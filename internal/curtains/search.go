@@ -19,11 +19,12 @@ const (
 // Bo'sh maydonlar filtr emas (ixtiyoriy); MaxPrice > 0 — narx chegarasi.
 // Limit ≤ 0 → 5, > 10 → 10.
 type SearchQuery struct {
+	Query        string          // nom/SKU/kod bo'yicha qat'iy qidiruv ("Velvet Chek") — so'zlar mahsulot nomi yoki variant SKU ichida
 	Room         string          // tavsiya etiladigan xona (RecommendedRooms bo'yicha)
 	Style        string          // uslub (Product.Style)
 	Pattern      string          // bezak (Product.Pattern ichida qidiriladi)
 	Transparency string          // shaffoflik (Product.Transparency)
-	Layer        string          // qatlam nomi; katalogda Layer ma'lumoti yo'q — filtr ishlamaydi
+	Layer        string          // qatlam: tul|portyera|lambrekan|astar|kant|rim|rulon — kategoriya/fabric_type/nom bo'yicha (LayerOf)
 	Color        string          // rang: nom/so'z — sinonim va hex ΔE orqali (search_colors.go)
 	Kind         string          // "fabric" | "accessory" | "" (hammasi)
 	Segment      Segment         // narx segmenti (berilsa — mos kelishi shart)
@@ -92,6 +93,16 @@ func Search(v *View, q SearchQuery) []ProductCard {
 		// butun mahsulotni chiqarib tashlaymiz. Bu 3 ta variant uchun 3× qayta
 		// tekshirish o'rniga 1× tekshirish (rules §4.3.5: variant hash'larini tejaydi).
 		if q.Segment != "" && p.Segment != q.Segment {
+			continue
+		}
+		// Qatlam filtri qat'iy: "tul" so'ralganda portyera qaytmaydi — aks holda model
+		// har qatlam uchun qayta-qayta qidiradi (2026-09-14 live: 7× product_search).
+		if q.Layer != "" && LayerOf(v, p) != strings.ToLower(q.Layer) {
+			continue
+		}
+		// Nom bo'yicha qidiruv qat'iy: mijoz "Velvet Chek" desa, model rang/uslub
+		// bilan taxmin qilmasin (2026-09-14 live: nomli so'rovda 2× bo'sh qidiruv).
+		if q.Query != "" && !nameMatches(v, p, q.Query) {
 			continue
 		}
 		// Shahar-styl mezonlari mahsulotga tegishli — bazani bir marta hisoblaymiz,
@@ -328,4 +339,58 @@ func containsFold(rooms []string, room string) bool {
 		}
 	}
 	return false
+}
+
+// LayerOf — mahsulot qatlamini aniqlaydi: avval kategoriya nomi, keyin fabric_type,
+// keyin mahsulot nomi bo'yicha; hech biri mos kelmasa "portyera" (asosiy mato).
+// Katalogda alohida layer maydoni yo'q (kontrakt 1.1) — shuning uchun evristika,
+// lekin deterministik va sinovdan o'tgan (search_test.go).
+func LayerOf(v *View, p Product) string {
+	// Kontrakt: teglar ro'yxati qatlamni aniq beradi ("tags": ["rim","rulon"]) —
+	// teg bo'lsa evristikadan ustun.
+	for _, l := range []string{"tul", "astar", "kant", "lambrekan", "rulon", "rim", "portyera"} {
+		if _, ok := p.Tags[l]; ok {
+			return l
+		}
+	}
+	name := strings.ToLower(p.Name)
+	if c, ok := v.Category(p.CategoryID); ok {
+		name = strings.ToLower(c.Name) + " " + name
+	}
+	ft := strings.ToLower(p.FabricType)
+	switch {
+	case strings.Contains(name, "tul") || strings.Contains(name, "tyul") || ft == "tulle" || ft == "organza" || ft == "voile":
+		return "tul"
+	case strings.Contains(name, "astar") || ft == "lining":
+		return "astar"
+	case strings.Contains(name, "kant"):
+		return "kant"
+	case strings.Contains(name, "lambrek"):
+		return "lambrekan"
+	case strings.Contains(name, "rulon"):
+		return "rulon"
+	case strings.Contains(name, "rim") && !strings.Contains(name, "primer"):
+		return "rim"
+	}
+	return "portyera"
+}
+
+// nameMatches — so'rovning har bir so'zi (≥ 2 belgi) mahsulot nomi, kodi yoki
+// biror variant SKU/rang nomi ichida bo'lsa true (registrga sezgir emas).
+func nameMatches(v *View, p Product, query string) bool {
+	hay := strings.ToLower(p.Name + " " + p.Code)
+	for _, vid := range v.byProduct[p.ID] {
+		if vx, ok := v.variants[vid]; ok {
+			hay += " " + strings.ToLower(vx.SKU+" "+vx.ColorName)
+		}
+	}
+	for _, w := range strings.Fields(strings.ToLower(query)) {
+		if len([]rune(w)) < 2 {
+			continue
+		}
+		if !strings.Contains(hay, w) {
+			return false
+		}
+	}
+	return true
 }

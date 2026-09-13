@@ -195,6 +195,7 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 		)
 
 		answered := false
+		emptyRetried := false
 		activeModel := primary
 		usedFallback := false
 		for step := 0; step < c.maxStep; step++ {
@@ -246,6 +247,15 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 				if strings.TrimSpace(content) != "" {
 					msgs = append(msgs, schema.AssistantMessage(content, nil))
 					answered = true
+					break
+				}
+				// Model na tool, na matn qaytardi (DeepSeek'da tool xatosidan keyin uchraydi):
+				// darhol uzr matni emas — bir marta aniq ko'rsatma bilan qayta so'raymiz
+				// (prefix keshda, arzon). Ikkinchi marta ham bo'sh bo'lsa fallback.
+				if !emptyRetried {
+					emptyRetried = true
+					msgs = append(msgs, schema.UserMessage("Oxirgi tool natijasiga qarab sotuvchiga qisqa, aniq javob ber: nima topildi yoki nima yetishmayapti va keyingi qadam."))
+					continue
 				}
 				break
 			}

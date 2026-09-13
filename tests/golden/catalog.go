@@ -76,7 +76,7 @@ func testSnapshot() curtains.Snapshot {
 				DefaultWidthM: d("2.8"), VariantIDs: []string{VKidsRainbow}},
 			{ID: "p-carmel-kitchen", CategoryID: "c-fabrics", Name: "Carmel Kitchen", Style: "classic",
 				Pattern: "striped", Transparency: "semi", RecommendedRooms: []string{"kitchen"}, Segment: curtains.SegmentEconomy,
-				DefaultWidthM: d("2.4"), VariantIDs: []string{VCarmelKitchen}},
+				DefaultWidthM: d("2.4"), VariantIDs: []string{VCarmelKitchen}, Tags: map[string]any{"rim": true}},
 			{ID: "p-office-minimal", CategoryID: "c-fabrics", Name: "Office Minimal", Style: "minimal",
 				Pattern: "plain", Transparency: "semi", RecommendedRooms: []string{"office"}, Segment: curtains.SegmentStandard,
 				DefaultWidthM: d("2.8"), VariantIDs: []string{VOfficeMinimal}},

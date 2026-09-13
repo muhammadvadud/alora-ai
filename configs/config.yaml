@@ -15,7 +15,7 @@ llm:
   model: deepseek-v4-pro
   base_url: https://api.deepseek.com/v1
   max_tokens: 2048
-  temperature: 0.5 # sotuvda barqarorlik uchun 0.7 dan pastroq
+  temperature: 0.2 # tool marshrutlash barqarorligi: 0.5 da live sinovda bir xil xabarga har xil tool zanjiri chiqdi
   timeout: 60s
   # Model "o'ylashi" (reasoning): adaptive | enabled | disabled. Bo'sh — provider standarti.
   # O'ylash matni stream'da alohida `thinking` event bo'lib chiqadi (javobga qo'shilmaydi).
@@ -32,7 +32,7 @@ llm:
   trace_file: "" # faqat dev: ALORA_LLM_TRACE_ALLOW=1 talab qilinadi (rules §13.5 — LLM matni loglanmaydi)
 
 agent:
-  max_step: 6
+  max_step: 8
   # Modelga yuboriladigan eski xabarlar chegarasi. Har navbat 4+ xabar qo'shadi
   # (savol + tool chaqiruvi + tool natijasi + javob), ya'ni 120 ≈ 25-30 navbat.
   # Suhbat oqimi uzun bo'lsa oshiring. Kesim doim savol chegarasidan boshlanadi.

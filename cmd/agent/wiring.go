@@ -64,14 +64,14 @@ func promptFunc(store session.Store, catalog *curtains.Catalog, fallback string,
 // ishlaydi. Muhim noziklik: stagesiz (noto'g'ri) sessiya xavfsiz default oladi.
 func stageTools(stage string) []string {
 	switch stage {
-	case "recommend":
-		return []string{"set_context", "product_search", "fason_lookup", "curtain_calculate", "build_options", "knowledge_lookup"}
-	case "measure", "calc", "variants", "choose":
-		return []string{"curtain_calculate", "price_quote", "build_options", "product_search", "set_context", "order_draft"}
+	case "recommend", "measure":
+		return []string{"set_context", "product_search", "fason_lookup", "knowledge_lookup", "curtain_calculate", "build_options"}
+	case "calc", "variants", "choose":
+		return []string{"set_context", "product_search", "fason_lookup", "curtain_calculate", "price_quote", "build_options", "order_draft"}
 	case "order":
 		return []string{"order_draft", "price_quote", "curtain_calculate"}
 	default:
-		return []string{"set_context", "product_search", "knowledge_lookup", "fason_lookup"}
+		return []string{"set_context", "product_search", "knowledge_lookup", "fason_lookup", "curtain_calculate", "build_options"}
 	}
 }
 

@@ -32,8 +32,15 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 		return buildOptionsResult{Error: errCalcUnavailable}, nil
 	}
 	st, sid := loadState(ctx, h.d)
+	// O'lcham argumentda kelsa — state'dan ustun (bitta chaqiruvda ishlasin).
+	if a.CorniceLengthM > 0 {
+		st.CorniceLengthM = dec(a.CorniceLengthM)
+	}
+	if a.HeightM > 0 {
+		st.HeightM = dec(a.HeightM)
+	}
 	if st.CorniceLengthM.IsZero() || st.HeightM.IsZero() {
-		return buildOptionsResult{Error: "avval karniz uzunligi va balandlikni curtain_calculate ga bering yoki set_context bilan yozing"}, nil
+		return buildOptionsResult{Error: "karniz uzunligi va balandlik kerak — cornice_length_m va height_m bilan qayta chaqir yoki sotuvchidan so'ra"}, nil
 	}
 	q := curtains.SearchQuery{Room: first(a.Room, st.Room), Style: first(a.Style, st.Style), Pattern: first(a.Pattern, st.Pattern), Transparency: first(a.Transparency, st.Transparency), Color: first(a.Color, "")}
 	plans := curtains.PlanOptions(v, st, q)

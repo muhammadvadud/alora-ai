@@ -160,7 +160,7 @@ func TestLLM_HallucinationRate(t *testing.T) {
 func runSuite(t *testing.T, c alorav1.AgentClient, round int) []llmRun {
 	t.Helper()
 	runs := make([]llmRun, len(llmScenarios))
-	sem := make(chan struct{}, 4)
+	sem := make(chan struct{}, 2) // 4 da DeepSeek TTFT 25–30 s ga chiqib, natija beqaror bo'ldi
 	var wg sync.WaitGroup
 	for i, sc := range llmScenarios {
 		wg.Add(1)

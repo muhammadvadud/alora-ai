@@ -149,6 +149,16 @@ func (s *SessionState) Apply(tool string, args map[string]any, now time.Time) {
 
 	switch tool {
 	case "set_context":
+		// O'lcham suhbatda aytilganda ham state'ga tushadi (2026-09-14 live: "yozib
+		// oldim" deb hech qayerga yozilmagan, build_options "o'lcham yo'q" degan).
+		if v, ok := args["cornice_length_m"]; ok && toDecimal(v).IsPositive() {
+			s.CorniceLengthM = toDecimal(v)
+			advanceStage(StageMeasure)
+		}
+		if v, ok := args["height_m"]; ok && toDecimal(v).IsPositive() {
+			s.HeightM = toDecimal(v)
+			advanceStage(StageMeasure)
+		}
 		if v, ok := args["room"]; ok {
 			s.Room = toString(v)
 		}
