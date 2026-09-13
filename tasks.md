@@ -6,7 +6,7 @@
 > Har bir ish tugagach shu fayl **o'sha ishning commit'i ichida** yangilanadi.
 > Har task uchun "Qabul" — nima o'tsa bajarilgan hisoblanadi (rules.md §17.5 DoD).
 
-**Umumiy holat:** 12 / 112 bajarildi (0.1–0.3, 0.6, 0.7, 0.14, 0.20, 0.21, 1.1, 1.3, 1.5; hisob Django'da — ADR-009)
+**Umumiy holat:** 24 / 112 bajarildi · Bosqich 0 yopiq (0.10–0.13 Go mapping kutmoqda) · 1.1–1.8 tayyor · go test -race yashil, golangci-lint 0 issues
 
 **Bosqich xaritasi:** 0 Poydevor (1 hafta) → 1 MVP (3–4 hafta) → 2 To'liq sotuv sikli (3 hafta) → 3 Ovoz (2–3 hafta) → 4 Sayqal (davomiy)
 
