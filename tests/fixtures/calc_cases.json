@@ -1,0 +1,1950 @@
+{
+  "schema_version": "alora.pricing.calc_cases.v1",
+  "pricing_seed": {
+    "calc_rules": [
+      {
+        "key": "coef_default",
+        "value": "2.500",
+        "unit": "koef",
+        "description": "Standart burma koeffitsienti",
+        "applies_to": {}
+      },
+      {
+        "key": "seam_allowance",
+        "value": "0.050",
+        "unit": "m",
+        "description": "Chok uchun zapas",
+        "applies_to": {}
+      },
+      {
+        "key": "hem_allowance",
+        "value": "0.150",
+        "unit": "m",
+        "description": "Pastki bukma uchun zapas",
+        "applies_to": {}
+      },
+      {
+        "key": "hook_step",
+        "value": "0.100",
+        "unit": "m",
+        "description": "Ilgichlar orasidagi qadam",
+        "applies_to": {}
+      },
+      {
+        "key": "round_area_to",
+        "value": "0.100",
+        "unit": "m2",
+        "description": "Yuzani yaxlitlash qadami",
+        "applies_to": {}
+      },
+      {
+        "key": "round_total_to",
+        "value": "1000.000",
+        "unit": "so'm",
+        "description": "Yakuniy summani yaxlitlash qadami",
+        "applies_to": {}
+      },
+      {
+        "key": "min_order_amount",
+        "value": "0.000",
+        "unit": "so'm",
+        "description": "Minimal buyurtma summasi",
+        "applies_to": {}
+      },
+      {
+        "key": "waste_warn_percent",
+        "value": "15.000",
+        "unit": "%",
+        "description": "Chiqindi ogohlantirish chegarasi",
+        "applies_to": {}
+      }
+    ],
+    "service_prices": [
+      {
+        "key": "sewing",
+        "name": "Tikuv",
+        "price": "12500.00",
+        "unit": "per_sqm",
+        "is_active": true
+      },
+      {
+        "key": "install",
+        "name": "Montaj",
+        "price": "20000.00",
+        "unit": "per_piece",
+        "is_active": true
+      },
+      {
+        "key": "tape",
+        "name": "Tasma",
+        "price": "5000.00",
+        "unit": "per_meter",
+        "is_active": true
+      },
+      {
+        "key": "hook",
+        "name": "Ilgich",
+        "price": "1500.00",
+        "unit": "per_piece",
+        "is_active": true
+      },
+      {
+        "key": "delivery",
+        "name": "Yetkazish",
+        "price": "30000.00",
+        "unit": "per_piece",
+        "is_active": true
+      }
+    ],
+    "discount_tiers": [
+      {
+        "min_amount": "5000000.00",
+        "percent": "3.00",
+        "is_active": true
+      },
+      {
+        "min_amount": "10000000.00",
+        "percent": "5.00",
+        "is_active": true
+      },
+      {
+        "min_amount": "20000000.00",
+        "percent": "10.00",
+        "is_active": true
+      }
+    ],
+    "discount_policy": {
+      "manual_max_percent_employee": "5.00",
+      "manual_max_percent_manager": "15.00",
+      "stack_with_tier": false
+    },
+    "order_defaults": {
+      "prepayment_percent": "50.00",
+      "delivery_amount": "30000.00",
+      "deadline_days": 14
+    }
+  },
+  "catalog_seed": {
+    "variants": [
+      {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "sku": "REF-PORTYERA",
+        "price": "25000.00",
+        "unit": "per_sqm"
+      },
+      {
+        "id": "22222222-2222-4222-8222-222222222222",
+        "sku": "REF-TUL",
+        "price": "8000.00",
+        "unit": "per_sqm"
+      },
+      {
+        "id": "33333333-3333-4333-8333-333333333333",
+        "sku": "REF-KANT",
+        "price": "12000.00",
+        "unit": "per_sqm"
+      },
+      {
+        "id": "44444444-4444-4444-8444-444444444444",
+        "sku": "REF-GUL",
+        "price": "15000.00",
+        "unit": "per_piece"
+      },
+      {
+        "id": "55555555-5555-4555-8555-555555555555",
+        "sku": "REF-BAHROMA",
+        "price": "9000.00",
+        "unit": "per_meter"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "Oddiy portyera, standart koeffitsient",
+      "input": {
+        "measurements": [
+          {
+            "length": "3.000",
+            "height": "2.500",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "3.000",
+                "height_m": "2.500"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "3.000",
+            "height": "2.500",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "3.000",
+                "height_m": "2.500",
+                "coef": "2.500",
+                "visible_area_m2": "18.750000000",
+                "raw_area_m2": "20.250000000",
+                "area_m2": "20.300",
+                "waste_area_m2": "1.500000000",
+                "waste_percent": "8.00",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "507500.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "20.250000000",
+            "area_m2": "20.300",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "507500.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "508000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Oddiy tul, kichik deraza",
+      "input": {
+        "measurements": [
+          {
+            "length": "2.000",
+            "height": "2.200",
+            "parts": [
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "role": "tul",
+                "width_m": "2.000",
+                "height_m": "2.200"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "2.000",
+            "height": "2.200",
+            "parts": [
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "sku": "REF-TUL",
+                "role": "tul",
+                "width_m": "2.000",
+                "height_m": "2.200",
+                "coef": "2.500",
+                "visible_area_m2": "11.000000000",
+                "raw_area_m2": "12.000000000",
+                "area_m2": "12.000",
+                "waste_area_m2": "1.000000000",
+                "waste_percent": "9.09",
+                "price_unit": "per_sqm",
+                "unit_price": "8000.00",
+                "line_total": "96000.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "12.000000000",
+            "area_m2": "12.000",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "96000.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "96000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Baland deraza, bitta portyera",
+      "input": {
+        "measurements": [
+          {
+            "length": "4.000",
+            "height": "3.200",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "4.000",
+                "height_m": "3.200"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "4.000",
+            "height": "3.200",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "4.000",
+                "height_m": "3.200",
+                "coef": "2.500",
+                "visible_area_m2": "32.000000000",
+                "raw_area_m2": "34.000000000",
+                "area_m2": "34.000",
+                "waste_area_m2": "2.000000000",
+                "waste_percent": "6.25",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "850000.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "34.000000000",
+            "area_m2": "34.000",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "850000.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "850000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Koeffitsient 2.0",
+      "input": {
+        "measurements": [
+          {
+            "length": "3.000",
+            "height": "2.500",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "3.000",
+                "height_m": "2.500",
+                "coef": "2.000"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "3.000",
+            "height": "2.500",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "3.000",
+                "height_m": "2.500",
+                "coef": "2.000",
+                "visible_area_m2": "15.000000000",
+                "raw_area_m2": "16.200000000",
+                "area_m2": "16.200",
+                "waste_area_m2": "1.200000000",
+                "waste_percent": "8.00",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "405000.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "16.200000000",
+            "area_m2": "16.200",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "405000.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "405000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Koeffitsient 2.5",
+      "input": {
+        "measurements": [
+          {
+            "length": "3.000",
+            "height": "2.500",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "3.000",
+                "height_m": "2.500",
+                "coef": "2.500"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "3.000",
+            "height": "2.500",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "3.000",
+                "height_m": "2.500",
+                "coef": "2.500",
+                "visible_area_m2": "18.750000000",
+                "raw_area_m2": "20.250000000",
+                "area_m2": "20.300",
+                "waste_area_m2": "1.500000000",
+                "waste_percent": "8.00",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "507500.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "20.250000000",
+            "area_m2": "20.300",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "507500.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "508000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Koeffitsient 3.0",
+      "input": {
+        "measurements": [
+          {
+            "length": "3.000",
+            "height": "2.500",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "3.000",
+                "height_m": "2.500",
+                "coef": "3.000"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "3.000",
+            "height": "2.500",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "3.000",
+                "height_m": "2.500",
+                "coef": "3.000",
+                "visible_area_m2": "22.500000000",
+                "raw_area_m2": "24.300000000",
+                "area_m2": "24.300",
+                "waste_area_m2": "1.800000000",
+                "waste_percent": "8.00",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "607500.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "24.300000000",
+            "area_m2": "24.300",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "607500.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "608000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Aksessuar: dona bo'yicha gul",
+      "input": {
+        "measurements": [
+          {
+            "length": "3.000",
+            "height": "2.500",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "3.000",
+                "height_m": "2.500"
+              }
+            ],
+            "accessories": [
+              {
+                "variant_id": "44444444-4444-4444-8444-444444444444",
+                "qty": "2"
+              }
+            ]
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "3.000",
+            "height": "2.500",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "3.000",
+                "height_m": "2.500",
+                "coef": "2.500",
+                "visible_area_m2": "18.750000000",
+                "raw_area_m2": "20.250000000",
+                "area_m2": "20.300",
+                "waste_area_m2": "1.500000000",
+                "waste_percent": "8.00",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "507500.00"
+              }
+            ],
+            "accessories": [
+              {
+                "variant_id": "44444444-4444-4444-8444-444444444444",
+                "sku": "REF-GUL",
+                "qty": "2",
+                "price_unit": "per_piece",
+                "unit_price": "15000.00",
+                "line_total": "30000.00"
+              }
+            ],
+            "raw_area_m2": "20.250000000",
+            "area_m2": "20.300",
+            "accessories_total": "30000.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "537500.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "538000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Aksessuar: metr bo'yicha bahroma",
+      "input": {
+        "measurements": [
+          {
+            "length": "3.000",
+            "height": "2.500",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "3.000",
+                "height_m": "2.500"
+              }
+            ],
+            "accessories": [
+              {
+                "variant_id": "55555555-5555-4555-8555-555555555555",
+                "qty": "3.000"
+              }
+            ]
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "3.000",
+            "height": "2.500",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "3.000",
+                "height_m": "2.500",
+                "coef": "2.500",
+                "visible_area_m2": "18.750000000",
+                "raw_area_m2": "20.250000000",
+                "area_m2": "20.300",
+                "waste_area_m2": "1.500000000",
+                "waste_percent": "8.00",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "507500.00"
+              }
+            ],
+            "accessories": [
+              {
+                "variant_id": "55555555-5555-4555-8555-555555555555",
+                "sku": "REF-BAHROMA",
+                "qty": "3.000",
+                "price_unit": "per_meter",
+                "unit_price": "9000.00",
+                "line_total": "27000.00"
+              }
+            ],
+            "raw_area_m2": "20.250000000",
+            "area_m2": "20.300",
+            "accessories_total": "27000.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "534500.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "535000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Aksessuar: gul va bahroma birga",
+      "input": {
+        "measurements": [
+          {
+            "length": "3.500",
+            "height": "2.800",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "3.500",
+                "height_m": "2.800"
+              }
+            ],
+            "accessories": [
+              {
+                "variant_id": "44444444-4444-4444-8444-444444444444",
+                "qty": "4"
+              },
+              {
+                "variant_id": "55555555-5555-4555-8555-555555555555",
+                "qty": "3.500"
+              }
+            ]
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "3.500",
+            "height": "2.800",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "3.500",
+                "height_m": "2.800",
+                "coef": "2.500",
+                "visible_area_m2": "24.500000000",
+                "raw_area_m2": "26.250000000",
+                "area_m2": "26.300",
+                "waste_area_m2": "1.750000000",
+                "waste_percent": "7.14",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "657500.00"
+              }
+            ],
+            "accessories": [
+              {
+                "variant_id": "44444444-4444-4444-8444-444444444444",
+                "sku": "REF-GUL",
+                "qty": "4",
+                "price_unit": "per_piece",
+                "unit_price": "15000.00",
+                "line_total": "60000.00"
+              },
+              {
+                "variant_id": "55555555-5555-4555-8555-555555555555",
+                "sku": "REF-BAHROMA",
+                "qty": "3.500",
+                "price_unit": "per_meter",
+                "unit_price": "9000.00",
+                "line_total": "31500.00"
+              }
+            ],
+            "raw_area_m2": "26.250000000",
+            "area_m2": "26.300",
+            "accessories_total": "91500.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "749000.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "749000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Portyera + tul",
+      "input": {
+        "measurements": [
+          {
+            "length": "4.000",
+            "height": "2.700",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "4.000",
+                "height_m": "2.700"
+              },
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "role": "tul",
+                "width_m": "4.000",
+                "height_m": "2.700",
+                "coef": "3.000"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "4.000",
+            "height": "2.700",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "4.000",
+                "height_m": "2.700",
+                "coef": "2.500",
+                "visible_area_m2": "27.000000000",
+                "raw_area_m2": "29.000000000",
+                "area_m2": "29.000",
+                "waste_area_m2": "2.000000000",
+                "waste_percent": "7.41",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "725000.00"
+              },
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "sku": "REF-TUL",
+                "role": "tul",
+                "width_m": "4.000",
+                "height_m": "2.700",
+                "coef": "3.000",
+                "visible_area_m2": "32.400000000",
+                "raw_area_m2": "34.800000000",
+                "area_m2": "34.800",
+                "waste_area_m2": "2.400000000",
+                "waste_percent": "7.41",
+                "price_unit": "per_sqm",
+                "unit_price": "8000.00",
+                "line_total": "278400.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "63.800000000",
+            "area_m2": "63.800",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "1003400.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "1003000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Portyera + tul + lambrekan",
+      "input": {
+        "measurements": [
+          {
+            "length": "4.000",
+            "height": "2.700",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "4.000",
+                "height_m": "2.700"
+              },
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "role": "tul",
+                "width_m": "4.000",
+                "height_m": "2.700",
+                "coef": "3.000"
+              },
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "role": "lambrekan",
+                "width_m": "4.000",
+                "height_m": "0.500",
+                "coef": "2.000"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "4.000",
+            "height": "2.700",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "4.000",
+                "height_m": "2.700",
+                "coef": "2.500",
+                "visible_area_m2": "27.000000000",
+                "raw_area_m2": "29.000000000",
+                "area_m2": "29.000",
+                "waste_area_m2": "2.000000000",
+                "waste_percent": "7.41",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "725000.00"
+              },
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "sku": "REF-TUL",
+                "role": "tul",
+                "width_m": "4.000",
+                "height_m": "2.700",
+                "coef": "3.000",
+                "visible_area_m2": "32.400000000",
+                "raw_area_m2": "34.800000000",
+                "area_m2": "34.800",
+                "waste_area_m2": "2.400000000",
+                "waste_percent": "7.41",
+                "price_unit": "per_sqm",
+                "unit_price": "8000.00",
+                "line_total": "278400.00"
+              },
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "sku": "REF-KANT",
+                "role": "lambrekan",
+                "width_m": "4.000",
+                "height_m": "0.500",
+                "coef": "2.000",
+                "visible_area_m2": "4.000000000",
+                "raw_area_m2": "5.600000000",
+                "area_m2": "5.600",
+                "waste_area_m2": "1.600000000",
+                "waste_percent": "40.00",
+                "price_unit": "per_sqm",
+                "unit_price": "12000.00",
+                "line_total": "67200.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "69.400000000",
+            "area_m2": "69.400",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "1070600.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "1071000.00",
+        "warnings": [
+          "REF-KANT uchun chiqindi 40.00% dan oshdi"
+        ]
+      }
+    },
+    {
+      "name": "Ikki rangli portyera + kant",
+      "input": {
+        "measurements": [
+          {
+            "length": "5.000",
+            "height": "2.900",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "3.500",
+                "height_m": "2.900"
+              },
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "role": "kant",
+                "width_m": "1.500",
+                "height_m": "2.900"
+              },
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "role": "tul",
+                "width_m": "5.000",
+                "height_m": "2.900",
+                "coef": "3.000"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "5.000",
+            "height": "2.900",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "3.500",
+                "height_m": "2.900",
+                "coef": "2.500",
+                "visible_area_m2": "25.375000000",
+                "raw_area_m2": "27.125000000",
+                "area_m2": "27.100",
+                "waste_area_m2": "1.750000000",
+                "waste_percent": "6.90",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "677500.00"
+              },
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "sku": "REF-KANT",
+                "role": "kant",
+                "width_m": "1.500",
+                "height_m": "2.900",
+                "coef": "2.500",
+                "visible_area_m2": "10.875000000",
+                "raw_area_m2": "11.625000000",
+                "area_m2": "11.600",
+                "waste_area_m2": "0.750000000",
+                "waste_percent": "6.90",
+                "price_unit": "per_sqm",
+                "unit_price": "12000.00",
+                "line_total": "139200.00"
+              },
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "sku": "REF-TUL",
+                "role": "tul",
+                "width_m": "5.000",
+                "height_m": "2.900",
+                "coef": "3.000",
+                "visible_area_m2": "43.500000000",
+                "raw_area_m2": "46.500000000",
+                "area_m2": "46.500",
+                "waste_area_m2": "3.000000000",
+                "waste_percent": "6.90",
+                "price_unit": "per_sqm",
+                "unit_price": "8000.00",
+                "line_total": "372000.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "85.250000000",
+            "area_m2": "85.200",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "1188700.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "1189000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Maksimal holat: 10 ta bo'lak",
+      "input": {
+        "measurements": [
+          {
+            "length": "6.000",
+            "height": "2.800",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "1.200",
+                "height_m": "2.800"
+              },
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "role": "kant",
+                "width_m": "0.300",
+                "height_m": "2.800"
+              },
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "1.200",
+                "height_m": "2.800"
+              },
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "role": "kant",
+                "width_m": "0.300",
+                "height_m": "2.800"
+              },
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "1.200",
+                "height_m": "2.800"
+              },
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "role": "kant",
+                "width_m": "0.300",
+                "height_m": "2.800"
+              },
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "role": "tul",
+                "width_m": "6.000",
+                "height_m": "2.800",
+                "coef": "3.000"
+              },
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "role": "lambrekan",
+                "width_m": "6.000",
+                "height_m": "0.450",
+                "coef": "2.000"
+              },
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "role": "dekor",
+                "width_m": "1.000",
+                "height_m": "0.600",
+                "coef": "2.000"
+              },
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "role": "astar",
+                "width_m": "3.000",
+                "height_m": "2.800",
+                "coef": "2.000"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "6.000",
+            "height": "2.800",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "1.200",
+                "height_m": "2.800",
+                "coef": "2.500",
+                "visible_area_m2": "8.400000000",
+                "raw_area_m2": "9.000000000",
+                "area_m2": "9.000",
+                "waste_area_m2": "0.600000000",
+                "waste_percent": "7.14",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "225000.00"
+              },
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "sku": "REF-KANT",
+                "role": "kant",
+                "width_m": "0.300",
+                "height_m": "2.800",
+                "coef": "2.500",
+                "visible_area_m2": "2.100000000",
+                "raw_area_m2": "2.250000000",
+                "area_m2": "2.300",
+                "waste_area_m2": "0.150000000",
+                "waste_percent": "7.14",
+                "price_unit": "per_sqm",
+                "unit_price": "12000.00",
+                "line_total": "27600.00"
+              },
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "1.200",
+                "height_m": "2.800",
+                "coef": "2.500",
+                "visible_area_m2": "8.400000000",
+                "raw_area_m2": "9.000000000",
+                "area_m2": "9.000",
+                "waste_area_m2": "0.600000000",
+                "waste_percent": "7.14",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "225000.00"
+              },
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "sku": "REF-KANT",
+                "role": "kant",
+                "width_m": "0.300",
+                "height_m": "2.800",
+                "coef": "2.500",
+                "visible_area_m2": "2.100000000",
+                "raw_area_m2": "2.250000000",
+                "area_m2": "2.300",
+                "waste_area_m2": "0.150000000",
+                "waste_percent": "7.14",
+                "price_unit": "per_sqm",
+                "unit_price": "12000.00",
+                "line_total": "27600.00"
+              },
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "1.200",
+                "height_m": "2.800",
+                "coef": "2.500",
+                "visible_area_m2": "8.400000000",
+                "raw_area_m2": "9.000000000",
+                "area_m2": "9.000",
+                "waste_area_m2": "0.600000000",
+                "waste_percent": "7.14",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "225000.00"
+              },
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "sku": "REF-KANT",
+                "role": "kant",
+                "width_m": "0.300",
+                "height_m": "2.800",
+                "coef": "2.500",
+                "visible_area_m2": "2.100000000",
+                "raw_area_m2": "2.250000000",
+                "area_m2": "2.300",
+                "waste_area_m2": "0.150000000",
+                "waste_percent": "7.14",
+                "price_unit": "per_sqm",
+                "unit_price": "12000.00",
+                "line_total": "27600.00"
+              },
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "sku": "REF-TUL",
+                "role": "tul",
+                "width_m": "6.000",
+                "height_m": "2.800",
+                "coef": "3.000",
+                "visible_area_m2": "50.400000000",
+                "raw_area_m2": "54.000000000",
+                "area_m2": "54.000",
+                "waste_area_m2": "3.600000000",
+                "waste_percent": "7.14",
+                "price_unit": "per_sqm",
+                "unit_price": "8000.00",
+                "line_total": "432000.00"
+              },
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "sku": "REF-KANT",
+                "role": "lambrekan",
+                "width_m": "6.000",
+                "height_m": "0.450",
+                "coef": "2.000",
+                "visible_area_m2": "5.400000000",
+                "raw_area_m2": "7.800000000",
+                "area_m2": "7.800",
+                "waste_area_m2": "2.400000000",
+                "waste_percent": "44.44",
+                "price_unit": "per_sqm",
+                "unit_price": "12000.00",
+                "line_total": "93600.00"
+              },
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "sku": "REF-KANT",
+                "role": "dekor",
+                "width_m": "1.000",
+                "height_m": "0.600",
+                "coef": "2.000",
+                "visible_area_m2": "1.200000000",
+                "raw_area_m2": "1.600000000",
+                "area_m2": "1.600",
+                "waste_area_m2": "0.400000000",
+                "waste_percent": "33.33",
+                "price_unit": "per_sqm",
+                "unit_price": "12000.00",
+                "line_total": "19200.00"
+              },
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "sku": "REF-TUL",
+                "role": "astar",
+                "width_m": "3.000",
+                "height_m": "2.800",
+                "coef": "2.000",
+                "visible_area_m2": "16.800000000",
+                "raw_area_m2": "18.000000000",
+                "area_m2": "18.000",
+                "waste_area_m2": "1.200000000",
+                "waste_percent": "7.14",
+                "price_unit": "per_sqm",
+                "unit_price": "8000.00",
+                "line_total": "144000.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "115.150000000",
+            "area_m2": "115.300",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "1446600.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "1447000.00",
+        "warnings": [
+          "REF-KANT uchun chiqindi 44.44% dan oshdi",
+          "REF-KANT uchun chiqindi 33.33% dan oshdi"
+        ]
+      }
+    },
+    {
+      "name": "Tikuv va tasma xizmatlari",
+      "input": {
+        "measurements": [
+          {
+            "length": "3.000",
+            "height": "2.500",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "3.000",
+                "height_m": "2.500"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": [
+          "sewing",
+          "tape"
+        ]
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "3.000",
+            "height": "2.500",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "3.000",
+                "height_m": "2.500",
+                "coef": "2.500",
+                "visible_area_m2": "18.750000000",
+                "raw_area_m2": "20.250000000",
+                "area_m2": "20.300",
+                "waste_area_m2": "1.500000000",
+                "waste_percent": "8.00",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "507500.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "20.250000000",
+            "area_m2": "20.300",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [
+          {
+            "key": "sewing",
+            "name": "Tikuv",
+            "qty": "20.300",
+            "price_unit": "per_sqm",
+            "unit_price": "12500.00",
+            "line_total": "253750.00",
+            "is_delivery": false
+          },
+          {
+            "key": "tape",
+            "name": "Tasma",
+            "qty": "3.000",
+            "price_unit": "per_meter",
+            "unit_price": "5000.00",
+            "line_total": "15000.00",
+            "is_delivery": false
+          }
+        ],
+        "subtotal": "776250.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "776000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Barcha xizmatlar va yetkazish",
+      "input": {
+        "measurements": [
+          {
+            "length": "4.000",
+            "height": "2.700",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "4.000",
+                "height_m": "2.700"
+              },
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "role": "tul",
+                "width_m": "4.000",
+                "height_m": "2.700",
+                "coef": "3.000"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": [
+          "sewing",
+          "install",
+          "tape",
+          "hook"
+        ],
+        "delivery": true
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "4.000",
+            "height": "2.700",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "4.000",
+                "height_m": "2.700",
+                "coef": "2.500",
+                "visible_area_m2": "27.000000000",
+                "raw_area_m2": "29.000000000",
+                "area_m2": "29.000",
+                "waste_area_m2": "2.000000000",
+                "waste_percent": "7.41",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "725000.00"
+              },
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "sku": "REF-TUL",
+                "role": "tul",
+                "width_m": "4.000",
+                "height_m": "2.700",
+                "coef": "3.000",
+                "visible_area_m2": "32.400000000",
+                "raw_area_m2": "34.800000000",
+                "area_m2": "34.800",
+                "waste_area_m2": "2.400000000",
+                "waste_percent": "7.41",
+                "price_unit": "per_sqm",
+                "unit_price": "8000.00",
+                "line_total": "278400.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "63.800000000",
+            "area_m2": "63.800",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [
+          {
+            "key": "sewing",
+            "name": "Tikuv",
+            "qty": "63.800",
+            "price_unit": "per_sqm",
+            "unit_price": "12500.00",
+            "line_total": "797500.00",
+            "is_delivery": false
+          },
+          {
+            "key": "install",
+            "name": "Montaj",
+            "qty": "2",
+            "price_unit": "per_piece",
+            "unit_price": "20000.00",
+            "line_total": "40000.00",
+            "is_delivery": false
+          },
+          {
+            "key": "tape",
+            "name": "Tasma",
+            "qty": "4.000",
+            "price_unit": "per_meter",
+            "unit_price": "5000.00",
+            "line_total": "20000.00",
+            "is_delivery": false
+          },
+          {
+            "key": "hook",
+            "name": "Ilgich",
+            "qty": "40",
+            "price_unit": "per_piece",
+            "unit_price": "1500.00",
+            "line_total": "60000.00",
+            "is_delivery": false
+          },
+          {
+            "key": "delivery",
+            "name": "Yetkazish",
+            "qty": "1",
+            "price_unit": "per_piece",
+            "unit_price": "30000.00",
+            "line_total": "30000.00",
+            "is_delivery": true
+          }
+        ],
+        "subtotal": "1920900.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "30000.00",
+        "total": "1951000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Bosqichli chegirma: 3 foizli bosqich",
+      "input": {
+        "measurements": [
+          {
+            "length": "22.000",
+            "height": "3.000",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "22.000",
+                "height_m": "3.000",
+                "coef": "3.000"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "22.000",
+            "height": "3.000",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "22.000",
+                "height_m": "3.000",
+                "coef": "3.000",
+                "visible_area_m2": "198.000000000",
+                "raw_area_m2": "211.200000000",
+                "area_m2": "211.200",
+                "waste_area_m2": "13.200000000",
+                "waste_percent": "6.67",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "5280000.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "211.200000000",
+            "area_m2": "211.200",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "5280000.00",
+        "tier_discount_percent": "3.00",
+        "manual_discount_percent": "0",
+        "discount_percent": "3.00",
+        "discount_amount": "158400.00",
+        "delivery_amount": "0.00",
+        "total": "5122000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Bosqichli chegirma: 10 foizli bosqich",
+      "input": {
+        "measurements": [
+          {
+            "length": "85.000",
+            "height": "3.000",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "85.000",
+                "height_m": "3.000",
+                "coef": "3.000"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "85.000",
+            "height": "3.000",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "85.000",
+                "height_m": "3.000",
+                "coef": "3.000",
+                "visible_area_m2": "765.000000000",
+                "raw_area_m2": "816.000000000",
+                "area_m2": "816.000",
+                "waste_area_m2": "51.000000000",
+                "waste_percent": "6.67",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "20400000.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "816.000000000",
+            "area_m2": "816.000",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "20400000.00",
+        "tier_discount_percent": "10.00",
+        "manual_discount_percent": "0",
+        "discount_percent": "10.00",
+        "discount_amount": "2040000.00",
+        "delivery_amount": "0.00",
+        "total": "18360000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Qo'lda chegirma policy chegarasidan oshmaydi",
+      "input": {
+        "measurements": [
+          {
+            "length": "4.000",
+            "height": "2.700",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "4.000",
+                "height_m": "2.700"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": [],
+        "discount_percent": "40.00"
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "4.000",
+            "height": "2.700",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "4.000",
+                "height_m": "2.700",
+                "coef": "2.500",
+                "visible_area_m2": "27.000000000",
+                "raw_area_m2": "29.000000000",
+                "area_m2": "29.000",
+                "waste_area_m2": "2.000000000",
+                "waste_percent": "7.41",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "725000.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "29.000000000",
+            "area_m2": "29.000",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "725000.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "15.00",
+        "discount_percent": "15.00",
+        "discount_amount": "108750.00",
+        "delivery_amount": "0.00",
+        "total": "616000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Uchta deraza: mehmonxona, yotoqxona, oshxona",
+      "input": {
+        "measurements": [
+          {
+            "length": "4.500",
+            "height": "2.900",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "4.500",
+                "height_m": "2.900"
+              }
+            ],
+            "accessories": []
+          },
+          {
+            "length": "3.200",
+            "height": "2.600",
+            "parts": [
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "role": "tul",
+                "width_m": "3.200",
+                "height_m": "2.600",
+                "coef": "3.000"
+              }
+            ],
+            "accessories": []
+          },
+          {
+            "length": "2.000",
+            "height": "1.500",
+            "parts": [
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "role": "portyera",
+                "width_m": "2.000",
+                "height_m": "1.500",
+                "coef": "2.000"
+              }
+            ],
+            "accessories": [
+              {
+                "variant_id": "44444444-4444-4444-8444-444444444444",
+                "qty": "2"
+              }
+            ]
+          }
+        ],
+        "services": [
+          "sewing"
+        ]
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "4.500",
+            "height": "2.900",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "4.500",
+                "height_m": "2.900",
+                "coef": "2.500",
+                "visible_area_m2": "32.625000000",
+                "raw_area_m2": "34.875000000",
+                "area_m2": "34.900",
+                "waste_area_m2": "2.250000000",
+                "waste_percent": "6.90",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "872500.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "34.875000000",
+            "area_m2": "34.900",
+            "accessories_total": "0.00"
+          },
+          {
+            "length": "3.200",
+            "height": "2.600",
+            "parts": [
+              {
+                "variant_id": "22222222-2222-4222-8222-222222222222",
+                "sku": "REF-TUL",
+                "role": "tul",
+                "width_m": "3.200",
+                "height_m": "2.600",
+                "coef": "3.000",
+                "visible_area_m2": "24.960000000",
+                "raw_area_m2": "26.880000000",
+                "area_m2": "26.900",
+                "waste_area_m2": "1.920000000",
+                "waste_percent": "7.69",
+                "price_unit": "per_sqm",
+                "unit_price": "8000.00",
+                "line_total": "215200.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "26.880000000",
+            "area_m2": "26.900",
+            "accessories_total": "0.00"
+          },
+          {
+            "length": "2.000",
+            "height": "1.500",
+            "parts": [
+              {
+                "variant_id": "33333333-3333-4333-8333-333333333333",
+                "sku": "REF-KANT",
+                "role": "portyera",
+                "width_m": "2.000",
+                "height_m": "1.500",
+                "coef": "2.000",
+                "visible_area_m2": "6.000000000",
+                "raw_area_m2": "6.800000000",
+                "area_m2": "6.800",
+                "waste_area_m2": "0.800000000",
+                "waste_percent": "13.33",
+                "price_unit": "per_sqm",
+                "unit_price": "12000.00",
+                "line_total": "81600.00"
+              }
+            ],
+            "accessories": [
+              {
+                "variant_id": "44444444-4444-4444-8444-444444444444",
+                "sku": "REF-GUL",
+                "qty": "2",
+                "price_unit": "per_piece",
+                "unit_price": "15000.00",
+                "line_total": "30000.00"
+              }
+            ],
+            "raw_area_m2": "6.800000000",
+            "area_m2": "6.800",
+            "accessories_total": "30000.00"
+          }
+        ],
+        "services": [
+          {
+            "key": "sewing",
+            "name": "Tikuv",
+            "qty": "68.600",
+            "price_unit": "per_sqm",
+            "unit_price": "12500.00",
+            "line_total": "857500.00",
+            "is_delivery": false
+          }
+        ],
+        "subtotal": "2056800.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "2057000.00",
+        "warnings": []
+      }
+    },
+    {
+      "name": "Yaxlitlash chekkasi: 1000 ga yaxlitlanadi",
+      "input": {
+        "measurements": [
+          {
+            "length": "1.000",
+            "height": "1.100",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "role": "portyera",
+                "width_m": "1.000",
+                "height_m": "1.100",
+                "coef": "2.000"
+              }
+            ],
+            "accessories": []
+          }
+        ],
+        "services": []
+      },
+      "expected": {
+        "measurements": [
+          {
+            "length": "1.000",
+            "height": "1.100",
+            "parts": [
+              {
+                "variant_id": "11111111-1111-4111-8111-111111111111",
+                "sku": "REF-PORTYERA",
+                "role": "portyera",
+                "width_m": "1.000",
+                "height_m": "1.100",
+                "coef": "2.000",
+                "visible_area_m2": "2.200000000",
+                "raw_area_m2": "2.600000000",
+                "area_m2": "2.600",
+                "waste_area_m2": "0.400000000",
+                "waste_percent": "18.18",
+                "price_unit": "per_sqm",
+                "unit_price": "25000.00",
+                "line_total": "65000.00"
+              }
+            ],
+            "accessories": [],
+            "raw_area_m2": "2.600000000",
+            "area_m2": "2.600",
+            "accessories_total": "0.00"
+          }
+        ],
+        "services": [],
+        "subtotal": "65000.00",
+        "tier_discount_percent": "0",
+        "manual_discount_percent": "0",
+        "discount_percent": "0",
+        "discount_amount": "0.00",
+        "delivery_amount": "0.00",
+        "total": "65000.00",
+        "warnings": [
+          "REF-PORTYERA uchun chiqindi 18.18% dan oshdi"
+        ]
+      }
+    }
+  ]
+}
