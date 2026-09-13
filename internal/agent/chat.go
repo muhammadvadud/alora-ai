@@ -172,39 +172,10 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 		// HAR doim 10 tool sxemasi (~3k token) o'rniga faqat joriy bosqich uchun
 		// keraklilari modelga yuboriladi. Agent domenni bilmaydi (rules §2) — tanlov
 		// funksiyasi composition root'da (cmd/agent/wiring.go). nil selector = hammasi.
-		selected := c.allTools
-		if c.toolSelector != nil {
-			selected = c.toolSelector(ctx, sessionID, c.allTools)
-		}
-		selectedInfos := make([]*schema.ToolInfo, 0, len(selected))
-		// Ijro xaritasi shu to'plamdan: tanlovda yo'q tool'ni model chaqirsa
-		// runTool "noma'lum tool" qaytaradi va ReAct o'zini tuzatadi.
-		executors := make(map[string]tool.InvokableTool, len(selected))
-		for _, t := range selected {
-			info, infoErr := t.Info(ctx)
-			if infoErr != nil {
-				emit(ctx, out, Event{Kind: KindError, Err: fmt.Sprintf("tool ma'lumoti: %v", infoErr)})
-				return
-			}
-			selectedInfos = append(selectedInfos, info)
-			executors[info.Name] = c.tools[info.Name]
-		}
-
-		// Har Stream o'z tanlangan to'plami bilan model bog'laydi. O'ramlar
-		// (trace, reasoning_effort) WithTools'ni saqlaydi (rules §6) — noto'g'ri
-		// to'g'ridan-to'g'ri bog'lab qo'yilsa ular butunlay yonlab qolardi.
-		primary, err := c.model.WithTools(selectedInfos)
-		if err != nil {
-			emit(ctx, out, Event{Kind: KindError, Err: fmt.Sprintf("tool'lar bog'lash: %v", err)})
+		primary, fallbackM, executors, bindErr := c.bindTools(ctx, sessionID)
+		if bindErr != nil {
+			emit(ctx, out, Event{Kind: KindError, Err: bindErr.Error()})
 			return
-		}
-		var fallbackM model.ToolCallingChatModel
-		if c.fallback != nil {
-			fallbackM, err = c.fallback.WithTools(selectedInfos)
-			if err != nil {
-				emit(ctx, out, Event{Kind: KindError, Err: fmt.Sprintf("fallback tool'lar bog'lash: %v", err)})
-				return
-			}
 		}
 
 		msgs := make([]*schema.Message, 0, len(history)+4)
@@ -229,6 +200,22 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 		activeModel := primary
 		usedFallback := false
 		for step := 0; step < c.maxStep; step++ {
+			// Tool bajarilgach sessiya bosqichi o'zgargan bo'lishi mumkin (set_context →
+			// recommend, curtain_calculate → calc): to'plam qayta tanlanadi, aks holda
+			// "hisobla va chegirma ayt" kabi xabarda price_quote modelga ko'rinmaydi.
+			if step > 0 && c.toolSelector != nil {
+				np, nf, ne, rebindErr := c.bindTools(ctx, sessionID)
+				if rebindErr != nil {
+					emit(ctx, out, Event{Kind: KindError, Err: rebindErr.Error()})
+					return
+				}
+				if usedFallback {
+					activeModel = nf
+				} else {
+					activeModel = np
+				}
+				primary, fallbackM, executors = np, nf, ne
+			}
 			content, toolCalls, u, nextModel, switched, err := c.ask(ctx, msgs, out, activeModel, primary, fallbackM)
 			if err != nil {
 				emit(ctx, out, Event{Kind: KindError, Err: err.Error()})
@@ -509,4 +496,37 @@ func emit(ctx context.Context, out chan<- Event, ev Event) {
 	case out <- ev:
 	case <-ctx.Done():
 	}
+}
+
+// bindTools — bosqichga qarab tool to'plamini tanlab modelga bog'laydi.
+// Buyurtmachi xarajat talabi: HAR doim 10 tool sxemasi (~3k token) o'rniga faqat
+// joriy bosqich uchun keraklilari yuboriladi. Agent domenni bilmaydi (rules §2) —
+// tanlov funksiyasi composition root'da (cmd/agent/wiring.go); nil selector = hammasi.
+// O'ramlar (trace, reasoning_effort) WithTools'ni saqlaydi (rules §6).
+func (c *Chat) bindTools(ctx context.Context, sessionID string) (primary, fallbackM model.ToolCallingChatModel, executors map[string]tool.InvokableTool, err error) {
+	selected := c.allTools
+	if c.toolSelector != nil {
+		selected = c.toolSelector(ctx, sessionID, c.allTools)
+	}
+	infos := make([]*schema.ToolInfo, 0, len(selected))
+	// Ijro xaritasi shu to'plamdan: tanlovda yo'q tool'ni model chaqirsa
+	// runTool "noma'lum tool" qaytaradi va ReAct o'zini tuzatadi.
+	executors = make(map[string]tool.InvokableTool, len(selected))
+	for _, t := range selected {
+		info, infoErr := t.Info(ctx)
+		if infoErr != nil {
+			return nil, nil, nil, fmt.Errorf("tool ma'lumoti: %w", infoErr)
+		}
+		infos = append(infos, info)
+		executors[info.Name] = c.tools[info.Name]
+	}
+	if primary, err = c.model.WithTools(infos); err != nil {
+		return nil, nil, nil, fmt.Errorf("tool'lar bog'lash: %w", err)
+	}
+	if c.fallback != nil {
+		if fallbackM, err = c.fallback.WithTools(infos); err != nil {
+			return nil, nil, nil, fmt.Errorf("fallback tool'lar bog'lash: %w", err)
+		}
+	}
+	return primary, fallbackM, executors, nil
 }

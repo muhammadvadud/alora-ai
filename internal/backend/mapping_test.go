@@ -62,3 +62,21 @@ func TestMapping_DeltaVariantDeleteAndUnknownEntity(t *testing.T) {
 		t.Fatalf("unknown entity error = %v", err)
 	}
 }
+
+// TestTagsJSON_ListAndObject — kontrakt: teglar ro'yxat; obyekt ham qabul qilinadi.
+func TestTagsJSON_ListAndObject(t *testing.T) {
+	got, err := tagsJSON(`["rim","rulon"]`)
+	if err != nil || got["rim"] != true || got["rulon"] != true {
+		t.Fatalf("ro'yxat: %v %v", got, err)
+	}
+	got, err = tagsJSON(`{"washable":true}`)
+	if err != nil || got["washable"] != true {
+		t.Fatalf("obyekt: %v %v", got, err)
+	}
+	if got, err := tagsJSON(""); err != nil || got != nil {
+		t.Fatalf("bo'sh: %v %v", got, err)
+	}
+	if _, err := tagsJSON(`[1,`); err == nil {
+		t.Fatal("buzuq JSON xato berishi kerak")
+	}
+}
