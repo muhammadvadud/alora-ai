@@ -38,12 +38,12 @@
 - [x] 0.8 `buf.yaml`, `buf.gen.yaml` (`protoc-gen-go`, `protoc-gen-go-grpc`, versiya pin); `gen/alorav1/`.
 - [x] 0.9 `scripts/import_proto.sh` — backend `protos/alora.proto` → `proto/alora.proto` (diff ko'rsatadi,
       backend `scripts/export_proto.sh` bilan juft). *Qabul:* `make proto` → `gen/` yangilanadi, build toza.
-- [~] 0.10 **Backend bilan (P6):** `go_package` = `github.com/muhammadvadud/alora-agent/gen/alorav1;alorav1`.
+- [x] 0.10 **Backend bilan (P6):** `go_package` = `github.com/muhammadvadud/alora-agent/gen/alorav1;alorav1`.
       Backend tomoni: `feat/proto-agent-contract-ext` branch'ida bajarildi (kontrakt 1.1). Go: `import_proto` + `buf generate` (0.9 bilan).
-- [~] 0.11 **Backend bilan (P1):** `CatalogSnapshot` 8–11 (`service_prices`, `discount_tiers`, `discount_policy`,
+- [x] 0.11 **Backend bilan (P1):** `CatalogSnapshot` 8–11 (`service_prices`, `discount_tiers`, `discount_policy`,
       `order_defaults`) + delta entity'lari — backend'da bajarildi (kontrakt 1.1, decimal matn). Go: mapping (2.17).
-- [~] 0.12 **Backend bilan (P2):** `CatalogFason` (12) + delta `fason` (bo'lak o'zgarsa butun fason) — backend'da bajarildi. Go: mapping (2.17).
-- [~] 0.13 **Backend bilan (P3):** `CatalogPrompt` (13) + delta `prompt` — backend'da bajarildi. Go: mapping (2.18).
+- [x] 0.12 **Backend bilan (P2):** `CatalogFason` (12) + delta `fason` (bo'lak o'zgarsa butun fason) — backend'da bajarildi. Go: mapping (2.17).
+- [x] 0.13 **Backend bilan (P3):** `CatalogPrompt` (13) + delta `prompt` — backend'da bajarildi. Go: mapping (2.18).
 - [x] 0.14 **Backend bilan (P4, P5, P7, P10):** `GO-CONTRACT.md` 1.1 da yozildi va Django'da amalga oshirildi:
       `kind="stage"` → `Conversation.stage` (Celery); `context` = `role`, `customer_mode`, `conversation_id`;
       `Usage.cost_*` faqat Django (Go `0`); `action="FULL_RESYNC"` (katta harf, entity `catalog`, stream yopiladi).
@@ -103,12 +103,12 @@
 
 ### 1.C Qidiruv
 
-- [ ] 1.12 `curtains/search.go` — `SearchQuery` (TZ §3.1 maydonlari), filtr (`kind` qoidasi: `per_sqm` ↔ fabric,
+- [x] 1.12 `curtains/search.go` — `SearchQuery` (TZ §3.1 maydonlari), filtr (`kind` qoidasi: `per_sqm` ↔ fabric,
       `per_piece/per_meter` + `accessories` kategoriya ↔ accessory; `is_active`; `max_price`; `segment`),
       skorlash (xona +3, uslub +3, bezak +2, shaffoflik +2, segment +2, rang +1), deterministik tartib, `why` yig'ish.
       *Qabul:* `search_test.go` — tartib, teng ball hal qilinishi, `kind` ajratish, `limit`, bo'sh natija.
-- [ ] 1.13 `curtains/search_colors.go` — rang sinonimlari (uz lotin/kirill/ru/en) + hex ΔE. 100% test.
-- [ ] 1.14 `search_bench_test.go` — 10k mahsulotda ≤ 5 ms.
+- [x] 1.13 `curtains/search_colors.go` — rang sinonimlari (uz lotin/kirill/ru/en) + hex ΔE. 100% test.
+- [x] 1.14 `search_bench_test.go` — 10k mahsulotda ≤ 5 ms.
 
 ### 1.D Narx (price_quote)
 
@@ -139,7 +139,7 @@
 - [ ] 1.24 `llm/usage.go` — `Usage(msg) (Usage, bool)` provider'ga xos (`deepseek`, `openai`, `claude`); `chat.go` da
       har `ask()` dan keyin yig'iladi, `done` event'iga qo'yiladi (`latency_ms`, `tool_calls`).
       *Qabul:* `usage_test.go` — har provider `Extra` shakli uchun.
-- [ ] 1.25 `curtains/state.go` — `SessionState`, `Stage` const, `Apply(toolName, args)` (tool chaqiruvidan yangilash),
+- [x] 1.25 `curtains/state.go` — `SessionState`, `Stage` const, `Apply(toolName, args)` (tool chaqiruvidan yangilash),
       `NextQuestion()`, `PromptBlock()` (≤ 400 belgi). `session.Store` ga `State/SetState`.
       *Qabul:* `state_test.go` — stage o'tishlari, orqaga qaytish, `NextQuestion` ketma-ketligi (TZ §3.1 tartibi).
 - [ ] 1.26 `chat.go` minimal ulash (ruxsat etilgan kengaytma): tool bajarilgach `state.Apply`, javob oxirida `KindStage`,
@@ -165,13 +165,13 @@
 
 ### 1.I Katalog sync klienti (Django → Go)
 
-- [ ] 1.32 `backend/conn.go` — bitta `ClientConn`, keepalive, `x-service-token` per-RPC credentials, `x-request-id`.
-- [ ] 1.33 `backend/catalog_sync.go` — `Snapshot` sahifalab (`page_token`) → `ApplySnapshot`; `Watch(from_version)` goroutine;
+- [x] 1.32 `backend/conn.go` — bitta `ClientConn`, keepalive, `x-service-token` per-RPC credentials, `x-request-id`.
+- [x] 1.33 `backend/catalog_sync.go` — `Snapshot` sahifalab (`page_token`) → `ApplySnapshot`; `Watch(from_version)` goroutine;
       backoff 1s→30s + jitter; `ErrVersionGap`/`full_resync` → snapshot; metrikalar `alora_catalog_version/age/stale`,
       `alora_catalog_watch_connected`. `backend/mapping.go` — `pb.Catalog*` → `curtains.*` (decimal parse).
       *Qabul:* `catalog_sync_test.go` — fake Django server (`bufconn`): snapshot 3 sahifa; delta oqimi; uzilish → qayta ulanish → snapshot;
       gap → snapshot.
-- [ ] 1.34 `/readyz` — snapshot tugamaguncha 503; `Chat` → `UNAVAILABLE` + o'zbekcha xabar.
+- [x] 1.34 `/readyz` — snapshot tugamaguncha 503; `Chat` → `UNAVAILABLE` + o'zbekcha xabar.
 
 ### 1.J gRPC transport
 
