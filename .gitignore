@@ -3,3 +3,5 @@ tmp/
 .env
 coverage.out
 *.test
+.idea/
+.vscode/

@@ -1,0 +1,504 @@
+// Alora — Umumiy gRPC shartnomasi (Django ↔ Go)
+// Yagona manba: shu fayl ikkala repoda (Django va Go) ishlatiladi.
+// O'zgarishlar faqat bu faylga kiritiladi, keyin ikkala taraf qayta generatsiya qiladi.
+// Versiya: v1 (kontrakt 1.1 — 2026-09-13: pricing/fason/prompt sinxroni, stage event)
+
+syntax = "proto3";
+
+package alora.v1;
+
+option java_package = "alora.grpc";
+option go_package   = "github.com/muhammadvadud/alora-agent/gen/alorav1;alorav1";
+
+// ──────────────────────────────────────────────
+// Bo'sh xabarlar
+// ──────────────────────────────────────────────
+
+message Empty {}
+
+// ──────────────────────────────────────────────
+// Agent servisi (Django → Go: chat va ovoz)
+// ──────────────────────────────────────────────
+
+service Agent {
+  // Asosiy chat: server-streaming — Go har event'ni alohida yuboradi.
+  rpc Chat(ChatRequest) returns (stream ChatEvent);
+
+  // Ovozli suhbat: ikki tomonlama streaming (audio kirish ↔ audio+matn chiqish).
+  rpc VoiceChat(stream VoiceChunk) returns (stream VoiceEvent);
+
+  // Sessiya kontekstini tozalash.
+  rpc ResetSession(ResetRequest) returns (ResetResponse);
+
+  // Go agentning sog'lig'ini tekshirish.
+  rpc Health(Empty) returns (HealthResponse);
+}
+
+message ChatRequest {
+  // Sessiya identifikatsiyasi — bir suhbat davomida doimiy.
+  string session_id = 1;
+  // Foydalanuvchi UUID si.
+  string user_id = 2;
+  // Tenant (do'kon) UUID si.
+  string tenant_id = 3;
+  // Foydalanuvchi xabari (matn).
+  string message = 4;
+  // Interfeys tili: uz yoki ru.
+  string locale = 5;
+  // Qo'shimcha kontekst. Django kafolatlaydigan kalitlar:
+  //   role            — employee | manager | admin (chegirma chegarasi uchun)
+  //   customer_mode   — "0" | "1" (qurilma mijoz qo'lida: tannarx/ichki izoh aytilmaydi)
+  //   conversation_id — Django Conversation UUID si (UsageRequest/LogMessage uchun)
+  //   message_id      — Django'da yaratilgan foydalanuvchi xabari UUID si (idempotent usage)
+  //   prompt_version  — ixtiyoriy, A/B uchun aniq system prompt versiyasi
+  map<string, string> context = 6;
+}
+
+message ChatEvent {
+  // Voqea turi: start | thinking | content | tool_call | tool_args | tool_result |
+  //             products | stage | done | error.
+  //   products — `products` maydoni to'ldiriladi (ilova kartochka chizadi).
+  //   stage    — `content` = suhbat bosqichi (need|recommend|measure|calc|variants|order),
+  //              `result` = qisqa holat JSON; Django `Conversation.stage` ni yangilaydi.
+  string kind = 1;
+  // Matn kontenti (content event'ida to'ldiriladi).
+  string content = 2;
+  // Chaqirilgan tool nomi (tool_call event'ida).
+  string tool = 3;
+  // Tool argumentlari JSON sifatida (tool_args event'ida).
+  string args = 4;
+  // Tool natijasi JSON sifatida (tool_result event'ida).
+  string result = 5;
+  // Xato xabari (error event'ida).
+  string error = 6;
+  // Ishlatilgan tokenlar va xarajat (done event'ida to'ldiriladi).
+  Usage usage = 7;
+  // Tavsiya qilingan mahsulotlar (ilovada kartochka chizish uchun).
+  repeated ProductRef products = 8;
+}
+
+message Usage {
+  // Provider nomi: deepseek, openai, claude.
+  string provider = 1;
+  // Model nomi: deepseek-v4-pro.
+  string model = 2;
+  // Kiritilgan tokenlar soni.
+  int32 prompt_tokens = 3;
+  // Chiqarilgan tokenlar soni.
+  int32 completion_tokens = 4;
+  // Keshlangan tokenlar soni.
+  int32 cached_tokens = 5;
+  // Oqilgan (reasoning) tokenlar soni.
+  int32 reasoning_tokens = 6;
+  // STT (matnga aylantirish) soniyalari.
+  float stt_seconds = 7;
+  // TTS (matndan ovozga) belgilar soni.
+  int32 tts_chars = 8;
+  // Ishlatilgan tool'lar ro'yxati JSON sifatida: ["product_search", "curtain_calculate"].
+  string tool_calls_json = 9;
+  // Javob kechikishi (millisekundlarda).
+  int32 latency_ms = 10;
+  // Xarajat: AQSh dollari. Go 0 yuboradi — Django `ModelPricing` bo'yicha hisoblaydi
+  // (narx jadvali bitta joyda). 0 bo'lmasa Django o'z hisobini ustun qo'yadi.
+  double cost_usd = 11;
+  // Xarajat: O'zbek so'mi (yuqoridagi qoida bilan bir xil).
+  double cost_uzs = 12;
+}
+
+message ProductRef {
+  // Mahsulot varianti UUID si.
+  string variant_id = 1;
+  // Mahsulot nomi.
+  string product_name = 2;
+  // Rang nomi.
+  string color_name = 3;
+  // Rang HEX kodi (masalan: #4A4A4A).
+  string color_hex = 4;
+  // Narx (UZS).
+  double price = 5;
+  // Rasm URL'i (asosiy rasm).
+  string image_url = 6;
+  // SKU kodi.
+  string sku = 7;
+}
+
+message VoiceChunk {
+  // Ovozli ma'lumot bo'lagi (PCM, WAV yoki encoded).
+  bytes audio_data = 1;
+  // Audio formati: pcm_s16le, wav, opus.
+  string format = 2;
+  // Ovoz chastotasi (Hz).
+  int32 sample_rate = 3;
+  // Bo'lak raqami (ketma-ketlik uchun).
+  int64 chunk_sequence = 4;
+  // Oxirgi bo'lak belgisi.
+  bool is_final = 5;
+}
+
+message VoiceEvent {
+  // Voqea turi: audio | text | error | done.
+  string kind = 1;
+  // Matn kontenti (text event'ida).
+  string content = 2;
+  // Ovozli javob (audio event'ida).
+  bytes audio_data = 3;
+  // Audio formati.
+  string audio_format = 4;
+  // Xato xabari.
+  string error = 5;
+  // Chat event bilan bir xil struktura (kelajakda birlashtirish mumkin).
+  ChatEvent chat_event = 6;
+}
+
+message ResetRequest {
+  // Tozalash kerak bo'lgan sessiya ID si.
+  string session_id = 1;
+  // Foydalanuvchi UUID si (ruxsat tekshirish uchun).
+  string user_id = 2;
+}
+
+message ResetResponse {
+  // Muvaffaqiyat holati.
+  bool success = 1;
+  // Qo'shimcha xabar (xato bo'lsa).
+  string message = 2;
+}
+
+message HealthResponse {
+  // Umumiy holat: ok yoki degraded.
+  string status = 1;
+  // Go agent versiyasi.
+  string version = 2;
+  // Joriy aktiv sessiyalar soni.
+  int32 active_sessions = 3;
+  // Oxirgi xatolik (bo'lsa).
+  string last_error = 4;
+}
+
+// ──────────────────────────────────────────────
+// Catalog servisi (Django → Go: ma'lumot yetkazish)
+// ──────────────────────────────────────────────
+
+service Catalog {
+  // Katalogning to'liq nusxasini olish (sahifalab beriladi).
+  // Go ishga tushganda yoki versiyada uzilish sezganda chaqiradi.
+  rpc Snapshot(SnapshotRequest) returns (CatalogSnapshot);
+
+  // Real-vaqt delta oqimi: katalog o'zgarganda Go'ga push qilinadi.
+  rpc Watch(WatchRequest) returns (stream CatalogDelta);
+}
+
+message SnapshotRequest {
+  // Sahifalash uchun belgi (birinchi so'rovda bo'sh).
+  string page_token = 1;
+  // Bir sahifadagi yozuvlar soni (default: 100, max: 1000).
+  int32 page_size = 2;
+}
+
+message CatalogSnapshot {
+  // Katalog versiya raqami (monoton o'sadi).
+  int64 version = 1;
+  // Mahsulotlar ro'yxati (sahifalanadi).
+  repeated CatalogProduct products = 2;
+  // Kategoriyalar (faqat birinchi sahifada, page_token bo'sh bo'lganda).
+  repeated CatalogCategory categories = 3;
+  // Hisoblash qoidalari (faqat birinchi sahifada).
+  repeated CatalogCalcRule calc_rules = 4;
+  // Bilimlar bazasi qoidalari (faqat birinchi sahifada).
+  repeated CatalogKnowledgeRule knowledge_rules = 5;
+  // Keyingi sahifa belgisi (bo'sh = oxirgi sahifa).
+  string next_page_token = 6;
+  // Jami yozuvlar soni (progress ko'rsatish uchun).
+  int32 total_count = 7;
+
+  // ── Kontrakt 1.1 qo'shimchalari. Mahsulotdan boshqa hamma ro'yxat (3–5 va 8–13)
+  //    faqat BIRINCHI sahifada to'ldiriladi — Go ularni birinchi sahifadan oladi. ──
+
+  // Xizmat narxlari (tikuv, tasma, ilgich, montaj, yetkazish, karniz...).
+  repeated CatalogServicePrice service_prices = 8;
+  // Summaga qarab o'sadigan chegirma bosqichlari.
+  repeated CatalogDiscountTier discount_tiers = 9;
+  // Qo'lda chegirma siyosati (rol chegaralari).
+  CatalogDiscountPolicy discount_policy = 10;
+  // Buyurtma standart qiymatlari (avans, yetkazish, muddat).
+  CatalogOrderDefaults order_defaults = 11;
+  // Fason shablonlari (bo'laklar ulushi va koeffitsienti bilan).
+  repeated CatalogFason fasons = 12;
+  // Joriy system prompt versiyasi.
+  CatalogPrompt prompt = 13;
+}
+
+message CatalogServicePrice {
+  // Kalit: sewing | tape | hook | install | delivery | cornice ...
+  string key = 1;
+  string name = 2;
+  // Narx (UZS), decimal matn ko'rinishida: "12500.00" — aniqlik yo'qolmasin.
+  string price = 3;
+  // per_sqm | per_meter | per_piece.
+  string unit = 4;
+  bool is_active = 5;
+}
+
+message CatalogDiscountTier {
+  string id = 1;
+  // Minimal summa (UZS), decimal matn: "5000000.00".
+  string min_amount = 2;
+  // Foiz, decimal matn: "3.00".
+  string percent = 3;
+  bool is_active = 4;
+}
+
+message CatalogDiscountPolicy {
+  // Xodim uchun qo'lda chegirma chegarasi, decimal matn: "5.00".
+  string manual_max_percent_employee = 1;
+  // Menejer/admin uchun, decimal matn: "15.00".
+  string manual_max_percent_manager = 2;
+  // true — qo'lda chegirma bosqichli chegirma ustiga qo'shiladi; false — kattasi olinadi.
+  bool stack_with_tier = 3;
+}
+
+message CatalogOrderDefaults {
+  // Avans foizi, decimal matn: "50.00".
+  string prepayment_percent = 1;
+  // Yetkazish narxi (UZS), decimal matn: "30000.00".
+  string delivery_amount = 2;
+  // Bajarish muddati (kun).
+  int32 deadline_days = 3;
+}
+
+message CatalogFasonPart {
+  string id = 1;
+  // portyera | tul | lambrekan | kant | dekor | astar.
+  string role = 2;
+  string name = 3;
+  // Karniz uzunligidan ulush (0..1), decimal matn: "1.000".
+  string width_share = 4;
+  // Umumiy balandlikdan ulush (0..1), decimal matn: "0.150".
+  string height_share = 5;
+  // Standart burma koeffitsienti, decimal matn: "2.500".
+  string default_coef = 6;
+  int32 sort_order = 7;
+}
+
+message CatalogFasonAccessory {
+  string id = 1;
+  // Aksessuar kategoriyasi (slug): podxvat | gul | kisti | bahroma ...
+  string category = 2;
+  // Standart miqdor, decimal matn: "2.000".
+  string default_qty = 3;
+  // Miqdor formulasi: "" | per_side | per_meter (bo'sh — default_qty).
+  string qty_formula = 4;
+}
+
+message CatalogFason {
+  string id = 1;
+  string name = 2;
+  // Uslub kodi (classic, modern, ...), bo'sh — hammasiga mos.
+  string style = 3;
+  // Xona kodlari ro'yxati (living, bedroom, ...), bo'sh — hammasiga mos.
+  repeated string rooms = 4;
+  string image_url = 5;
+  int32 part_count = 6;
+  repeated CatalogFasonPart parts = 7;
+  repeated CatalogFasonAccessory accessories = 8;
+}
+
+message CatalogPrompt {
+  // Versiya raqami (Django PromptVersion.version).
+  int32 version = 1;
+  // System prompt matni.
+  string content = 2;
+  // Yangilangan vaqt, RFC3339.
+  string updated_at = 3;
+}
+
+message CatalogProduct {
+  string id = 1;
+  string category_id = 2;
+  string name = 3;
+  string code = 4;
+  string description = 5;
+  string fabric_type = 6;
+  string pattern = 7;
+  string style = 8;
+  string transparency = 9;
+  double density = 10;
+  string composition = 11;
+  string care = 12;
+  repeated string recommended_rooms = 13;
+  double recommended_coef = 14;
+  double default_width_m = 15;
+  bool is_sewing_required = 16;
+  string segment = 17;
+  // JSON teglar.
+  string tags_json = 18;
+  // Variantlar.
+  repeated CatalogVariant variants = 19;
+  // Rasmlar URLs.
+  repeated string image_urls = 20;
+}
+
+message CatalogVariant {
+  string id = 1;
+  string product_id = 2;
+  string sku = 3;
+  string color_name = 4;
+  string color_hex = 5;
+  double width_m = 6;
+  double price = 7;
+  string price_unit = 8;
+  double old_price = 9;
+  bool is_active = 10;
+}
+
+message CatalogCategory {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string parent_id = 4;
+  int32 sort_order = 5;
+}
+
+message CatalogCalcRule {
+  string key = 1;
+  double value = 2;
+  string unit = 3;
+  string description = 4;
+  // JSON shart: {"style": "classic"} — bo'sh bo'lsa umumiy.
+  string applies_to_json = 5;
+}
+
+message CatalogKnowledgeRule {
+  string id = 1;
+  string kind = 2;
+  // JSON shart: {"room": "wedding", "style": "classic"}.
+  string condition_json = 3;
+  string recommendation = 4;
+  int32 priority = 5;
+}
+
+message WatchRequest {
+  // Qaysi versiyadan boshlash kerak (oxirgi yetib kelgan versiya).
+  int64 from_version = 1;
+  // Qaysi tenant uchun (bo'sh = hammasi).
+  string tenant_id = 2;
+}
+
+message CatalogDelta {
+  // Yangi versiya raqami.
+  int64 version = 1;
+  // O'zgarayotgan subyekt turi:
+  //   product | variant | category | calc_rule | knowledge_rule |
+  //   service_price | discount_tier | discount_policy | order_defaults | fason | prompt |
+  //   catalog (faqat FULL_RESYNC bilan).
+  // `fason` — FasonPart/FasonAccessory o'zgarganda ham butun fason yuboriladi.
+  // `variant` — payload'da `product_id` bor; Go shu mahsulot ichida almashtiradi.
+  string entity = 2;
+  // O'zgarayotgan yozuv UUID si (discount_policy/order_defaults/prompt uchun ham bor).
+  string entity_id = 3;
+  // Amal turi: create | update | delete | FULL_RESYNC.
+  // FULL_RESYNC — Go `from_version` juda eski: Watch yopiladi, Go Snapshot'ni
+  // qayta oladi va yangi versiya bilan Watch'ni qayta ochadi.
+  string action = 4;
+  // Qaysi tenant tegishli (global obyektlar uchun bo'sh).
+  string tenant_id = 5;
+  // Yangilangan ma'lumot (create/update uchun) — snapshot'dagi mos Catalog* xabarining
+  // JSON ko'rinishi (proto JSON, maydon nomlari snake_case). delete'da bo'sh.
+  string payload_json = 6;
+}
+
+// ──────────────────────────────────────────────
+// Backend servisi (Go → Django: yozish, asinxron)
+// ──────────────────────────────────────────────
+
+service Backend {
+  // Ishlatilgan tokenlar/xarajat haqida hisobot.
+  rpc ReportUsage(UsageRequest) returns (Ack);
+
+  // Buyurtma qoralamasini saqlash (AI tomonidan yaratilgan).
+  rpc SaveOrderDraft(OrderDraftRequest) returns (OrderDraftResponse);
+
+  // Suhbat xabarini saqlash (tarix uchun).
+  rpc LogMessage(MessageLogRequest) returns (Ack);
+}
+
+message UsageRequest {
+  // Sessiya ID si.
+  string session_id = 1;
+  // Foydalanuvchi UUID si.
+  string user_id = 2;
+  // Tenant UUID si.
+  string tenant_id = 3;
+  // Suhbat UUID si (Django'dagi Conversation).
+  string conversation_id = 4;
+  // Xabar UUID si (Django'dagi Message).
+  string message_id = 5;
+  // Ishlatilgan model haqida ma'lumot.
+  Usage usage = 6;
+}
+
+message OrderDraftRequest {
+  // Sessiya ID si.
+  string session_id = 1;
+  // Foydalanuvchi UUID si.
+  string user_id = 2;
+  // Tenant UUID si.
+  string tenant_id = 3;
+  // Suhbat UUID si.
+  string conversation_id = 4;
+  // Mijoz ismi.
+  string customer_name = 5;
+  // Mijoz telefoni.
+  string customer_phone = 6;
+  // Manzil.
+  string address = 7;
+  // Buyurtma tarkibi JSON sifatida. Sxema `tests/fixtures/calc_cases.json` dagi `input`
+  // bilan bir xil (Django `create_order_from_draft` payload'i):
+  //   {"measurements":[{"length":"3.000","height":"2.500",
+  //                     "parts":[{"variant_id":"...","role":"portyera","width_m":"3.000",
+  //                               "height_m":"2.500","coef":"2.500"}],
+  //                     "accessories":[{"variant_id":"...","qty":"2"}]}],
+  //    "services":["sewing","tape","hook"], "delivery":true, "discount_percent":"0"}
+  // Sonlar decimal matn.
+  string items_json = 8;
+  // Eslatma.
+  string note = 9;
+}
+
+message OrderDraftResponse {
+  // Yaratilgan buyurtma UUID si.
+  string order_id = 1;
+  // Buyurtma raqami: ALR-2026-000123.
+  string order_number = 2;
+  // Muvaffaqiyat holati.
+  bool success = 3;
+  // Xato xabari.
+  string error = 4;
+}
+
+message MessageLogRequest {
+  // Sessiya ID si.
+  string session_id = 1;
+  // Suhbat UUID si.
+  string conversation_id = 2;
+  // Xabar roli: user | assistant | tool | system.
+  string role = 3;
+  // Xabar matni.
+  string content = 4;
+  // Tool chaqiruvlari JSON.
+  string tool_calls_json = 5;
+  // Tool natijalari JSON.
+  string tool_result_json = 6;
+  // Ovozli xabar URL'i.
+  string audio_url = 7;
+  // Tokenlar soni.
+  int32 tokens_in = 8;
+  int32 tokens_out = 9;
+}
+
+message Ack {
+  // Muvaffaqiyat holati.
+  bool success = 1;
+  // Qo'shimcha xabar.
+  string message = 2;
+}
