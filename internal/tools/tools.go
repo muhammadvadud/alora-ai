@@ -20,12 +20,19 @@ type StateStore interface {
 	SetState(ctx context.Context, sessionID string, st curtains.SessionState) error
 }
 
+// Orders — buyurtma qoralamasini Django'ga saqlash (rules §9.4). Sinxron, retry yo'q
+// (dublikat buyurtma xavfi — ADR-008). backend.OrderClient shu interfeysni qanoatlantiradi.
+type Orders interface {
+	SaveOrderDraft(ctx context.Context, d curtains.OrderDraft) (curtains.OrderDraftResult, error)
+}
+
 // Deps — tool'lar uchun bog'liqliklar (main.go beradi). Global holat yo'q.
 type Deps struct {
 	Catalog *curtains.Catalog
 	Calc    curtains.Calculator // Django CalcPreview klienti
 	State   StateStore
 	Clock   curtains.Clock
+	Orders  Orders // buyurtma qoralamasini Django'ga yozish (nil bo'lsa order_draft xato qaytaradi)
 }
 
 // Alora — barcha domen tool'lari bir joyda (main.go shu ro'yxatni register qiladi).
@@ -35,6 +42,8 @@ func Alora(d Deps) []tool.BaseTool {
 		ProductSearch(d),
 		CurtainCalculate(d),
 		PriceQuote(d),
+		BuildOptions(d),
+		OrderDraft(d),
 		SetContext(d),
 	}
 }
