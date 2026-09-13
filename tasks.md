@@ -6,7 +6,7 @@
 > Har bir ish tugagach shu fayl **o'sha ishning commit'i ichida** yangilanadi.
 > Har task uchun "Qabul" — nima o'tsa bajarilgan hisoblanadi (rules.md §17.5 DoD).
 
-**Umumiy holat:** 83 / 112 bajarildi · golden 20/20, yuklama 50 sessiya ok, VoiceChat oqimi (fake STT/TTS) · API kalit kutayotganlar: 1.43, 1.44 SSE, 2.21, 3.2/3.3, 3.7 live
+**Umumiy holat:** 86 / 112 bajarildi · LLM fallback, kontrakt 1.1–1.4 live tekshirilgan, docs yangilangan · API kalit kutayotganlar: 1.43, 1.44 SSE, 2.21, 3.2/3.3, 3.7/3.8 live
 
 **Bosqich xaritasi:** 0 Poydevor (1 hafta) → 1 MVP (3–4 hafta) → 2 To'liq sotuv sikli (3 hafta) → 3 Ovoz (2–3 hafta) → 4 Sayqal (davomiy)
 
@@ -243,9 +243,9 @@
 
 ### 2.E Sinxron kengaytmalar (proto P1–P3 kelgach)
 
-- [ ] 2.17 `backend/mapping.go` — `service_prices`, `discount_tiers`, `discount_policy`, `order_defaults`, `fasons`, `prompt` →
+- [x] 2.17 `backend/mapping.go` — `service_prices`, `discount_tiers`, `discount_policy`, `order_defaults`, `fasons`, `prompt` →
       `Catalog`; delta entity'lari. 1.15 dagi stub'lar olib tashlanadi. *Qabul:* fake server bilan sync testi kengaytirildi.
-- [ ] 2.18 Prompt Django versiyasidan (`catalog.prompt`), `prompt` delta → keyingi so'rovdan yangi prompt; log `info` versiya.
+- [x] 2.18 Prompt Django versiyasidan (`catalog.prompt`), `prompt` delta → keyingi so'rovdan yangi prompt; log `info` versiya.
 - [ ] 2.19 Katalog "stale" → `KindStage`/`done` da `warnings` + Django'ga `LogMessage` `kind=warning`? (kelishiladi) — hozircha metrika + log.
 
 ### 2.F Sifat
@@ -282,7 +282,7 @@
 
 ## Bosqich 4 — Sayqal (davomiy)
 
-- [ ] 4.1 Fallback provider (`fallback_provider: claude`) — 2 ketma-ket xato → o'sha navbat qayta; `usage.provider` to'g'ri;
+- [x] 4.1 Fallback provider (`fallback_provider: claude`) — 2 ketma-ket xato → o'sha navbat qayta; `usage.provider` to'g'ri;
       `alora_llm_fallback_total`. *Qabul:* mock provider xato → fallback ishladi testi.
 - [ ] 4.2 Prompt A/B: `context["prompt_version"]` bilan Django tanlagan versiyani ishlatish (bir nechta versiya cache'da).
 - [ ] 4.3 mTLS (`grpc.tls` bo'limi, sertifikat ENV yo'llari), `docs/DEPLOY.md`.
