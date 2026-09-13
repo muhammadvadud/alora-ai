@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/muhammadvadud/alora-agent/internal/agent"
+	"github.com/muhammadvadud/alora-ai/internal/agent"
 )
 
 const sessionID = "cli"

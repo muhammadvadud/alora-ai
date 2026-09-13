@@ -389,7 +389,7 @@ qo'lda ReAct sikli · tarixga butun navbat yoziladi · `trimHistory` faqat User 
 8. `ResetSession`: `store.Reset` + `state` tozalash; `user_id` sessiya egasiga mos bo'lmasa
    `PERMISSION_DENIED`.
 9. **Proto generatsiya:** `buf generate` (`buf.gen.yaml`: `protoc-gen-go`, `protoc-gen-go-grpc`,
-   versiyalar pin). `go_package` = `github.com/muhammadvadud/alora-agent/gen/alorav1;alorav1` — backend
+   versiyalar pin). `go_package` = `github.com/muhammadvadud/alora-ai/gen/alorav1;alorav1` — backend
    proto'sida shu qiymat bo'lishi kerak (§18). CI `buf lint` + `buf breaking --against` (backend main).
 
 ---
@@ -573,7 +573,7 @@ yangi maydon raqamlari, eski o'chirilmaydi).
 | P3 | System prompt sinxroni yo'q | TZ §4 "Django admin'da versiyalanadi" | `CatalogPrompt prompt = 13 {int32 version; string content; string updated_at}` + delta entity `prompt` |
 | P4 | `ChatEvent` da `stage` yo'q | Manager suhbat bosqichini ko'rishi (`Conversation.stage`) | `kind="stage"` (string, yangi enum qiymati) + `content` = stage; Django gateway shu kind'ni `Conversation.stage` ga yozadi va mobilga uzatadi |
 | P5 | `ChatRequest.context` da `role` yo'q (hujjatlashtirilmagan) | `price_quote` chegirma chegarasi | Django `context["role"] = employee|manager|admin`, `context["customer_mode"] = "0|1"` yuboradi — `GO-CONTRACT.md` ga yoziladi |
-| P6 | `go_package = "alora/gen/alora.v1"` — Go'da yaroqsiz import yo'li | `buf generate` | `option go_package = "github.com/muhammadvadud/alora-agent/gen/alorav1;alorav1";` |
+| P6 | `go_package = "alora/gen/alora.v1"` — Go'da yaroqsiz import yo'li | `buf generate` | `option go_package = "github.com/muhammadvadud/alora-ai/gen/alorav1;alorav1";` |
 | P7 | `Usage.cost_usd/cost_uzs` — kim hisoblaydi? | Bir joyda (`ModelPricing` Django'da) | Go `0` yuboradi, Django hisoblaydi — `GO-CONTRACT.md` ga yoziladi |
 | P8 | Chiqindi ta'rifi: Django "zapas", TZ "rulon eni/panel" | Etalon bir xil bo'lishi | Go Django ta'rifini oladi; panel hisobi `cut` — faqat ogohlantirish (ADR-002) |
 | P9 | `calc_cases.json` sinxron nusxasi | Ikki repo bir faylni ishlatadi | `scripts/sync_fixtures.sh` + CI sha256 tekshiruvi |

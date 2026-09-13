@@ -27,13 +27,13 @@ linters:
               desc: "curtains domen qatlami Eino'ga bog'lanmaydi"
             - pkg: google.golang.org/grpc
               desc: "curtains domen qatlami gRPC'ga bog'lanmaydi"
-            - pkg: github.com/muhammadvadud/alora-agent/gen
+            - pkg: github.com/muhammadvadud/alora-ai/gen
               desc: "curtains domen qatlami generated proto'ga bog'lanmaydi"
         tools:
           files:
             - "**/internal/tools/**/*.go"
           deny:
-            - pkg: github.com/muhammadvadud/alora-agent/gen
+            - pkg: github.com/muhammadvadud/alora-ai/gen
               desc: "tools adapteri generated proto'ga bog'lanmaydi"
   exclusions:
     generated: lax

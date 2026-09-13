@@ -8,7 +8,7 @@ import (
 	"github.com/cloudwego/eino/components/tool/utils"
 	"github.com/shopspring/decimal"
 
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
 
 // PriceQuote — oxirgi hisob (LastCalc) ustiga xizmatlar, chegirma, avans (rules §5.7, tasks 1.15).

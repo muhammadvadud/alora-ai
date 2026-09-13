@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/muhammadvadud/alora-agent/gen/alorav1"
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/gen/alorav1"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
 
 func TestMapping_DoubleAndDecimalRemainExact(t *testing.T) {

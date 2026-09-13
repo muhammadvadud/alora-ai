@@ -13,8 +13,8 @@ import (
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
 
-	"github.com/muhammadvadud/alora-agent/internal/llm"
-	"github.com/muhammadvadud/alora-agent/internal/session"
+	"github.com/muhammadvadud/alora-ai/internal/llm"
+	"github.com/muhammadvadud/alora-ai/internal/session"
 )
 
 // Chat — qo'lda yozilgan ReAct sikli: model.Stream() ni o'qib, matnni JONLI stream qiladi,

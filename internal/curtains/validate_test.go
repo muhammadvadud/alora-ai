@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
 	"github.com/shopspring/decimal"
 )
 

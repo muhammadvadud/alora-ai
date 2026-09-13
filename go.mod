@@ -1,4 +1,4 @@
-module github.com/muhammadvadud/alora-agent
+module github.com/muhammadvadud/alora-ai
 
 go 1.26.4
 

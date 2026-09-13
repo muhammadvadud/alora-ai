@@ -5,9 +5,9 @@ import (
 	"net"
 	"testing"
 
-	"github.com/muhammadvadud/alora-agent/gen/alorav1"
-	"github.com/muhammadvadud/alora-agent/internal/agent"
-	grpctransport "github.com/muhammadvadud/alora-agent/internal/transport/grpc"
+	"github.com/muhammadvadud/alora-ai/gen/alorav1"
+	"github.com/muhammadvadud/alora-ai/internal/agent"
+	grpctransport "github.com/muhammadvadud/alora-ai/internal/transport/grpc"
 	grpcgo "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"

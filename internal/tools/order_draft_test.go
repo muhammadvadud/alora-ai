@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
 
 // quoteFixture — price_quote natijasiga teng taklif (LastQuote); items_json sxemasi

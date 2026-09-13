@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/muhammadvadud/alora-agent/gen/alorav1"
-	"github.com/muhammadvadud/alora-agent/internal/config"
+	"github.com/muhammadvadud/alora-ai/gen/alorav1"
+	"github.com/muhammadvadud/alora-ai/internal/config"
 	grpcgo "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )

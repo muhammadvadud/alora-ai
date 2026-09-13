@@ -10,9 +10,9 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/muhammadvadud/alora-agent/internal/agent"
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
-	"github.com/muhammadvadud/alora-agent/internal/session"
+	"github.com/muhammadvadud/alora-ai/internal/agent"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/session"
 )
 
 const (

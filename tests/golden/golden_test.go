@@ -13,10 +13,10 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/muhammadvadud/alora-agent/internal/agent"
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
-	"github.com/muhammadvadud/alora-agent/internal/session"
-	"github.com/muhammadvadud/alora-agent/internal/tools"
+	"github.com/muhammadvadud/alora-ai/internal/agent"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/session"
+	"github.com/muhammadvadud/alora-ai/internal/tools"
 	"gopkg.in/yaml.v3"
 )
 

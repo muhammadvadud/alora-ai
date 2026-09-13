@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/muhammadvadud/alora-agent/internal/config"
+	"github.com/muhammadvadud/alora-ai/internal/config"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 )

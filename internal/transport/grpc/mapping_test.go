@@ -3,7 +3,7 @@ package grpc
 import (
 	"testing"
 
-	"github.com/muhammadvadud/alora-agent/internal/agent"
+	"github.com/muhammadvadud/alora-ai/internal/agent"
 )
 
 func TestToProtoMapsProductsAndUsage(t *testing.T) {

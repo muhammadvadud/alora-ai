@@ -13,9 +13,9 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/muhammadvadud/alora-agent/internal/backend"
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
-	"github.com/muhammadvadud/alora-agent/internal/curtains/curtainstest"
+	"github.com/muhammadvadud/alora-ai/internal/backend"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/curtains/curtainstest"
 )
 
 func dial(t *testing.T) (context.Context, *backend.PricingClient, *curtains.Catalog) {

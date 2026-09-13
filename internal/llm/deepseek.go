@@ -7,7 +7,7 @@ import (
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 
-	"github.com/muhammadvadud/alora-agent/internal/config"
+	"github.com/muhammadvadud/alora-ai/internal/config"
 )
 
 func init() {
