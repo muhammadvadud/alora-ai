@@ -59,7 +59,7 @@
 - [x] 0.18 `docker/Dockerfile` (multi-stage, distroless, non-root, `HEALTHCHECK /readyz`);
       `docker-compose.yml` — `agent` servisi backend compose tarmog'i `alora_net` ga ulanadi
       (`postgres`, `django:9091` ko'rinadi). *Qabul:* `docker compose up agent` → `/healthz` 200.
-- [ ] 0.19 `internal/observability`: `slog` JSON (`request_id`, `session_id`, `user_id` maydonlari),
+- [x] 0.19 `internal/observability`: `slog` JSON (`request_id`, `session_id`, `user_id` maydonlari),
       Prometheus registry, `/metrics`, `/healthz`, `/readyz` (`transport/http` faqat shu).
       *Qabul:* `curl :8081/metrics` da `alora_*` metrikalar ko'rinadi.
 - [x] 0.20 `internal/config` kengaytmasi (TZ §9): `grpc`, `backend`, `catalog`, `stt`, `tts`, `knowledge`, `db`,
@@ -77,23 +77,23 @@
       `DiscountTier`, `DiscountPolicy`, `OrderDefaults`, `Fason{Parts, Accessories}`, `KnowledgeRule`, `PromptVersion`;
       barcha pul/o'lcham `decimal.Decimal`; `PartRole`, `Segment`, `Room`, `Style`, `Pattern`, `Transparency` const'lari
       (`product_search` enum'lari bilan bir xil).
-- [ ] 1.2 `curtains/catalog.go` — `Catalog` + `View` (copy-on-write, `atomic.Pointer`), `ApplySnapshot(page)`,
+- [x] 1.2 `curtains/catalog.go` — `Catalog` + `View` (copy-on-write, `atomic.Pointer`), `ApplySnapshot(page)`,
       `ApplyDelta(d)` (idempotent, version ketma-ketlik tekshiruvi → `ErrVersionGap`), `View().Stale`,
       `Version()`, `SyncedAt()`. *Qabul:* `catalog_test.go` — snapshot sahifalab yig'iladi; delta create/update/delete;
       takroriy version e'tiborsiz; gap → xato; stale `FakeClock` bilan; `-race` bilan parallel o'qish/yozish.
 - [x] 1.3 `curtains/curtainstest/fixture.go` (`//go:build test` emas — `internal/curtains/testutil`) — `NewCatalogFromFixture(calc_cases.json)`:
       `catalog_seed` + `pricing_seed` dan `View`. *Qabul:* fixture'dagi barcha variant ID lar topiladi.
-- [ ] 1.4 `catalog_bench_test.go` — 10k mahsulot × 3 variant generatsiya; xotira ≤ 200 MB, `View()` ≤ 1 µs.
+- [x] 1.4 `catalog_bench_test.go` — 10k mahsulot × 3 variant generatsiya; xotira ≤ 200 MB, `View()` ≤ 1 µs.
 
 ### 1.B Hisob — Django CalcPreview orqali (ADR-009)
 
 - [x] 1.5 `curtains/calc_types.go` — `CalcInput`/`CalcResult` DTO, Django payload/preview JSON bilan bir xil kalitlar (decimal string).
-- [ ] 1.6 `curtains/validate.go` — rules §4.2.3 chegaralari (Σwidth qoidasi yo'q, ADR-010); `ValidationError`.
+- [x] 1.6 `curtains/validate.go` — rules §4.2.3 chegaralari (Σwidth qoidasi yo'q, ADR-010); `ValidationError`.
       *Qabul:* `validate_test.go` — har chegara +/− (L=0.4, 15.1; H; 11 bo'lak; K=0.9/4.1; qty=0; nofaol variant).
 - [!] 1.7 **Backend bilan:** proto `service Pricing { rpc CalcPreview(CalcPreviewRequest) returns (CalcPreviewResponse) }`
       (`payload_json`, `user_role` → `result_json`, `error`, `error_fields_json`); Django servicer `calculate_preview` ni chaqiradi
       (backend tasks 6.19). Go: `import_proto` + `buf generate`.
-- [ ] 1.8 `curtains/calc.go` — `Calculator` interfeysi; `backend/pricing.go` — gRPC klient (timeout 3s, `UNAVAILABLE` da 1 retry,
+- [x] 1.8 `curtains/calc.go` — `Calculator` interfeysi; `backend/pricing.go` — gRPC klient (timeout 3s, `UNAVAILABLE` da 1 retry,
       `ValidationError` mapping). **`calc_test.go` — 20 etalon:** fake Pricing server `expected` qaytaradi; request `payload_json`
       Django `input` bilan bir xil (JSON tenglik), javob `CalcResult` ↔ `expected` Decimal tengligi. *Qabul:* 20/20.
 - [ ] 1.9 `curtains/explain.go` — `explanation`/`warnings`: chiqindi (Django `warnings` + `waste_percent`), koeffitsient −0.5 tejami
