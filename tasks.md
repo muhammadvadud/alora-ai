@@ -6,7 +6,7 @@
 > Har bir ish tugagach shu fayl **o'sha ishning commit'i ichida** yangilanadi.
 > Har task uchun "Qabul" — nima o'tsa bajarilgan hisoblanadi (rules.md §17.5 DoD).
 
-**Umumiy holat:** 24 / 112 bajarildi · Bosqich 0 yopiq (0.10–0.13 Go mapping kutmoqda) · 1.1–1.8 tayyor · go test -race yashil, golangci-lint 0 issues
+**Umumiy holat:** 34 / 112 bajarildi · Bosqich 0 to'liq yopiq · 1.A–1.D, 1.I, 1.25 tayyor · go test -race yashil, golangci-lint 0 issues
 
 **Bosqich xaritasi:** 0 Poydevor (1 hafta) → 1 MVP (3–4 hafta) → 2 To'liq sotuv sikli (3 hafta) → 3 Ovoz (2–3 hafta) → 4 Sayqal (davomiy)
 
