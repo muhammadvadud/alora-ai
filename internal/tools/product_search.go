@@ -44,12 +44,18 @@ func (h *productSearchHandler) do(ctx context.Context, a productSearchArgs) (pro
 	}
 	refs := make([]agent.ProductRef, 0, len(cards))
 	for _, c := range cards {
+		// Kartochka ixcham: faqat LLM tanlash uchun kerakli maydonlar (≤ 2 KB).
+		// PriceDisplay — ayrim ssenariylar uchun formatlangan narx aynan natijada
+		// bo'lishi shart (hallucination tekshiruvi: "85 000 so'm/m²").
+		why := ""
+		if len(c.Why) > 0 {
+			why = c.Why[0] // bitta qisqa sabab, sabablar ro'yxati emas
+		}
 		res.Products = append(res.Products, productCard{
-			ProductID: c.ProductID, VariantID: c.VariantID, Name: c.Name,
-			ColorName: c.ColorName, ColorHex: c.ColorHex,
+			VariantID: c.VariantID, Name: c.Name, ColorName: c.ColorName,
 			Price: c.Price.String(), PriceDisplay: displayMoney(c.Price), PriceUnit: string(c.PriceUnit),
-			WidthM: c.WidthM.String(), FabricType: c.FabricType, Transparency: c.Transparency,
-			Segment: string(c.Segment), ImageURL: c.ImageURL, Why: c.Why,
+			WidthM: c.WidthM.String(), Transparency: c.Transparency,
+			Segment: string(c.Segment), Why: why,
 		})
 		price, _ := c.Price.Float64()
 		refs = append(refs, agent.ProductRef{

@@ -6,7 +6,6 @@ import (
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
-	"github.com/shopspring/decimal"
 
 	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
@@ -71,26 +70,37 @@ func (h *priceQuoteHandler) do(ctx context.Context, a priceQuoteArgs) (priceQuot
 		}
 	}
 
+	// Avans foizi payload bilan Django'ga ketadi — summani Django hisoblaydi (rules §0.2).
+	if a.PrepaymentPct > 0 {
+		in.PrepaymentPercent = dec(a.PrepaymentPct)
+	}
 	res, err := h.d.Calc.Calculate(ctx, in)
 	if err != nil {
 		return priceQuoteResult{Error: calcErrorText(err)}, nil
 	}
 
-	prepayPct := dec(a.PrepaymentPct)
-	if a.PrepaymentPct <= 0 {
-		if defs, ok := v.OrderDefaults(); ok {
-			prepayPct = defs.PrepaymentPercent
-		}
+	t, lines, services := compactCalc(v, res)
+	if res.PrepaymentAmount != nil {
+		t.Prepayment = res.PrepaymentAmount.String()
 	}
-	prepayment := res.Total.Mul(prepayPct).Div(decimal.NewFromInt(100)).Round(2)
+	if res.BalanceAmount != nil {
+		t.Balance = res.BalanceAmount.String()
+	}
+	disp := displayTotals(res)
+	// Avans/qoldiq ham FORMATLANGAN holda chiqadi — LLM "2 535 000 so'm" matnini
+	// o'zi tuzmaydi, display'dan aynan oladi (rules §0.2, hallucination tekshiruvi).
+	if res.PrepaymentAmount != nil && res.BalanceAmount != nil {
+		disp["prepayment"] = displayMoney(*res.PrepaymentAmount)
+		disp["balance"] = displayMoney(*res.BalanceAmount)
+	}
 
 	out := priceQuoteResult{
-		Quote:      toAny(res),
-		Display:    displayTotals(res),
-		Prepayment: displayMoney(prepayment),
-		Balance:    displayMoney(res.Total.Sub(prepayment)),
-		Warnings:   append(warnings, res.Warnings...),
-		Stale:      stale,
+		Totals:   t,
+		Lines:    lines,
+		Services: services,
+		Display:  disp,
+		Warnings: append(warnings, res.Warnings...),
+		Stale:    stale,
 	}
 	if stale {
 		out.Warnings = append(out.Warnings, warnStale)

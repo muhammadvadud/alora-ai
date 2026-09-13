@@ -70,7 +70,10 @@ type CalcInput struct {
 	Services        []string
 	Delivery        bool
 	DiscountPercent decimal.Decimal
-	Role            UserRole
+	// PrepaymentPercent — avans foizi; nol bo'lsa Django OrderDefaults'dan oladi.
+	// Avans SUMMASI Django'da hisoblanadi (rules §0.2), Go faqat ko'rsatadi.
+	PrepaymentPercent decimal.Decimal
+	Role              UserRole
 }
 
 // ── Chiqish (Django preview JSON kalitlari bilan bir xil) ──────────────────
@@ -129,8 +132,21 @@ type CalcResult struct {
 	TierDiscountPercent   decimal.Decimal     `json:"tier_discount_percent"`
 	ManualDiscountPercent decimal.Decimal     `json:"manual_discount_percent"`
 	DiscountPercent       decimal.Decimal     `json:"discount_percent"`
-	DiscountAmount        decimal.Decimal     `json:"discount_amount"`
-	DeliveryAmount        decimal.Decimal     `json:"delivery_amount"`
-	Total                 decimal.Decimal     `json:"total"`
-	Warnings              []string            `json:"warnings"`
+	// Avans/qoldiq — kontrakt 1.4.2 (Django hisoblaydi); eski backend → nil.
+	PrepaymentPercent *decimal.Decimal `json:"prepayment_percent,omitempty"`
+	PrepaymentAmount  *decimal.Decimal `json:"prepayment_amount,omitempty"`
+	BalanceAmount     *decimal.Decimal `json:"balance_amount,omitempty"`
+	DiscountAmount    decimal.Decimal  `json:"discount_amount"`
+	DeliveryAmount    decimal.Decimal  `json:"delivery_amount"`
+	Total             decimal.Decimal  `json:"total"`
+	Warnings          []string         `json:"warnings"`
+
+	// Kontrakt 1.4.1: Django yuqori darajadagi oraliq yig'indilarni ham beradi
+	// (to'liq hisob SessionState'da, UI transportlarida saqlanadi). Pointer —
+	// eski backend ularni yubormasa nil qoladi, yig'indini Go HISOBLAMAYDI
+	// (rules §0.3: formula faqat Django'da), shu sabab JSON'ga ham tushmaydi.
+	PartsTotal       *decimal.Decimal `json:"parts_total,omitempty"`
+	AccessoriesTotal *decimal.Decimal `json:"accessories_total,omitempty"`
+	ServicesTotal    *decimal.Decimal `json:"services_total,omitempty"`
+	MeasurementTotal *decimal.Decimal `json:"measurement_total,omitempty"`
 }

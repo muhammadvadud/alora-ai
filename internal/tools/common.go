@@ -58,6 +58,65 @@ func toAny(v any) any {
 	return out
 }
 
+// compactCalc — LLM'ga qaytariladigan IXCHAM hisob (rules §5: natija ≤ 2 KB).
+// To'liq CalcResult bu yerda chiqarilmaydi, lekin SessionState'da saqlanadi
+// (LastCalc/LastQuote) — hisob hech qaerda yo'qolmaydi. Yig'indilar faqat
+// Django qaytargandagina chiqadi (partLabel, Go hisoblamaydi — rules §0.3).
+func compactCalc(v *curtains.View, r curtains.CalcResult) (*calcTotals, []calcLine, []calcServiceLine) {
+	t := &calcTotals{
+		PartsTotal:       decStr(r.PartsTotal),
+		AccessoriesTotal: decStr(r.AccessoriesTotal),
+		ServicesTotal:    decStr(r.ServicesTotal),
+		DeliveryAmount:   r.DeliveryAmount.String(),
+		DiscountPercent:  r.DiscountPercent.String(),
+		DiscountAmount:   r.DiscountAmount.String(),
+		Subtotal:         r.Subtotal.String(),
+		Total:            r.Total.String(),
+	}
+	lines := make([]calcLine, 0)
+	for i := range r.Measurements {
+		for _, p := range r.Measurements[i].Parts {
+			lines = append(lines, calcLine{
+				Role:      string(p.Role),
+				Name:      partLabel(v, p.VariantID, p.SKU),
+				AreaM2:    p.AreaM2.String(),
+				Coef:      p.Coef.String(),
+				LineTotal: p.LineTotal.String(),
+			})
+		}
+	}
+	services := make([]calcServiceLine, 0, len(r.Services))
+	for _, s := range r.Services {
+		services = append(services, calcServiceLine{Key: s.Key, LineTotal: s.LineTotal.String()})
+	}
+	return t, lines, services
+}
+
+// decStr — kontrakt 1.4.1 oraliq yig'indisi: Django ularni bermasa nil —
+// LLM natijasida bo'sh qoladi (Go hisoblamaydi, rules §0.3).
+func decStr(d *decimal.Decimal) string {
+	if d == nil {
+		return ""
+	}
+	return d.String()
+}
+
+// partLabel — bo'lakning o'qiladigan nomi: mahsulot nomi (katalogdan), bo'lmasa
+// SKU, u ham bo'lmasa variant ID. LLM variantni shu nom bilan eslab qoladi.
+func partLabel(v *curtains.View, variantID, sku string) string {
+	if v != nil {
+		if x, ok := v.Variant(variantID); ok {
+			if p, ok := v.Product(x.ProductID); ok && p.Name != "" {
+				return p.Name
+			}
+		}
+	}
+	if sku != "" {
+		return sku
+	}
+	return variantID
+}
+
 func dec(f float64) decimal.Decimal { return decimal.NewFromFloat(f) }
 
 func decPtr(f float64) *decimal.Decimal {

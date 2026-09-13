@@ -17,6 +17,8 @@ var expectedMetricNames = []string{
 	"alora_tool_seconds",
 	"alora_tool_errors_total",
 	"alora_llm_tokens_total",
+	"alora_llm_cached_tokens_total",
+	"alora_llm_budget_exceeded_total",
 	"alora_llm_errors_total",
 	"alora_llm_fallback_total",
 	"alora_catalog_version",
@@ -33,13 +35,15 @@ var expectedMetricNames = []string{
 func TestMetrics_AllNamesRegistered(t *testing.T) {
 	m, reg := NewMetrics()
 
-	// Vector'lar label qiymati olmaguncha Gather'da chiqmaydi — barcha 17 nomni
+	// Vector'lar label qiymati olmaguncha Gather'da chiqmaydi — barcha 19 nomni
 	// ko'rish uchun har vector'ga bitta misol qiymat beramiz.
 	m.ChatRequests.WithLabelValues("ok").Inc()
 	m.ToolSeconds.WithLabelValues("test_tool").Observe(0.01)
 	m.ToolErrors.WithLabelValues("test_tool").Inc()
 	m.LLMTokens.WithLabelValues("deepseek", "deepseek-v4-pro", "output").Add(1)
 	m.LLMErrors.WithLabelValues("deepseek").Inc()
+	m.LLMCachedTokens.WithLabelValues("deepseek").Add(1)
+	m.LLMBudgetExceeded.WithLabelValues("deepseek").Inc()
 
 	// Gather — registrda RO'YXATDAN OTGAN metrikalarni qaytaradi; nomlar ro'yxati
 	// rules §13.1 bilan bir xil bo'lishi shart.

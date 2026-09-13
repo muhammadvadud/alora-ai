@@ -34,20 +34,16 @@ type productSearchArgs struct {
 }
 
 type productCard struct {
-	ProductID    string   `json:"product_id"`
-	VariantID    string   `json:"variant_id"`
-	Name         string   `json:"name"`
-	ColorName    string   `json:"color_name,omitempty"`
-	ColorHex     string   `json:"color_hex,omitempty"`
-	Price        string   `json:"price"`
-	PriceDisplay string   `json:"price_display"`
-	PriceUnit    string   `json:"price_unit"`
-	WidthM       string   `json:"width_m,omitempty"`
-	FabricType   string   `json:"fabric_type,omitempty"`
-	Transparency string   `json:"transparency,omitempty"`
-	Segment      string   `json:"segment,omitempty"`
-	ImageURL     string   `json:"image_url,omitempty"`
-	Why          []string `json:"why,omitempty"`
+	VariantID    string `json:"variant_id"`
+	Name         string `json:"name"`
+	ColorName    string `json:"color,omitempty"`
+	Price        string `json:"price"`
+	PriceDisplay string `json:"price_display,omitempty"`
+	PriceUnit    string `json:"unit"`
+	WidthM       string `json:"width_m,omitempty"`
+	Transparency string `json:"transparency,omitempty"`
+	Segment      string `json:"segment,omitempty"`
+	Why          string `json:"why,omitempty"`
 }
 
 type productSearchResult struct {
@@ -81,14 +77,45 @@ type curtainCalcArgs struct {
 	RoomName       string          `json:"room_name,omitempty"   jsonschema:"description=xona nomi, masalan mehmonxona"`
 }
 
+// ---- ixcham hisob natijasi (curtain_calculate / price_quote) ----
+// To'liq CalcResult LLM'ga katta (10 bo'lakda 4 KB+) — shuning uchun faqat
+// yakuniy yig'indilar va eng kerakli qatorlar chiqariladi (rules §5: ≤ 2 KB).
+// To'liq hisob SessionState'da (LastCalc/LastQuote) saqlanadi va yo'qotilmaydi.
+
+type calcTotals struct {
+	PartsTotal       string `json:"parts_total,omitempty"`       // kontrakt 1.4.1; eski backend -> bo'sh
+	AccessoriesTotal string `json:"accessories_total,omitempty"` // yuqoridagi kabi
+	ServicesTotal    string `json:"services_total,omitempty"`    // yuqoridagi kabi
+	DeliveryAmount   string `json:"delivery_amount,omitempty"`
+	DiscountPercent  string `json:"discount_percent,omitempty"`
+	DiscountAmount   string `json:"discount_amount,omitempty"`
+	Subtotal         string `json:"subtotal"`
+	Total            string `json:"total"`
+	Prepayment       string `json:"prepayment,omitempty"` // faqat price_quote
+	Balance          string `json:"balance,omitempty"`    // faqat price_quote
+}
+
+type calcLine struct {
+	Role      string `json:"role"`
+	Name      string `json:"name"` // mahsulot nomi; katalogda bo'lmasa SKU
+	AreaM2    string `json:"area_m2"`
+	Coef      string `json:"coef"`
+	LineTotal string `json:"line_total"`
+}
+
+type calcServiceLine struct {
+	Key       string `json:"key"`
+	LineTotal string `json:"line_total"`
+}
+
 type curtainCalcResult struct {
-	RoomName    string   `json:"room_name,omitempty"`
-	Calc        any      `json:"calc,omitempty"`    // Django preview natijasi (measurements, subtotal, total...) o'zgarishsiz
-	Display     any      `json:"display,omitempty"` // o'qiladigan summalar: {"subtotal":"5 382 000 so'm",...}
-	Explanation string   `json:"explanation,omitempty"`
-	Warnings    []string `json:"warnings,omitempty"`
-	Stale       bool     `json:"stale,omitempty"`
-	Error       string   `json:"error,omitempty"`
+	Totals   *calcTotals       `json:"totals,omitempty"`
+	Lines    []calcLine        `json:"lines,omitempty"`
+	Services []calcServiceLine `json:"services,omitempty"`
+	Display  any               `json:"display,omitempty"` // o'qiladigan summalar: {"subtotal":"5 382 000 so'm",...}
+	Warnings []string          `json:"warnings,omitempty"`
+	Stale    bool              `json:"stale,omitempty"`
+	Error    string            `json:"error,omitempty"`
 }
 
 // ---- build_options ----
@@ -103,23 +130,12 @@ type buildOptionsArgs struct {
 }
 
 type buildOptionResult struct {
-	Tier        string              `json:"tier"`
-	Why         string              `json:"why,omitempty"`
-	Parts       []curtainOptionPart `json:"parts,omitempty"`
-	Accessories []calcAccessory     `json:"accessories,omitempty"`
-	Services    []string            `json:"services,omitempty"`
-	Calc        any                 `json:"calc,omitempty"`
-	Display     any                 `json:"display,omitempty"`
-	Total       string              `json:"total,omitempty"`
-	Error       string              `json:"error,omitempty"`
-}
-
-type curtainOptionPart struct {
-	Role      string `json:"role"`
-	VariantID string `json:"variant_id"`
-	WidthM    string `json:"width_m"`
-	HeightM   string `json:"height_m"`
-	Coef      string `json:"coef"`
+	Tier    string   `json:"tier"`
+	Why     string   `json:"why,omitempty"`
+	Total   string   `json:"total,omitempty"` // o'qiladigan yakuniy summa
+	Display any      `json:"display,omitempty"`
+	Lines   []string `json:"lines,omitempty"` // tarkib xulosasi, eng ko'pi 3 qator
+	Error   string   `json:"error,omitempty"`
 }
 
 type buildOptionsResult struct {
@@ -142,13 +158,13 @@ type priceQuoteArgs struct {
 }
 
 type priceQuoteResult struct {
-	Quote      any      `json:"quote,omitempty"` // Django preview: services, subtotal, discount, total
-	Display    any      `json:"display,omitempty"`
-	Prepayment string   `json:"prepayment,omitempty"`
-	Balance    string   `json:"balance,omitempty"`
-	Warnings   []string `json:"warnings,omitempty"`
-	Stale      bool     `json:"stale,omitempty"`
-	Error      string   `json:"error,omitempty"`
+	Totals   *calcTotals       `json:"totals,omitempty"`
+	Lines    []calcLine        `json:"lines,omitempty"`
+	Services []calcServiceLine `json:"services,omitempty"`
+	Display  any               `json:"display,omitempty"` // o'qiladigan summalar, shu jumladan prepayment/balance
+	Warnings []string          `json:"warnings,omitempty"`
+	Stale    bool              `json:"stale,omitempty"`
+	Error    string            `json:"error,omitempty"`
 }
 
 // ---- set_context ----

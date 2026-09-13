@@ -102,6 +102,7 @@ func (t *traceModel) Generate(ctx context.Context, in []*schema.Message, opts ..
 		if msg.ResponseMeta != nil && msg.ResponseMeta.Usage != nil {
 			resp.Usage.Prompt = msg.ResponseMeta.Usage.PromptTokens
 			resp.Usage.Completion = msg.ResponseMeta.Usage.CompletionTokens
+			resp.Usage.Cached = msg.ResponseMeta.Usage.PromptTokenDetails.CachedTokens
 		}
 	}
 	if err != nil {
@@ -143,7 +144,7 @@ func (t *traceModel) drainStream(inner *schema.StreamReader[*schema.Message], wr
 	// (chat.go readStream'dagi naqsh) — argumentlar EOF'da to'liq bo'ladi.
 	calls := map[int]*traceCallAcc{}
 	var order []int
-	prompt, completion := 0, 0
+	prompt, completion, cached := 0, 0, 0
 
 	for {
 		chunk, err := inner.Recv()
@@ -166,6 +167,7 @@ func (t *traceModel) drainStream(inner *schema.StreamReader[*schema.Message], wr
 			if chunk.ResponseMeta != nil && chunk.ResponseMeta.Usage != nil {
 				prompt += chunk.ResponseMeta.Usage.PromptTokens
 				completion += chunk.ResponseMeta.Usage.CompletionTokens
+				cached += chunk.ResponseMeta.Usage.PromptTokenDetails.CachedTokens
 			}
 			for _, tc := range chunk.ToolCalls {
 				idx := 0
@@ -195,7 +197,7 @@ func (t *traceModel) drainStream(inner *schema.StreamReader[*schema.Message], wr
 	t.writeBestEffort(traceResponse{
 		TS: nowIso(), Kind: "response", LatencyMs: sinceMs(start),
 		Content: content.String(), ToolCalls: finalTraceCalls(calls, order),
-		Usage: traceUsage{Prompt: prompt, Completion: completion},
+		Usage: traceUsage{Prompt: prompt, Completion: completion, Cached: cached},
 	})
 }
 
@@ -257,6 +259,10 @@ type traceResponse struct {
 type traceUsage struct {
 	Prompt     int `json:"prompt"`
 	Completion int `json:"completion"`
+	// Cached — provider prefix-keshiga urilgan prompt tokenlar (DeepSeek
+	// prompt_cache_hit_tokens). Xarajat diagnostikasi uchun: buyurtmachi kesh
+	// urishini trace'dan ham ko'radi (metrikadan tashqari).
+	Cached int `json:"cached,omitempty"`
 }
 
 type traceToolCall struct {

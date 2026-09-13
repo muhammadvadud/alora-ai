@@ -18,6 +18,7 @@ type calcPayload struct {
 	Services     []string             `json:"services"`
 	Delivery     bool                 `json:"delivery,omitempty"`
 	Discount     string               `json:"discount_percent,omitempty"`
+	Prepayment   string               `json:"prepayment_percent,omitempty"`
 }
 
 type measurementPayload struct {
@@ -52,6 +53,9 @@ func (in CalcInput) MarshalJSON() ([]byte, error) {
 	}
 	if !in.DiscountPercent.IsZero() {
 		p.Discount = decimalText(in.DiscountPercent)
+	}
+	if !in.PrepaymentPercent.IsZero() {
+		p.Prepayment = decimalText(in.PrepaymentPercent)
 	}
 	for _, m := range in.Measurements {
 		mp := measurementPayload{

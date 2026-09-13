@@ -28,6 +28,7 @@ type llmRun struct {
 	tools          []string
 	content        string
 	toolResults    string
+	unbackedPrice  string
 	stage          string
 	ttft, total    time.Duration
 	tokens         int
@@ -86,7 +87,8 @@ func runLLMScenario(t *testing.T, c alorav1.AgentClient, sc llmScenario, n int) 
 		}
 	}
 	r.total = time.Since(start)
-	r.hallucination = hasHallucinatedPrice(r.content, r.toolResults)
+	r.unbackedPrice = firstUnbackedPrice(r.content, r.toolResults)
+	r.hallucination = r.unbackedPrice != ""
 	return r
 }
 
@@ -112,7 +114,7 @@ func validateLLMRun(sc llmScenario, r llmRun) []string {
 		}
 	}
 	if r.hallucination {
-		problems = append(problems, "tool natijasida asosi bo'lmagan narx: "+r.content)
+		problems = append(problems, "tool natijasida asosi bo'lmagan narx: "+r.unbackedPrice+" — "+r.content)
 	}
 	return problems
 }
@@ -232,14 +234,21 @@ func containsAny(xs, wants []string) bool {
 	return false
 }
 
+// hasHallucinatedPrice — content'dagi har bir summa tool natijalari ichida bo'lishi shart;
+// birinchi asossiz summa qaytariladi (diagnostika uchun — qaysi raqam o'ylab topilgani ko'rinsin).
 func hasHallucinatedPrice(content, results string) bool {
+	return firstUnbackedPrice(content, results) != ""
+}
+
+func firstUnbackedPrice(content, results string) string {
+	resultDigits := onlyDigits(results)
 	for _, price := range liveMoneyRe.FindAllString(content, -1) {
 		digits := onlyDigits(price)
-		if digits != "" && !strings.Contains(onlyDigits(results), digits) {
-			return true
+		if digits != "" && !strings.Contains(resultDigits, digits) {
+			return strings.TrimSpace(price)
 		}
 	}
-	return false
+	return ""
 }
 
 func onlyDigits(s string) string {

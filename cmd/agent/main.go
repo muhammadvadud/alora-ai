@@ -98,10 +98,9 @@ func run() error {
 		}
 	}
 
-	// Tool'lar shu yerda (composition root) ochiq register qilinadi — kim nima
-	// qila oladi, bir joyda ko'rinadi. Handler/DTO/konstruktor: internal/tools.
-	// Alora domen tool'lari (product_search, curtain_calculate, ...) tasks.md 1.E da qo'shiladi.
-	toolList := []tool.BaseTool{tools.Calculator(), tools.Clock()}
+	// Domendan (internal/tools) keladigan tool'lar shu yerda (composition root)
+	// ochiq register qilinadi — kim nima qila oladi, bir joyda ko'rinadi.
+	var toolList []tool.BaseTool
 	var backendConn *grpc.ClientConn
 	var syncer *backend.CatalogSyncer
 	var metrics *observability.Metrics
@@ -203,6 +202,25 @@ func run() error {
 		Model:              cfg.LLM.Model,
 		Fallback:           fallbackModel,
 		FallbackProvider:   cfg.LLM.FallbackProvider,
+		// Bosqichga qarab tool to'plamini kichraytirish (xarajat opt. A):
+		// sessiya holatidagi Stage orqali mos to'plam tanlanadi (tuning: wiring.go).
+		ToolSelector: toolSelectorFor(store),
+		// Bitta Stream ichida yig'ilgan prompt tokenlar chegarasi (xarajat opt. E).
+		PromptTokenBudget: cfg.Agent.PromptTokenBudget,
+		// Keshga urilgan va sarflangan tokenlarni metrikaga yozish (xarajat opt. D).
+		OnUsage: func(u agent.Usage) {
+			if metrics != nil {
+				metrics.LLMTokens.WithLabelValues(u.Provider, u.Model, "input").Add(float64(u.PromptTokens))
+				metrics.LLMTokens.WithLabelValues(u.Provider, u.Model, "output").Add(float64(u.CompletionTokens))
+				metrics.LLMTokens.WithLabelValues(u.Provider, u.Model, "cached").Add(float64(u.CachedTokens))
+				metrics.LLMCachedTokens.WithLabelValues(u.Provider).Add(float64(u.CachedTokens))
+			}
+		},
+		OnBudgetExceeded: func(provider string) {
+			if metrics != nil {
+				metrics.LLMBudgetExceeded.WithLabelValues(provider).Inc()
+			}
+		},
 	})
 	if err != nil {
 		return err

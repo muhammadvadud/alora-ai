@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/cloudwego/eino/components/tool"
+
 	"github.com/muhammadvadud/alora-ai/internal/curtains"
 	"github.com/muhammadvadud/alora-ai/internal/prompt"
 	"github.com/muhammadvadud/alora-ai/internal/session"
@@ -45,5 +47,58 @@ func promptFunc(store session.Store, catalog *curtains.Catalog, fallback string,
 			Base: baseText, State: st, Knowledge: view.Knowledge(), KnowledgeInlineMax: inlineMax,
 			CatalogVersion: view.Version, CatalogStale: view.Stale, Locale: user.Locale, CustomerMode: user.CustomerMode,
 		})
+	}
+}
+
+// stageTools — har bir bosqich uchun ruxsat etilgan tool to'plami (xarajat opt. A).
+// Asosiy qoida: bosqichga tegishli bo'lmagan tool'ni modelga ko'rsatmaslik —
+// schema qancha kichik bo'lsa, prompt token va (DeepSeek'da) kesh shuncha tez.
+// Dizayn:
+//   - need: foydalanuvchi hali nima istagani aniq emas — faqat kontekst yig'ish.
+//   - recommend: katalog tavsiyasi (product_search) + o'lcham/xona tahlili.
+//   - measure/calc/variants/choose: narx/parametr hisobi markazda — curtain_calculate.
+//   - order: buyurtma oqimi — order_draft asosiy, narx/parametr tekshiruv uchun.
+//
+// Har bir to'plamga set_context qo'shilgan (xona/o'lcham ma'lumotlarini olish uchun)
+// va knowledge_lookup faqat dastlabki bosqichlarda — kech bosqichda aniq narx-tavsiya
+// ishlaydi. Muhim noziklik: stagesiz (noto'g'ri) sessiya xavfsiz default oladi.
+func stageTools(stage string) []string {
+	switch stage {
+	case "recommend":
+		return []string{"set_context", "product_search", "fason_lookup", "curtain_calculate", "build_options", "knowledge_lookup"}
+	case "measure", "calc", "variants", "choose":
+		return []string{"curtain_calculate", "price_quote", "build_options", "product_search", "set_context", "order_draft"}
+	case "order":
+		return []string{"order_draft", "price_quote", "curtain_calculate"}
+	default:
+		return []string{"set_context", "product_search", "knowledge_lookup", "fason_lookup"}
+	}
+}
+
+// toolSelectorFor — sessiya Stage'iga qarab Stream uchun tool to'plamini tanlaydi.
+// Selector per-Stream chaqiriladi, Chat xoslashgan to'plamni egallamaydi —
+// bir xil Chat bir nechta sessiyaga parallel xizmat qiladi. Tanlab olingan tool
+// nomi ro'yxatda bo'lmasa (yovuz yoki eski config) hatto yozuv emas, shunchaki
+// o'tkazib yuboriladi — noto'g'ri to'plam butun so'rovni yiqitmasin.
+func toolSelectorFor(store session.Store) func(ctx context.Context, sessionID string, all []tool.BaseTool) []tool.BaseTool {
+	return func(ctx context.Context, sessionID string, all []tool.BaseTool) []tool.BaseTool {
+		st, err := store.State(ctx, sessionID)
+		if err != nil {
+			st = curtains.NewSessionState()
+		}
+		allowed := stageTools(st.Stage.Backend())
+		allowedSet := make(map[string]bool, len(allowed))
+		for _, name := range allowed {
+			allowedSet[name] = true
+		}
+		selected := make([]tool.BaseTool, 0, len(allowed))
+		for _, tt := range all {
+			info, infoErr := tt.Info(ctx)
+			if infoErr != nil || !allowedSet[info.Name] {
+				continue
+			}
+			selected = append(selected, tt)
+		}
+		return selected
 	}
 }

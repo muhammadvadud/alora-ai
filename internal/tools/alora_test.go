@@ -64,7 +64,11 @@ func (f *fakeCalc) Calculate(_ context.Context, in curtains.CalcInput) (curtains
 			WidthM: m.Length, HeightM: m.Height, Coef: d("2.5"), LineTotal: d("5382000")})
 	}
 	res.Measurements = []curtains.MeasurementResult{mr}
-	return res, nil
+	pct := d("50")
+	if !in.PrepaymentPercent.IsZero() {
+		pct = in.PrepaymentPercent
+	}
+	return withPrepayment(res, pct), nil
 }
 
 type memState struct {
@@ -165,8 +169,11 @@ func TestCurtainCalculate_Success(t *testing.T) {
 	if res.Display.(map[string]string)["total"] != "5 382 000 so'm" {
 		t.Fatalf("display: %v", res.Display)
 	}
-	if !strings.Contains(res.Explanation, "chok kerak emas") || !strings.Contains(res.Explanation, "VM-BEJ") {
-		t.Fatalf("explanation: %q", res.Explanation)
+	if res.Totals == nil || res.Totals.Subtotal != "5382000" || res.Totals.Total != "5382000" {
+		t.Fatalf("totals: %+v", res.Totals)
+	}
+	if len(res.Lines) != 1 || res.Lines[0].Name != "Velvet Milano" || res.Lines[0].LineTotal != "5382000" {
+		t.Fatalf("lines: %+v", res.Lines)
 	}
 	if s, _ := st.State(ctx, "s1"); s.LastCalc == nil || s.Stage != curtains.StageCalc || !s.CorniceLengthM.Equal(d("4.2")) {
 		t.Fatalf("state: %+v", s)
@@ -222,8 +229,11 @@ func TestPriceQuote_RequiresCalcAndRespectsRoleLimit(t *testing.T) {
 	if got := strings.Join(calc.last.Services, ","); got != "sewing,tape,hook,install" || !calc.last.Delivery {
 		t.Fatalf("xizmatlar: %s delivery=%v", got, calc.last.Delivery)
 	}
-	if res.Prepayment != "2 691 000 so'm" || res.Balance != "2 691 000 so'm" {
-		t.Fatalf("avans/qoldiq: %s / %s", res.Prepayment, res.Balance)
+	if res.Totals.Prepayment != "2691000" || res.Totals.Balance != "2691000" {
+		t.Fatalf("avans/qoldiq: %+v", res.Totals)
+	}
+	if d := res.Display.(map[string]string); d["prepayment"] != "2 691 000 so'm" || d["balance"] != "2 691 000 so'm" {
+		t.Fatalf("display avans/qoldiq: %v", d)
 	}
 	if len(res.Warnings) == 0 || !strings.Contains(res.Warnings[0], "karniz") {
 		t.Fatalf("karniz ogohlantirishi kutilgan: %v", res.Warnings)
@@ -255,4 +265,13 @@ func TestDisplayMoney(t *testing.T) {
 			t.Errorf("%s: %q != %q", in, got, want)
 		}
 	}
+}
+
+// withPrepayment — Django (kontrakt 1.4.2) kabi avans/qoldiqni natijaga qo'shadi.
+// Bu TEST fake'i: Go ishlab chiqarish kodi bu summalarni hisoblamaydi (rules §0.2).
+func withPrepayment(res curtains.CalcResult, pct decimal.Decimal) curtains.CalcResult {
+	pre := res.Total.Mul(pct).Div(decimal.NewFromInt(100)).Round(2)
+	bal := res.Total.Sub(pre)
+	res.PrepaymentPercent, res.PrepaymentAmount, res.BalanceAmount = &pct, &pre, &bal
+	return res
 }
