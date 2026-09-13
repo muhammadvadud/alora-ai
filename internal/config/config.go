@@ -58,6 +58,10 @@ type LLMConfig struct {
 	// FallbackProvider — asosiy provider ketma-ket 2 marta xato bersa, o'sha navbat
 	// shu provider bilan qayta so'raladi (rules.md §6.5). ENV: ALORA_LLM_FALLBACK_PROVIDER
 	FallbackProvider string `mapstructure:"fallback_provider"`
+	// TraceFile — LLM'ga ketgan so'rov va kelgan javob yoziladigan JSONL fayl
+	// (debug trace, buyurtmachi ko'radi). Bo'sh — trace o'chiq. Kalit yozilmaydi.
+	// ENV: ALORA_LLM_TRACE_FILE
+	TraceFile string `mapstructure:"trace_file"`
 }
 
 // Thinking rejimlari (DeepSeek API: thinking.type).
@@ -193,6 +197,7 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("llm.thinking", "")         // bo'sh default — env override (ALORA_LLM_THINKING) ishlashi uchun
 	v.SetDefault("llm.reasoning_effort", "") // bir xil sabab: bo'sh default, env override zarur
 	v.SetDefault("llm.fallback_provider", "claude")
+	v.SetDefault("llm.trace_file", "")
 	v.SetDefault("agent.max_step", 20)
 	v.SetDefault("agent.max_history", 40)
 	v.SetDefault("agent.max_tool_result_chars", 3000)
