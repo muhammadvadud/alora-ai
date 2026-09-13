@@ -13,6 +13,8 @@ import (
 // Implementatsiyalar: NewMemory (in-memory), NewPostgres (DB).
 // ctx va error — DB kabi implementatsiyalar uchun (in-memory ularni e'tiborsiz qoldiradi).
 type Store interface {
+	// Owner sessiyaning egasini qaytaradi; mavjud bo'lmagan sessiya uchun bo'sh satr.
+	Owner(ctx context.Context, id string) (string, error)
 	// History sessiyadagi xabarlarni tartib bilan qaytaradi (bo'sh bo'lsa nil).
 	History(ctx context.Context, id string) ([]*schema.Message, error)
 	// Append sessiyaga xabar(lar) qo'shadi.

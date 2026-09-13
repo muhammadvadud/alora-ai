@@ -4,10 +4,14 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
+	"github.com/cloudwego/eino/schema"
 	"github.com/muhammadvadud/alora-agent/gen/alorav1"
 	"github.com/muhammadvadud/alora-agent/internal/agent"
 	"github.com/muhammadvadud/alora-agent/internal/backend"
+	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-agent/internal/session"
 	grpcgo "google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -62,7 +66,7 @@ func TestServerChatFiltersThinkingAndPreservesOrder(t *testing.T) {
 	}}
 	srv := New(fake, Options{})
 	stream := &fakeChatStream{ctx: context.Background()}
-	err := srv.Chat(&alorav1.ChatRequest{SessionId: "s1", UserId: "u1", TenantId: "t1", Locale: "uz", Context: map[string]string{"role": "manager", "customer_mode": "1"}}, stream)
+	err := srv.Chat(&alorav1.ChatRequest{SessionId: "s1", UserId: "u1", TenantId: "t1", Locale: "uz", Message: "salom", Context: map[string]string{"role": "manager", "customer_mode": "1"}}, stream)
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
 	}
@@ -141,6 +145,70 @@ func TestRecoveryUnary(t *testing.T) {
 		t.Fatalf("code = %v", status.Code(err))
 	}
 }
+
+func TestResetSessionChecksOwner(t *testing.T) {
+	store := session.NewMemory()
+	ownerCtx := curtains.WithUser(context.Background(), curtains.UserInfo{UserID: "owner"})
+	if err := store.Append(ownerCtx, "s1", schema.UserMessage("salom")); err != nil {
+		t.Fatal(err)
+	}
+	srv := New(&fakeStreamer{}, Options{Store: store})
+	_, err := srv.ResetSession(context.Background(), &alorav1.ResetRequest{SessionId: "s1", UserId: "other"})
+	if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("code = %v", status.Code(err))
+	}
+	if _, err := srv.ResetSession(context.Background(), &alorav1.ResetRequest{SessionId: "s1", UserId: "owner"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestChatRejectsEmptyAndLongMessage(t *testing.T) {
+	srv := New(&fakeStreamer{}, Options{MaxMessageChars: 3})
+	stream := &fakeChatStream{ctx: context.Background()}
+	for _, message := range []string{"", "abcd"} {
+		err := srv.Chat(&alorav1.ChatRequest{SessionId: "s", UserId: "u", Message: message}, stream)
+		if status.Code(err) != codes.InvalidArgument {
+			t.Fatalf("message %q code = %v", message, status.Code(err))
+		}
+	}
+}
+
+func TestServerSessionLimit(t *testing.T) {
+	blocking := &blockingStreamer{release: make(chan struct{})}
+	srv := New(blocking, Options{MaxSessions: 1})
+	first := &fakeChatStream{ctx: context.Background()}
+	done := make(chan error, 1)
+	go func() { done <- srv.Chat(&alorav1.ChatRequest{SessionId: "s1", UserId: "u", Message: "x"}, first) }()
+	for i := 0; i < 100 && srv.active.Load() == 0; i++ {
+		time.Sleep(time.Millisecond)
+	}
+	second := srv.Chat(&alorav1.ChatRequest{SessionId: "s2", UserId: "u", Message: "x"}, &fakeChatStream{ctx: context.Background()})
+	if status.Code(second) != codes.ResourceExhausted {
+		t.Fatalf("code = %v", status.Code(second))
+	}
+	close(blocking.release)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+}
+
+type blockingStreamer struct{ release chan struct{} }
+
+func (b *blockingStreamer) Stream(ctx context.Context, _, _ string) <-chan agent.Event {
+	out := make(chan agent.Event)
+	if b.release == nil {
+		b.release = make(chan struct{})
+	}
+	go func() {
+		defer close(out)
+		select {
+		case <-b.release:
+		case <-ctx.Done():
+		}
+	}()
+	return out
+}
+func (b *blockingStreamer) Reset(context.Context, string) error { return nil }
 
 type fakeReady struct {
 	ok     bool

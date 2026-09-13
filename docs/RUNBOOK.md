@@ -15,6 +15,17 @@ Ushbu qollanma tizim ishlash jarayonidagi xatoliklarni topish va bartaraf etish 
 | **LLM Provayder xatosi / 429**<br>*(Rate limit, Timeout)* | Model API'dan javob kelmayapti yoki limit tugagan. | **Fallback provayder (4.1):** Ikkita xato bo'lsa avtomatik `fallback_provider` (config'dan) yoqiladi, va navbat qayta yuboriladi. Ikkalasi yiqilsa `error` event chiqadi. `alora_llm_fallback_total` va `llm_fallback` log'larini kuzating. | `internal/llm/llm.go` |
 
 ## 2. Ishga Tushirish
+
+### Kalitsiz ishga tushirish (mock provider)
+
+API kalitisiz deterministik dev sinovi uchun `llm.provider: mock` tanlanadi. Mock
+provider `mehmonxona`/`hotel` so'rovida `set_context` va `product_search` chaqiradi,
+o'lchamli `hisobla` so'rovida esa `curtain_calculate` chaqiradi; tool natijasida
+bo'lmagan narxni o'zi ishlab chiqarmaydi. Bu rejim faqat integratsiya va SSE oqimini
+tekshirish uchun.
+
+> Eslatma: `config.Load` provider registry'siga `mock` qo'shilgan build talab qilinadi.
+
 Agentni ishlab chiqish yoki tekshirish maqsadida ishga tushirish uchun quyidagi usullardan foydalaning:
 * **Make yordamida:**
   ```bash

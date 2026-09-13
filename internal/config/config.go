@@ -98,12 +98,14 @@ type ServerConfig struct {
 // GRPCConfig — asosiy transport (rules.md §8). Token nomi ENV'dan o'qiladi;
 // qiymatning o'zi config'da bo'lmaydi.
 type GRPCConfig struct {
-	Addr            string        `mapstructure:"addr"`
-	ServiceTokenEnv string        `mapstructure:"service_token_env"`
-	AuthRequired    bool          `mapstructure:"auth_required"`
-	MaxSessions     int           `mapstructure:"max_sessions"`
-	Keepalive       time.Duration `mapstructure:"keepalive"`
-	TLS             TLSConfig     `mapstructure:"tls"`
+	Addr               string        `mapstructure:"addr"`
+	ServiceTokenEnv    string        `mapstructure:"service_token_env"`
+	AuthRequired       bool          `mapstructure:"auth_required"`
+	MaxSessions        int           `mapstructure:"max_sessions"`
+	RateLimitPerMinute int           `mapstructure:"rate_limit_per_minute"`
+	MaxMessageChars    int           `mapstructure:"max_message_chars"`
+	Keepalive          time.Duration `mapstructure:"keepalive"`
+	TLS                TLSConfig     `mapstructure:"tls"`
 }
 
 // HTTPConfig — faqat /healthz, /readyz, /metrics (rules.md §0.7); biznes endpoint yo'q.
@@ -161,6 +163,7 @@ type FallbackConfig struct {
 // Bo'sh qiymat — kalit talab qilinmaydi (masalan Ollama lokal).
 // stt/tts providerlari ham shu xaritada — bitta ENV nomi manbai bo'lsin.
 var providerKeyEnv = map[string]string{
+	"mock":       "",
 	"deepseek":   "DEEPSEEK_API_KEY",
 	"openai":     "OPENAI_API_KEY",
 	"claude":     "ANTHROPIC_API_KEY",
@@ -196,6 +199,8 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("grpc.service_token_env", "AGENT_SERVICE_TOKEN")
 	v.SetDefault("grpc.auth_required", true)
 	v.SetDefault("grpc.max_sessions", 100)
+	v.SetDefault("grpc.rate_limit_per_minute", 20)
+	v.SetDefault("grpc.max_message_chars", 4000)
 	v.SetDefault("grpc.keepalive", "30s")
 	v.SetDefault("grpc.tls.enabled", false)
 	v.SetDefault("grpc.tls.cert_file_env", "ALORA_GRPC_TLS_CERT_FILE")
@@ -256,7 +261,7 @@ func Load(path string) (*Config, error) {
 func (c *Config) resolveAPIKey() error {
 	envName, known := providerKeyEnv[c.LLM.Provider]
 	if !known {
-		return fmt.Errorf("noma'lum provider %q (deepseek, openai, claude, ollama)", c.LLM.Provider)
+		return fmt.Errorf("noma'lum provider %q (deepseek, openai, claude, ollama, mock)", c.LLM.Provider)
 	}
 	if envName == "" {
 		return nil // kalit talab qilinmaydi
@@ -290,6 +295,12 @@ func (c *Config) Validate() error {
 	}
 	if c.LLM.Model == "" {
 		return fmt.Errorf("llm.model bo'sh bo'lishi mumkin emas")
+	}
+	if c.GRPC.RateLimitPerMinute < 0 {
+		return fmt.Errorf("grpc.rate_limit_per_minute noto'g'ri")
+	}
+	if c.GRPC.MaxMessageChars < 0 {
+		return fmt.Errorf("grpc.max_message_chars noto'g'ri")
 	}
 	switch c.LLM.Thinking {
 	case "", ThinkingAdaptive, ThinkingEnabled, ThinkingDisabled:

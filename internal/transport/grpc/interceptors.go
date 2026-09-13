@@ -201,8 +201,10 @@ func metricsStream(o interceptorOptions) grpcgo.StreamServerInterceptor {
 }
 
 type rateLimiter struct {
-	mu      sync.Mutex
-	entries map[string]rateEntry
+	mu        sync.Mutex
+	entries   map[string]rateEntry
+	limit     int
+	lastSweep time.Time
 }
 
 type rateEntry struct {
@@ -210,7 +212,13 @@ type rateEntry struct {
 	count   int
 }
 
-func newRateLimiter() *rateLimiter { return &rateLimiter{entries: make(map[string]rateEntry)} }
+func newRateLimiter(limits ...int) *rateLimiter {
+	limit := 20
+	if len(limits) > 0 && limits[0] > 0 {
+		limit = limits[0]
+	}
+	return &rateLimiter{entries: make(map[string]rateEntry), limit: limit}
+}
 
 func (r *rateLimiter) allow(key string) bool {
 	if key == "" {
@@ -219,12 +227,20 @@ func (r *rateLimiter) allow(key string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now := time.Now()
+	if len(r.entries) > 1000 || now.Sub(r.lastSweep) >= 5*time.Minute {
+		for id, entry := range r.entries {
+			if now.Sub(entry.started) >= time.Minute {
+				delete(r.entries, id)
+			}
+		}
+		r.lastSweep = now
+	}
 	e := r.entries[key]
 	if e.started.IsZero() || now.Sub(e.started) >= time.Minute {
 		r.entries[key] = rateEntry{started: now, count: 1}
 		return true
 	}
-	if e.count >= 20 {
+	if e.count >= r.limit {
 		return false
 	}
 	e.count++

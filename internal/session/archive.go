@@ -56,6 +56,7 @@ func (s *memoryStore) Archive(_ context.Context, id, reason string) error {
 	s.archived = append(s.archived, archivedSession{messages: append([]*schema.Message(nil), s.sessions[id]...), state: cloneState(s.states[id]), reason: reason, at: time.Now()})
 	delete(s.sessions, id)
 	delete(s.states, id)
+	delete(s.owners, id)
 	delete(s.updated, id)
 	return nil
 }

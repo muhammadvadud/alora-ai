@@ -15,6 +15,7 @@ import (
 const (
 	errCatalogNotReady = "katalog yuklanmadi, narx aytib bo'lmaydi"
 	errCalcUnavailable = "hisob xizmati vaqtincha ishlamayapti"
+	errUnknownRole     = "foydalanuvchi roli noma'lum — chegirma berib bo'lmaydi"
 	warnStale          = "narxlar yangilanmagan bo'lishi mumkin (katalog eskirgan)"
 )
 
@@ -112,10 +113,19 @@ func argsMap(v any) map[string]any {
 	return m
 }
 
-// userRole — kontekstda rol bo'lmasa employee (eng qat'iy chegara) — xavfsiz default.
+// userRole — hisob tool'lariga (curtain_calculate, build_options, order_draft)
+// yuboriladigan rol: noma'lum/bo'sh rol → employee (eng qat'iy chegara), chunki
+// CalcInput.Role Django'ga boradi va u ham tekshiradi. Chegirma (price_quote)
+// esa userRole'ga tayanmaydi — Valid() bilan fail-closed rad qiladi (rules §5.6).
 func userRole(ctx context.Context) curtains.UserRole {
-	if u, ok := curtains.UserFromContext(ctx); ok && u.Role != "" {
-		return u.Role
+	u, ok := curtains.UserFromContext(ctx)
+	if !ok {
+		return curtains.RoleEmployee
 	}
+	if role, ok := curtains.ParseRole(string(u.Role)); ok {
+		return role
+	}
+	// Noma'lum rol ("admin", "MANAGER"...) — hisob eng cheklangan chegirma bilan
+	// borsin; manager limitiga aylantirilmaydi.
 	return curtains.RoleEmployee
 }

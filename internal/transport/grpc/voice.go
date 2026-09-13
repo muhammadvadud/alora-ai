@@ -40,6 +40,10 @@ func (s *Server) VoiceChat(stream grpcgo.BidiStreamingServer[alorav1.VoiceChunk,
 	if s.stt == nil || s.tts == nil {
 		return status.Error(codes.Unimplemented, "ovoz xizmati ulanmagan")
 	}
+	if !s.acquireSession() {
+		return status.Error(codes.ResourceExhausted, "agent band (sessiya chegarasi)")
+	}
+	defer s.active.Add(-1)
 	meta, err := voiceMetadata(stream.Context())
 	if err != nil {
 		return err
@@ -162,6 +166,10 @@ func (s *Server) voiceResponse(ctx context.Context, generation int, sessionID st
 	sttText, sttUsage, err := s.stt.Transcribe(ctx, bytes.NewReader(data), format, s.sttLang)
 	if err != nil {
 		result(&alorav1.VoiceEvent{Kind: "error", Error: "ovozni tanib bo'lmadi", ChatEvent: &alorav1.ChatEvent{Kind: string(agent.KindError), Tool: "stt", Error: "ovozni tanib bo'lmadi"}})
+		return
+	}
+	if err := validateMessage(sttText, s.maxMessageChars); err != nil {
+		result(&alorav1.VoiceEvent{Kind: "error", Error: "xabar juda uzun yoki bo'sh", ChatEvent: &alorav1.ChatEvent{Kind: string(agent.KindError), Tool: "stt", Error: err.Error()}})
 		return
 	}
 	result(&alorav1.VoiceEvent{Kind: "text", Content: sttText, ChatEvent: &alorav1.ChatEvent{Kind: "transcript", Content: sttText}})

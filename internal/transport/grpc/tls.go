@@ -53,12 +53,13 @@ func ServeTLS(ctx context.Context, addr string, srv *Server, cfg ServeConfig, cr
 	if maxSessions <= 0 {
 		maxSessions = 100
 	}
+	limiter := newRateLimiter(cfg.RateLimitPerMinute)
 	serverOptions := []grpcgo.ServerOption{
 		grpcgo.KeepaliveParams(keepalive.ServerParameters{Time: 30 * time.Second}),
 		grpcgo.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{MinTime: 10 * time.Second, PermitWithoutStream: true}),
 		grpcgo.MaxRecvMsgSize(4 << 20), grpcgo.MaxSendMsgSize(4 << 20), grpcgo.MaxConcurrentStreams(uint32(maxSessions)),
-		grpcgo.ChainUnaryInterceptor(unaryInterceptors(interceptorOptions{token: cfg.ServiceToken, authRequired: cfg.AuthRequired, metrics: cfg.Metrics, limiter: newRateLimiter()})...),
-		grpcgo.ChainStreamInterceptor(streamInterceptors(interceptorOptions{token: cfg.ServiceToken, authRequired: cfg.AuthRequired, metrics: cfg.Metrics, limiter: newRateLimiter()})...),
+		grpcgo.ChainUnaryInterceptor(unaryInterceptors(interceptorOptions{token: cfg.ServiceToken, authRequired: cfg.AuthRequired, metrics: cfg.Metrics, limiter: limiter})...),
+		grpcgo.ChainStreamInterceptor(streamInterceptors(interceptorOptions{token: cfg.ServiceToken, authRequired: cfg.AuthRequired, metrics: cfg.Metrics, limiter: limiter})...),
 	}
 	if creds != nil {
 		serverOptions = append(serverOptions, grpcgo.Creds(creds))

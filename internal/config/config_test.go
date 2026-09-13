@@ -71,6 +71,8 @@ func TestLoad_Defaults(t *testing.T) {
 		{cfg.GRPC.ServiceTokenEnv, "AGENT_SERVICE_TOKEN"},
 		{cfg.GRPC.AuthRequired, true},
 		{cfg.GRPC.MaxSessions, 100},
+		{cfg.GRPC.RateLimitPerMinute, 20},
+		{cfg.GRPC.MaxMessageChars, 4000},
 		{cfg.GRPC.Keepalive, 30 * time.Second},
 		{cfg.HTTP.Addr, ":8081"},
 		{cfg.Backend.Timeout, 5 * time.Second},
@@ -312,5 +314,13 @@ func TestValidate_Direct(t *testing.T) {
 	base.Catalog.PageSize = 5000
 	if err := base.Validate(); err == nil || !strings.Contains(err.Error(), "page_size") {
 		t.Fatalf("page_size=5000 xato berishi kerak: %v", err)
+	}
+}
+
+func TestLoad_MockProvider(t *testing.T) {
+	path := writeConfig(t, "mode: cli\nllm:\n  provider: mock\n")
+	cfg, err := Load(path)
+	if err != nil || cfg.LLM.Provider != "mock" {
+		t.Fatalf("mock provider: cfg=%#v err=%v", cfg, err)
 	}
 }

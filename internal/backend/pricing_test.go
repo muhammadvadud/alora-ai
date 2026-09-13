@@ -39,12 +39,14 @@ type pricingFake struct {
 	calls    int
 	mode     string
 	metadata metadata.MD
+	tenantID string
 }
 
 func (f *pricingFake) CalcPreview(ctx context.Context, req *alorav1.CalcPreviewRequest) (*alorav1.CalcPreviewResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.calls++
+	f.tenantID = req.GetTenantId()
 	f.metadata, _ = metadata.FromIncomingContext(ctx)
 	if f.mode == "unavailable" {
 		return nil, status.Error(codes.Unavailable, "backend down")
@@ -173,6 +175,20 @@ func TestPricing_ErrorFieldsAndFallback(t *testing.T) {
 				t.Fatalf("retry calls=%d, want 2", calls)
 			}
 		})
+	}
+}
+
+func TestPricing_UsesTenantFromContext(t *testing.T) {
+	fake := &pricingFake{expected: map[string][]byte{`{"area_m2":"0"}`: []byte(`{"area_m2":"0"}`)}}
+	conn, cleanup := startPricingServer(t, fake)
+	defer cleanup()
+	client := NewPricingClient(conn, time.Second, "constructor-tenant")
+	ctx := curtains.WithUser(context.Background(), curtains.UserInfo{TenantID: "context-tenant"})
+	_, _ = client.Calculate(ctx, curtains.CalcInput{})
+	fake.mu.Lock()
+	defer fake.mu.Unlock()
+	if fake.tenantID != "context-tenant" {
+		t.Fatalf("tenant = %q", fake.tenantID)
 	}
 }
 
