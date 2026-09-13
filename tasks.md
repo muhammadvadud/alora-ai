@@ -1,0 +1,332 @@
+# Alora AI Agent (Go) — Ish rejasi (tasks.md)
+
+> Manba: `plan/02-AI-TZ.md` + `plan/00-ALORA-UMUMIY-TZ.md` · Qoidalar: `rules.md`
+> Backend shartnoma: `projects/backend/protos/alora.proto`, `docs/GO-CONTRACT.md`, `tests/fixtures/calc_cases.json`
+> Belgilar: `[ ]` boshlanmagan · `[~]` jarayonda · `[x]` tugallangan (test o'tgan) · `[!]` backend bilan kelishuv kutilmoqda
+> Har bir ish tugagach shu fayl **o'sha ishning commit'i ichida** yangilanadi.
+> Har task uchun "Qabul" — nima o'tsa bajarilgan hisoblanadi (rules.md §17.5 DoD).
+
+**Umumiy holat:** 1 / 112 bajarildi (4 tasi Go tomonida mapping kutmoqda, 2 tasi backend kelishuvida) · testlar: — · lint: —
+
+**Bosqich xaritasi:** 0 Poydevor (1 hafta) → 1 MVP (3–4 hafta) → 2 To'liq sotuv sikli (3 hafta) → 3 Ovoz (2–3 hafta) → 4 Sayqal (davomiy)
+
+---
+
+## Bosqich 0 — Poydevor (shablon → Alora skeleti, shartnoma, CI)
+
+### 0.A Repo va shablon
+
+- [ ] 0.1 `UzStack/agent` shablonini `alora-agent` sifatida ko'chirish; `go.mod` moduli
+      `github.com/muhammadvadud/alora-agent`; barcha importlar yangilanadi.
+      *Qabul:* `go build ./...` toza.
+- [ ] 0.2 Keraksizni o'chirish: `internal/rocketpark`, `internal/weather`, `internal/transport/telegram`,
+      `k8s/rocketpark-bot.yaml`, `tools/rocketpark.go`, `tools/weather.go`, mos testlar; `go mod tidy`.
+      *Qabul:* `go build && go test ./...` toza, `main.go` da faqat `Calculator`, `Clock` qoladi.
+- [ ] 0.3 `AGENTS.md` ni Alora'ga moslash (rules.md §0 va §2 ga havola, shablon "oltin qoidalar" saqlanadi);
+      `README.md` (ishga tushirish, ENV, make buyruqlari); `LICENSE`, `.editorconfig`, `.gitignore`
+      (`bin/`, `tmp/`, `.env`, `coverage.out`).
+- [ ] 0.4 `Makefile`: `build test vet lint fmt tidy proto check-fixtures sync-fixtures bench docker run-cli run-grpc`.
+- [ ] 0.5 `.golangci.yml` — rules.md §3.1 linterlari + `depguard` qoidalari (§2 bog'liqlik yo'nalishi:
+      `curtains` da `eino/grpc/gen` taqiq, `tools` da `gen` taqiq).
+      *Qabul:* `golangci-lint run` toza, ataylab noto'g'ri import qo'shilganda fail bo'ladi (test).
+- [ ] 0.6 Pre-commit: `gofmt`, `goimports`, `golangci-lint --fast`, `gitleaks`.
+- [ ] 0.7 `.env.example` (`DEEPSEEK_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `ELEVENLABS_API_KEY`,
+      `GOOGLE_API_KEY`, `AGENT_SERVICE_TOKEN`, `DATABASE_URL`, `ALORA_BACKEND_ADDR`) — qiymatsiz.
+
+### 0.B Proto va generatsiya
+
+- [ ] 0.8 `buf.yaml`, `buf.gen.yaml` (`protoc-gen-go`, `protoc-gen-go-grpc`, versiya pin); `gen/alorav1/`.
+- [ ] 0.9 `scripts/import_proto.sh` — backend `protos/alora.proto` → `proto/alora.proto` (diff ko'rsatadi,
+      backend `scripts/export_proto.sh` bilan juft). *Qabul:* `make proto` → `gen/` yangilanadi, build toza.
+- [~] 0.10 **Backend bilan (P6):** `go_package` = `github.com/muhammadvadud/alora-agent/gen/alorav1;alorav1`.
+      Backend tomoni: `feat/proto-agent-contract-ext` branch'ida bajarildi (kontrakt 1.1). Go: `import_proto` + `buf generate` (0.9 bilan).
+- [~] 0.11 **Backend bilan (P1):** `CatalogSnapshot` 8–11 (`service_prices`, `discount_tiers`, `discount_policy`,
+      `order_defaults`) + delta entity'lari — backend'da bajarildi (kontrakt 1.1, decimal matn). Go: mapping (2.17).
+- [~] 0.12 **Backend bilan (P2):** `CatalogFason` (12) + delta `fason` (bo'lak o'zgarsa butun fason) — backend'da bajarildi. Go: mapping (2.17).
+- [~] 0.13 **Backend bilan (P3):** `CatalogPrompt` (13) + delta `prompt` — backend'da bajarildi. Go: mapping (2.18).
+- [x] 0.14 **Backend bilan (P4, P5, P7, P10):** `GO-CONTRACT.md` 1.1 da yozildi va Django'da amalga oshirildi:
+      `kind="stage"` → `Conversation.stage` (Celery); `context` = `role`, `customer_mode`, `conversation_id`;
+      `Usage.cost_*` faqat Django (Go `0`); `action="FULL_RESYNC"` (katta harf, entity `catalog`, stream yopiladi).
+      **Diqqat:** `x-service-token`/`x-request-id` Django hali yubormaydi (backend 6.18) — Go auth `grpc.auth_required=false` bilan boshlanadi.
+- [ ] 0.15 CI'da `buf lint` + `buf breaking --against 'https://github.com/muhammadvadud/alora-backend.git#branch=main,subdir=protos'`.
+
+### 0.C Etalon va CI
+
+- [ ] 0.16 `scripts/sync_fixtures.sh` — backend `tests/fixtures/calc_cases.json` → `tests/fixtures/`;
+      `make check-fixtures` sha256 solishtiradi. *Qabul:* fixture farq qilsa CI qizil.
+- [ ] 0.17 GitHub Actions: `buf lint → build → vet → golangci-lint → test -race -cover → coverage gate
+      (curtains ≥ 90 / tools ≥ 85 / umumiy ≥ 75) → govulncheck → check-fixtures → docker build`.
+- [ ] 0.18 `docker/Dockerfile` (multi-stage, distroless, non-root, `HEALTHCHECK /readyz`);
+      `docker-compose.yml` — `agent` servisi backend compose tarmog'i `alora_net` ga ulanadi
+      (`postgres`, `django:9091` ko'rinadi). *Qabul:* `docker compose up agent` → `/healthz` 200.
+- [ ] 0.19 `internal/observability`: `slog` JSON (`request_id`, `session_id`, `user_id` maydonlari),
+      Prometheus registry, `/metrics`, `/healthz`, `/readyz` (`transport/http` faqat shu).
+      *Qabul:* `curl :8081/metrics` da `alora_*` metrikalar ko'rinadi.
+- [ ] 0.20 `internal/config` kengaytmasi (TZ §9): `grpc`, `backend`, `catalog`, `stt`, `tts`, `knowledge`, `db`,
+      `fallback` bo'limlari; `ALORA_` ENV prefiks; `Validate()`; `providerKeyEnv` ga `elevenlabs`, `google`.
+      *Qabul:* `config_test.go` — noto'g'ri `stale_after`, bo'sh `backend.addr` (grpc mode) → xato.
+- [ ] 0.21 `clock` interfeysi (`internal/curtains/clock.go` yoki `internal/common`), testlarda `FakeClock`.
+
+---
+
+## Bosqich 1 — MVP (matnli chat: qidiruv + hisob + narx, gRPC, snapshot sync)
+
+### 1.A Domen turlari va katalog cache
+
+- [ ] 1.1 `curtains/types.go` — `Product`, `Variant` (`PriceUnit` typed), `Category`, `CalcRule`, `Service`,
+      `DiscountTier`, `DiscountPolicy`, `OrderDefaults`, `Fason{Parts, Accessories}`, `KnowledgeRule`, `PromptVersion`;
+      barcha pul/o'lcham `decimal.Decimal`; `PartRole`, `Segment`, `Room`, `Style`, `Pattern`, `Transparency` const'lari
+      (`product_search` enum'lari bilan bir xil).
+- [ ] 1.2 `curtains/catalog.go` — `Catalog` + `View` (copy-on-write, `atomic.Pointer`), `ApplySnapshot(page)`,
+      `ApplyDelta(d)` (idempotent, version ketma-ketlik tekshiruvi → `ErrVersionGap`), `View().Stale`,
+      `Version()`, `SyncedAt()`. *Qabul:* `catalog_test.go` — snapshot sahifalab yig'iladi; delta create/update/delete;
+      takroriy version e'tiborsiz; gap → xato; stale `FakeClock` bilan; `-race` bilan parallel o'qish/yozish.
+- [ ] 1.3 `curtains/fixture.go` (`//go:build test` emas — `internal/curtains/testutil`) — `NewCatalogFromFixture(calc_cases.json)`:
+      `catalog_seed` + `pricing_seed` dan `View`. *Qabul:* fixture'dagi barcha variant ID lar topiladi.
+- [ ] 1.4 `catalog_bench_test.go` — 10k mahsulot × 3 variant generatsiya; xotira ≤ 200 MB, `View()` ≤ 1 µs.
+
+### 1.B Hisob (eng muhim blok)
+
+- [ ] 1.5 `curtains/calc_types.go` — `CalcInput{Measurements[]{Length, Height, Parts[], Accessories[]}, Services[], Delivery bool,
+      ManualDiscountPct, Role}`, `CalcResult` — Django `calculate_preview` JSON kalitlari bilan **bir xil**
+      (`MarshalJSON` sonlarni string qiladi).
+- [ ] 1.6 `curtains/validate.go` — rules.md §4.2.3 chegaralari; `ValidationError{Field, Msg}` o'zbekcha.
+      *Qabul:* `validate_test.go` — har chegara uchun +/− holat (L=0.4, L=15.1, 11 bo'lak, K=0.9, Σwidth>L, qatlam istisnosi).
+- [ ] 1.7 `curtains/calc.go` — `calculator.py` nusxasi: `partWidth/Height/Coef`, `visibleArea`, `rawArea`, `roundToStep`
+      (RoundHalfUp), `quantizeMoney`, `variantLineTotal`, `serviceQuantity` (hook ceil), `matchTier`,
+      `resolveDiscountPolicy`, `buildMeasurement`, `buildServiceLines`, `Calculate(view, input)`.
+      Kalit topilmasa → `ValidationError{"rules", ...}`.
+- [ ] 1.8 **`calc_test.go` — 20 ta etalon** `calc_cases.json` dan o'qib, `expected` bilan string tengligi.
+      *Qabul:* 20/20 o'tadi, **±0 farq**; test fixture'ni faylga bog'laydi (hardcode yo'q).
+- [ ] 1.9 `calc.go` ga `explanation` + `warnings` generatori: `waste_percent > waste_warn_percent` → ogohlantirish;
+      koeffitsient −0.5 tejami (qayta hisob, faqat matn); arzonroq analog (bir `product`, boshqa `variant` yoki bir kategoriya,
+      ≤ 80% narx) — hammasi katalogdan. *Qabul:* `calc_explain_test.go` — 3 ta chiqindi ssenariysi (TZ §12 talabi), analog topiladi/topilmaydi.
+- [ ] 1.10 `cut` maydoni (ADR-002): `Hp > W` bo'lsa `panels`, `seams`, `roll_waste_pct` — **faqat ma'lumot**, `total` o'zgarmaydi.
+      *Qabul:* etalon testlar hamon 20/20; `cut` alohida testda.
+- [ ] 1.11 Ko'p matoli etalonlar: fixture'da kamida 6 ta 3–10 bo'lakli holat borligini tekshiruvchi test
+      (`TestFixture_HasMultiPartCases`); yo'q bo'lsa backend bilan fixture kengaytiriladi ([!]).
+
+### 1.C Qidiruv
+
+- [ ] 1.12 `curtains/search.go` — `SearchQuery` (TZ §3.1 maydonlari), filtr (`kind` qoidasi: `per_sqm` ↔ fabric,
+      `per_piece/per_meter` + `accessories` kategoriya ↔ accessory; `is_active`; `max_price`; `segment`),
+      skorlash (xona +3, uslub +3, bezak +2, shaffoflik +2, segment +2, rang +1), deterministik tartib, `why` yig'ish.
+      *Qabul:* `search_test.go` — tartib, teng ball hal qilinishi, `kind` ajratish, `limit`, bo'sh natija.
+- [ ] 1.13 `curtains/search_colors.go` — rang sinonimlari (uz lotin/kirill/ru/en) + hex ΔE. 100% test.
+- [ ] 1.14 `search_bench_test.go` — 10k mahsulotda ≤ 5 ms.
+
+### 1.D Narx (price_quote)
+
+- [ ] 1.15 `curtains/quote.go` — `Quote(view, calcResult, opts{NeedCornice, NeedInstall, NeedDelivery, DiscountPct, Role})`:
+      xizmat qatorlari (`sewing`, `tape`, `hook`, `install`, `cornice`?, `delivery`), tier, manual chegara (rolga qarab →
+      `ValidationError`), `stack_with_tier`, `round_total_to`, `prepayment`, `balance`. **Karniz** — `ServicePrice` da
+      `cornice` kaliti bo'lsa `per_meter × Σlength`, bo'lmasa `warnings` ("karniz narxi sozlanmagan").
+      *Qabul:* `quote_test.go` — tier chegaralari (4.99/5/10/20 mln), employee 5% vs manager 15%, rad etish matni,
+      default avans/yetkazish, `stack_with_tier` ikkala rejim.
+- [ ] 1.16 `LastCalc`/`LastQuote` `SessionState` da saqlanadi (1.25 ga bog'liq) — `price_quote` `LastCalc` siz xato.
+
+### 1.E Tool adapterlari
+
+- [ ] 1.17 `tools/tools.go` — `Deps{Catalog *curtains.Catalog, State curtains.StateStore, Backend backend.Client, Clock}`;
+      `must()`; `displayMoney()` (`5 382 000 so'm`), `truncate(8KB)`.
+- [ ] 1.18 `tools/dto.go` — `productSearchArgs/Result`, `calcArgs` (parts ≤ 10, accessories), `quoteArgs`, `ProductCard`;
+      barcha `jsonschema` teglari, `Error` maydonlari. *Qabul:* `dto_test.go` — `InferTool` sxemasida enum/description bor.
+- [ ] 1.19 `tools/product_search.go` — adapter; natija ≤ 10; `stale` bayrog'i; katalog bo'sh → `error`;
+      `KindProducts` uchun `ProductRef` ro'yxati `ctx` orqali agentga uzatiladi (`agent.AttachProducts(ctx, refs)`).
+      *Qabul:* `product_search_test.go`.
+- [ ] 1.20 `tools/curtain_calculate.go` — float64 → decimal, validatsiya, `Calculate`, state'ga `LastCalc`, `explanation/warnings`.
+      *Qabul:* test — 1 bo'lak, 10 bo'lak, 11 bo'lak (xato), noto'g'ri variant, faol emas variant, stale.
+- [ ] 1.21 `tools/price_quote.go` — adapter; rol `ctx` dan; `LastCalc` yo'q → xato. *Qabul:* test.
+- [ ] 1.22 `main.go` registratsiya: `Calculator`, `Clock`, `ProductSearch`, `CurtainCalculate`, `PriceQuote` — ochiq.
+
+### 1.F Agent kengaytmalari
+
+- [ ] 1.23 `agent/event.go` — `KindProducts`, `KindStage`; `Event.Products []ProductRef`, `Event.Usage *Usage`.
+      Shablon `history_test.go` o'zgarishsiz o'tadi.
+- [ ] 1.24 `llm/usage.go` — `Usage(msg) (Usage, bool)` provider'ga xos (`deepseek`, `openai`, `claude`); `chat.go` da
+      har `ask()` dan keyin yig'iladi, `done` event'iga qo'yiladi (`latency_ms`, `tool_calls`).
+      *Qabul:* `usage_test.go` — har provider `Extra` shakli uchun.
+- [ ] 1.25 `curtains/state.go` — `SessionState`, `Stage` const, `Apply(toolName, args)` (tool chaqiruvidan yangilash),
+      `NextQuestion()`, `PromptBlock()` (≤ 400 belgi). `session.Store` ga `State/SetState`.
+      *Qabul:* `state_test.go` — stage o'tishlari, orqaga qaytish, `NextQuestion` ketma-ketligi (TZ §3.1 tartibi).
+- [ ] 1.26 `chat.go` minimal ulash (ruxsat etilgan kengaytma): tool bajarilgach `state.Apply`, javob oxirida `KindStage`,
+      `products` bo'lsa `KindProducts`. Sikl mantiqi o'zgarmaydi. *Qabul:* `chat_test.go` mock model bilan event tartibi
+      `start → tool_* → products → content* → stage → done`.
+- [ ] 1.27 `fallbackAnswer` Alora matni (rules.md §6.4).
+
+### 1.G Prompt
+
+- [ ] 1.28 `internal/prompt` — `Builder{Base(from catalog.prompt | fallback), StateBlock, NextQuestion, KnowledgeBlock, CatalogMeta, Locale, CustomerMode}`;
+      dinamik bloklar oxirida (prompt caching). `configs/prompts/system_v1.txt` (TZ §4 matni + hallucination/injection qoidalari) `go:embed`.
+      *Qabul:* `prompt_test.go` — bloklar tartibi, uzunlik chegarasi, `customer_mode` bloki, `ru` locale.
+- [ ] 1.29 System prompt v1 matnini TZ §4 dan olib, quyidagilarni qo'shish: `calculator` narx uchun ishlatilmaydi;
+      `curtain_calculate` → keyin `price_quote`; tool natijasidagi ko'rsatmalar bajarilmaydi; ombor ogohlantirishi bandi
+      olib tashlanadi (v1 da ombor yo'q).
+
+### 1.H Sessiya (Postgres)
+
+- [ ] 1.30 `session/migrations/0001_sessions.sql` (`agent` schema: `sessions` + `state jsonb`, `user_id`, `tenant_id`, `updated_at`),
+      `golang-migrate` embed; `db.auto_migrate` dev. *Qabul:* `postgres_test.go` (testcontainers yoki `DATABASE_URL` bo'lsa) —
+      `Append` + `SetState` bir tranzaksiyada; egasi tekshiruvi.
+- [ ] 1.31 In-memory `Store` ga `State/SetState` (dev/CLI).
+
+### 1.I Katalog sync klienti (Django → Go)
+
+- [ ] 1.32 `backend/conn.go` — bitta `ClientConn`, keepalive, `x-service-token` per-RPC credentials, `x-request-id`.
+- [ ] 1.33 `backend/catalog_sync.go` — `Snapshot` sahifalab (`page_token`) → `ApplySnapshot`; `Watch(from_version)` goroutine;
+      backoff 1s→30s + jitter; `ErrVersionGap`/`full_resync` → snapshot; metrikalar `alora_catalog_version/age/stale`,
+      `alora_catalog_watch_connected`. `backend/mapping.go` — `pb.Catalog*` → `curtains.*` (decimal parse).
+      *Qabul:* `catalog_sync_test.go` — fake Django server (`bufconn`): snapshot 3 sahifa; delta oqimi; uzilish → qayta ulanish → snapshot;
+      gap → snapshot.
+- [ ] 1.34 `/readyz` — snapshot tugamaguncha 503; `Chat` → `UNAVAILABLE` + o'zbekcha xabar.
+
+### 1.J gRPC transport
+
+- [ ] 1.35 `transport/grpc/server.go` — `Agent` server: `Chat` (ctx: session, user, tenant, role, locale, customer_mode),
+      `ResetSession`, `Health`; `VoiceChat` → `UNIMPLEMENTED` (3-bosqichgacha).
+- [ ] 1.36 `transport/grpc/mapping.go` — `agent.Event` → `pb.ChatEvent` (kind string, products, usage); `thinking` filtrlanadi.
+      *Qabul:* `mapping_test.go` — har kind uchun.
+- [ ] 1.37 Interceptorlar: recovery, request-id, auth (`ConstantTimeCompare`), logging, metrics, ratelimit (20/min/sessiya).
+      *Qabul:* `interceptors_test.go` — token yo'q → `UNAUTHENTICATED`; `Health` tokensiz o'tadi; limit → `RESOURCE_EXHAUSTED`.
+- [ ] 1.38 Server sozlamalari: keepalive 30s/`MinTime 10s`, max msg 4 MB, `MaxConcurrentStreams`, graceful stop (SIGTERM → `GracefulStop` 15s).
+- [ ] 1.39 `main.go`: `mode: grpc` → HTTP health (`:8081`) + gRPC (`:9090`) parallel, `errgroup`; `mode: cli` — dev.
+- [ ] 1.40 `tests/e2e/chat_test.go` — `bufconn`: fake Django (Catalog + Backend) + mock LLM → `Chat` stream tartibi,
+      `ResetSession`, `Health.status` (`ok`/`degraded` stale bilan).
+
+### 1.K MVP yakuni
+
+- [ ] 1.41 `tests/golden/` karkasi + mock `ToolCallingChatModel` (skript: user matn → tool chaqiruv/javob) — 5 ta MVP ssenariy:
+      mehmonxona hi-tech to'liq oqim (need→calc→quote), noto'g'ri o'lcham (L=50), katalogda yo'q mahsulot, stale katalog,
+      chegirma chegarasi. *Qabul:* `go test ./tests/golden/...` o'tadi; `forbid_content_regex` narx uchun ishlaydi.
+- [ ] 1.42 `hallucination_test.go` (rules.md §14.5). *Qabul:* CI'da `-run Halluc` alohida job.
+- [ ] 1.43 Live sinov (`//go:build live`, DeepSeek): 5 ssenariy, TTFT/tool soni `docs/LIVE-RUNS.md` ga.
+      *Qabul:* TTFT p95 ≤ 1.5 s, 2-tool javob ≤ 6 s (bo'lmasa `max_tokens`/prompt hajmi sozlanadi, natija yoziladi).
+- [ ] 1.44 Backend bilan integratsiya sinovi: `docker compose` (backend + agent) → Django `POST /api/v1/chat/.../messages/` SSE →
+      Go → javob. *Qabul:* mobil/`curl -N` da `content` oqimi va `products` keladi; Django `UsageRecord` yozilgan.
+- [ ] 1.45 `docs/ARCHITECTURE.md` (paket xaritasi, oqim diagrammasi), `docs/RUNBOOK.md` (stale, outbox dead, Watch uzilishi nima qilish).
+- [ ] 1.46 Teg `v0.1.0`.
+
+---
+
+## Bosqich 2 — To'liq sotuv sikli (variantlar, buyurtma, bilimlar, fason, usage)
+
+### 2.A Backend'ga yozuv (outbox)
+
+- [ ] 2.1 `session/migrations/0002_outbox.sql` (`outbox(id, kind, payload jsonb, attempts, next_at, created_at)`), in-memory variant.
+- [ ] 2.2 `backend/outbox.go` — `Enqueue(kind, payload)`, worker (batch 50, retry jadvali `1s,5s,30s,2m,10m`, 10 → `dead`),
+      metrikalar `alora_outbox_pending/dead_total`. *Qabul:* `outbox_test.go` — fake Django yotganda yig'iladi, tirilganda bo'shaydi; dead.
+- [ ] 2.3 `backend/usage.go` — `done.usage` → `UsageRequest` (`message_id`, `conversation_id` `context` dan), outbox orqali.
+- [ ] 2.4 `backend/log.go` — `LogMessage` (user, assistant, tool) — `pii.Mask()` bilan; `seq` idempotent.
+- [ ] 2.5 `internal/pii` — `Mask(phone)`, `MaskName`, `ScrubToolResult` — 100% test.
+- [ ] 2.6 `Health.status=degraded` outbox > 1000 yoki dead > 0 bo'lsa.
+
+### 2.B Fason va bilimlar
+
+- [ ] 2.7 `curtains/fason.go` — `Fason` → `[]calcPart` (share × L/H, koeffitsient, rol), `LookupFason(room, style)`;
+      `tools/fason_lookup.go`. *Qabul:* `fason_test.go` — ulushlar yig'indisi, qatlam/bo'lak ajratish, mos fason yo'q.
+- [ ] 2.8 `curtains/knowledge.go` — `Match(state)`, `priority` tartib, `PromptBlock(limit)`; `tools/knowledge_lookup.go`
+      (faqat `inline_max` dan oshsa ro'yxatga qo'shiladi — `main.go` shart bilan). *Qabul:* `knowledge_test.go`.
+- [ ] 2.9 Prompt'ga `<knowledge>` bloki + injection sarlavhasi; `description`/`recommendation` sanitizatsiya (500 belgi, HTML).
+
+### 2.C Variantlar (build_options)
+
+- [ ] 2.10 `curtains/variants.go` — 3 paket (`economy/standard/premium`), `coef_*` kalitlari (fallback `coef_default`),
+      qatlam tarkibi, invariant `economy ≤ standard ≤ premium` (qayta urinish ≤ 3), bo'sh segment → `null` + warning,
+      qisqa taqqoslash matni (kodda, LLM emas: "Premium o'rtachadan 2.1 mln qimmat: astar + lambrekan + yangi karniz").
+      *Qabul:* `variants_test.go` — tartib invarianti 50 random katalogda (property test), bo'sh segment.
+- [ ] 2.11 `tools/build_options.go` — adapter; `KindProducts` ga 3 paket mahsulotlari; state `Stage=variants`, `ChosenVariants`.
+- [ ] 2.12 Golden: "3 variant → 'arzonroq' e'tirozi → o'rtacha paketda K 2.5→2.0" ssenariysi.
+
+### 2.D Buyurtma qoralamasi
+
+- [ ] 2.13 `tools/order_draft.go` — `action=quote|draft|confirm`; `missing[]`; `confirm` → `backend.SaveOrderDraft` sinxron 5s,
+      `items_json` = `LastQuote` (Django `OrderMeasurement/Part/Accessory` shakli — backend serializer bilan kelishiladi [!]);
+      `customer_ref` bilan PII maskalash; natija `order_id`, `order_number`. *Qabul:* test — missing ketma-ketligi, Django xatosi,
+      PII model kontekstiga tushmagani (`LogMessage` payload'ida telefon yo'q).
+- [!] 2.14 **Backend bilan:** `OrderDraftRequest.items_json` sxemasi (`calc_cases.json` `input` formati bilan bir xil deb taklif) —
+      `GO-CONTRACT.md` ga yoziladi.
+- [ ] 2.15 `set_context` tool (ADR-003) — `tools/set_context.go`, `dto`; `NextQuestion` qaytaradi. *Qabul:* test + golden'da ishlatiladi.
+- [ ] 2.16 `main.go` ro'yxat: + `BuildOptions`, `OrderDraft`, `FasonLookup`, `KnowledgeLookup?`, `SetContext`.
+
+### 2.E Sinxron kengaytmalar (proto P1–P3 kelgach)
+
+- [ ] 2.17 `backend/mapping.go` — `service_prices`, `discount_tiers`, `discount_policy`, `order_defaults`, `fasons`, `prompt` →
+      `Catalog`; delta entity'lari. 1.15 dagi stub'lar olib tashlanadi. *Qabul:* fake server bilan sync testi kengaytirildi.
+- [ ] 2.18 Prompt Django versiyasidan (`catalog.prompt`), `prompt` delta → keyingi so'rovdan yangi prompt; log `info` versiya.
+- [ ] 2.19 Katalog "stale" → `KindStage`/`done` da `warnings` + Django'ga `LogMessage` `kind=warning`? (kelishiladi) — hozircha metrika + log.
+
+### 2.F Sifat
+
+- [ ] 2.20 Golden ssenariylar 20 taga yetkaziladi (TZ §12): xona turlari ×7, yorug'lik, balkon eshigi, ko'p matoli (5 bo'lak),
+      10 bo'lak, chiqindi ogohlantirishi, e'tirozlar ("qimmat", "boshqa rang"), buyurtma to'liq, orqaga qaytish (o'lcham o'zgardi),
+      rus tili, mijoz rejimi (tannarx aytilmaydi).
+- [ ] 2.21 Live sinov 20 ssenariy DeepSeek vs Claude (A/B) → `docs/LIVE-RUNS.md`; hallucination 0/100 (TZ §10.2) — 100 ta suhbat
+      skriptli yugurtiriladi, regex tekshiruv.
+- [ ] 2.22 Yuklama testi: 50 parallel sessiya (`ghz` yoki Go bench, mock LLM) — xotira, goroutine sizishi (`goleak`).
+- [ ] 2.23 Teg `v0.2.0`.
+
+---
+
+## Bosqich 3 — Ovoz (STT/TTS, VoiceChat, barge-in)
+
+- [ ] 3.1 `voice/voice.go` — `STT`, `TTS` interfeyslari, `Usage`, registry (`init()/register`), config'dan `New`.
+- [ ] 3.2 `voice/whisper.go` (OpenAI Whisper API, `uz`/`ru`, auto), `voice/gemini_stt.go` (zaxira).
+      *Qabul:* HTTP mock bilan test; kalit ENV.
+- [ ] 3.3 `voice/elevenlabs.go` (stream chunk), `voice/google_tts.go` (zaxira, uz ovozi). *Qabul:* mock test.
+- [ ] 3.4 `voice/normalize.go` — raqam→so'z (uz lotin/kirill, ru), `m²`, `K=2.5`, telefon o'qilmaydi. 100% test, 40+ holat.
+- [ ] 3.5 `voice/sentence.go` — jumla chegarasi detektori (`. ! ?` + bo'sh joy, 120 belgi, qisqartmalar `sm.`, `mln.`). Test.
+- [ ] 3.6 `transport/grpc/voice.go` — `VoiceChat` bidirectional: chunk bufer → `is_final` → STT → `transcript` event →
+      `Chat.Stream` → `text` event'lar + jumla-jumla TTS goroutine → `audio` event; barge-in (`cancel()` yangi chunk'da);
+      `stt_seconds/tts_chars` `done.usage` ga; STT xatosi → `error kind=stt`, sessiya tirik.
+      *Qabul:* `voice_test.go` — fake STT/TTS bilan event tartibi; barge-in TTS to'xtatadi; ctx bekor → goroutine sizmaydi (`goleak`).
+- [ ] 3.7 Metrikalar `alora_voice_*`, TTS birinchi audio ≤ 3 s (TZ §10.5) — live o'lchov `docs/LIVE-RUNS.md`.
+- [ ] 3.8 Django WebSocket gateway bilan integratsiya sinovi (backend `apps/chat/consumers.py`) — audio format kelishuvi
+      (`pcm_s16le 16k` kirish; chiqish `mp3`) `GO-CONTRACT.md` ga [!].
+- [ ] 3.9 Golden'ga 3 ovozli ssenariy (transcript → tool → audio).
+- [ ] 3.10 Teg `v0.3.0`.
+
+---
+
+## Bosqich 4 — Sayqal (davomiy)
+
+- [ ] 4.1 Fallback provider (`fallback_provider: claude`) — 2 ketma-ket xato → o'sha navbat qayta; `usage.provider` to'g'ri;
+      `alora_llm_fallback_total`. *Qabul:* mock provider xato → fallback ishladi testi.
+- [ ] 4.2 Prompt A/B: `context["prompt_version"]` bilan Django tanlagan versiyani ishlatish (bir nechta versiya cache'da).
+- [ ] 4.3 mTLS (`grpc.tls` bo'limi, sertifikat ENV yo'llari), `docs/DEPLOY.md`.
+- [ ] 4.4 Semantik qidiruv: pgvector + embedding (`product_search` skoriga `+2` semantik), faqat 10k+ da yoki sifat talab qilsa (ADR kerak).
+- [ ] 4.5 Rasm bo'yicha tavsiya: `ChatRequest.context["image_url"]` → vision model → rang/uslub → `set_context` (proto/kontrakt [!]).
+- [ ] 4.6 Katalog indekslari (agar `search_bench` 5 ms dan oshsa) — ADR.
+- [ ] 4.7 Kubernetes manifestlar (`k8s/agent.yaml`: Deployment, Service ClusterIP, HPA 2–5, PDB), Grafana dashboard JSON (`docs/grafana/`).
+- [ ] 4.8 Tarix arxivlash (`archived_messages`), 90 kunlik tozalash cron (`session.Cleanup`).
+- [ ] 4.9 `ResetSession` bilan birga `ArchiveSession` (manager suhbatni yopganda) — kontrakt [!].
+- [ ] 4.10 PDF taklif — Django tomonida; Go faqat `LastQuote` ni `order_draft(quote)` bilan beradi (o'zgarish yo'q, tekshiruv).
+- [ ] 4.11 Oflayn/keshlangan katalog — mobil tomonda; Go'da o'zgarish yo'q (tekshiruv).
+- [ ] 4.12 `ombor qoldig'i` (v2): `stock_check` tool, skorga `+2`, ogohlantirish — faqat buyurtmachi tasdiqlasa.
+
+---
+
+## Backend bilan ochiq savollar (kelishilmaguncha `[!]`)
+
+| # | Savol | Kimga | Holat |
+|---|---|---|---|
+| Q1 | P1–P3 proto kengaytmalari (service_prices, tiers, policy, defaults, fason, prompt) — backend `catalog_service.py` ham to'ldiradi | backend | **hal** (kontrakt 1.1, 2026-09-13) |
+| Q2 | `go_package` tuzatish (P6) | backend | **hal** |
+| Q3 | `ChatEvent.kind="stage"` → `Conversation.stage`; `context["role"]`, `context["customer_mode"]` | backend gateway | **hal**; `x-service-token`/`x-request-id` — backend 6.18 ochiq |
+| Q4 | `Usage.cost_*` faqat Django hisoblaydi | backend usage | **hal** (GO-CONTRACT §1.1) |
+| Q5 | `FULL_RESYNC` — `from_version < current` bo'lsa darhol, stream yopiladi; Go Snapshot + Watch qayta ochadi | backend | **hal** (GO-CONTRACT §1.2) |
+| Q6 | `OrderDraftRequest.items_json` = `calc_cases.json` `input` formati | backend orders | **hal** sxema; `SaveOrderDraft` hali stub (backend 6.17) |
+| Q7 | Chiqindi ta'rifi (zapas vs rulon-eni) — buyurtmachi javobi (TZ §12 "aniqlanmagan-1") | buyurtmachi | ochiq |
+| Q8 | Tikuv narxi asosi (`per_sqm` hozir) — TZ §12 "aniqlanmagan-3" | buyurtmachi | ochiq |
+| Q9 | `calc_cases.json` da ko'p matoli (3–10 bo'lak) holatlar soni ≥ 6 mi? Bo'lmasa qo'shiladi | backend + AI | ochiq |
+| Q10 | Karniz (`cornice`) `ServicePrice` kaliti bormi? | backend pricing | ochiq |
+| Q11 | Postgres `agent` schema uchun alohida DB user/ruxsat | devops | ochiq |
+| Q12 | Ovoz formati (kirish `pcm_s16le 16k`, chiqish `mp3`) — mobil + gateway | backend + mobile | ochiq |
+
+---
+
+## Ish tartibi eslatmasi
+
+1. Task boshlashdan oldin `rules.md` tegishli bo'limi o'qiladi; kelishuv kerak bo'lsa `[!]` — kod stub bilan, test stub xatosini tekshiradi.
+2. Har task: kod → test → `make lint test` → `tasks.md` belgisi → commit (`feat(scope): ... (#task)`).
+3. Bosqich yakuni: golden + live + integratsiya → teg → `docs/LIVE-RUNS.md`.
+4. Har hafta: `[!]` ro'yxati backend bilan ko'rib chiqiladi, yechilganlar `[ ]` ga o'tadi.
