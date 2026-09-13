@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/components/tool"
@@ -30,11 +31,15 @@ type Chat struct {
 	maxStep      int
 	maxHistory   int // modelga yuboriladigan eski xabarlar chegarasi (history.go)
 	stream       bool
+	stateHook    StageReporter // nil bo'lsa stage event'lar chiqmaydi
+	provider     string        // done.usage uchun (main.go to'ldiradi)
+	modelName    string
 }
 
 // fallbackAnswer — model matnli javob bermasa (masalan maxStep tugab qolsa)
-// foydalanuvchi hech bo'lmasa nimadir ko'rsin.
-const fallbackAnswer = "Kechirasiz, javob bera olmadim. Qayta urinib ko'ring."
+// foydalanuvchi hech bo'lmasa nimadir ko'rsin. Alora uslubi (rules §6.4):
+// narx aytilmaydi, hisobni qo'lda tekshirish tavsiya qilinadi.
+const fallbackAnswer = "Kechirasiz, bu savolga hozir aniq javob bera olmadim. Qaytadan so'rang yoki hisobni qo'lda tekshirib ko'ring."
 
 // Options — Chat sozlamalari. Struct sifatida, chunki pozitsion parametrlar ko'payib
 // ketgan edi va MaxStep/MaxHistory qo'shni int'lar — ularni jimgina almashtirib
@@ -48,6 +53,12 @@ type Options struct {
 	// Stream — javobni jonli (bo'lak-bo'lak) yuborish. false bo'lsa yaxlit keladi
 	// va bitta content Event bo'ladi (Event shartnomasi o'zgarmaydi — transportlar bilmaydi).
 	Stream bool
+	// StateHook — suhbat bosqichini transportga xabar qiluvchi hook (stage.go).
+	// nil bo'lsa agent bosqich/state haqida hech narsa chiqarmaydi.
+	StateHook StageReporter
+	// Provider/Model — done.usage markerlari (main.go shu nomlarni to'ldiradi).
+	Provider string
+	Model    string
 }
 
 // NewChat model'ga tool'larni bog'laydi va Chat servisini yaratadi.
@@ -80,17 +91,27 @@ func NewChat(ctx context.Context, chatModel model.ToolCallingChatModel, tools []
 		model: bound, tools: byName, store: store,
 		systemPrompt: opts.SystemPrompt, maxStep: opts.MaxStep,
 		maxHistory: opts.MaxHistory, stream: opts.Stream,
+		stateHook: opts.StateHook, provider: opts.Provider, modelName: opts.Model,
 	}, nil
 }
 
 // Stream foydalanuvchi xabariga javobni Event oqimi sifatida qaytaradi.
-// Ketma-ketlik: start -> (content* | tool_call -> tool_args -> tool_result)* -> content* -> done.
+// Ketma-ketlik: start -> (tool_call -> tool_args -> tool_result -> products?)*
+// -> content* -> stage -> done (rules §6.1).
 func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event {
 	out := make(chan Event, 16)
+
+	// done.usage LatencyMs shu nuqtadan o'lchanadi.
+	start := time.Now()
 
 	go func() {
 		defer close(out)
 		emit(ctx, out, Event{Kind: KindStart})
+
+		// Tool'lar topgan mahsulotlarni yig'uvchi kontekst — product_search kabi
+		// tool'lar AttachProducts bilan belgilaydi, agent har natijadan keyin
+		// yig'ilganini KindProducts event'iga aylantiradi (products.go).
+		ctx, collector := WithProductCollector(ctx)
 
 		// Tool'lar joriy sessiyani bilishi uchun (masalan oxirgi order'ga bog'lash).
 		ctx = session.WithID(ctx, sessionID)
@@ -112,13 +133,20 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 		// oxirida HAMMASI tarixga yoziladi.
 		turnStart := len(msgs) - 1
 
+		// Shu navbat davomidagi jamlanma hisob: bir nechta ask bo'lsa qo'shiladi.
+		var (
+			usage     llm.TokenUsage
+			toolNames []string // done.usage uchun, chaqirilish tartibida
+		)
+
 		answered := false
 		for step := 0; step < c.maxStep; step++ {
-			content, toolCalls, err := c.ask(ctx, msgs, out)
+			content, toolCalls, u, err := c.ask(ctx, msgs, out)
 			if err != nil {
 				emit(ctx, out, Event{Kind: KindError, Err: err.Error()})
 				return
 			}
+			usage = addUsage(usage, u)
 			if len(toolCalls) == 0 {
 				// Yakuniy javob. Bo'sh matnni tarixga yozmaymiz — quyida fallback qo'yiladi.
 				if strings.TrimSpace(content) != "" {
@@ -132,6 +160,15 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 			for _, tc := range toolCalls {
 				result := c.runTool(ctx, tc)
 				emit(ctx, out, Event{Kind: KindToolResult, Tool: tc.Function.Name, Result: result})
+				toolNames = append(toolNames, tc.Function.Name)
+				// State hook: bosqich to'g'ridan-to'g'ri tool argumentlaridan yangilanadi
+				// (rules §4.5.2) — javob matni parse qilinmaydi.
+				if c.stateHook != nil {
+					c.stateHook.OnToolCall(ctx, sessionID, tc.Function.Name, tc.Function.Arguments)
+				}
+				if refs := collector.Drain(); len(refs) > 0 {
+					emit(ctx, out, Event{Kind: KindProducts, Products: refs})
+				}
 				msgs = append(msgs, schema.ToolMessage(result, tc.ID))
 			}
 		}
@@ -153,10 +190,39 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 		if err := c.store.Append(ctx, sessionID, msgs[turnStart:]...); err != nil {
 			slog.Warn("suhbat tarixini saqlab bo'lmadi", "session", sessionID, "err", err)
 		}
-		emit(ctx, out, Event{Kind: KindDone})
+		// Bosqich xabari javob tugashidan oldin (rules §4.5.5) — transport shu orqali
+		// suhbat bosqichini ko'radi. Hook yo'q bo'lsa hech narsa chiqmaydi.
+		if c.stateHook != nil {
+			stage, summary := c.stateHook.Stage(ctx, sessionID)
+			if stage != "" {
+				emit(ctx, out, Event{Kind: KindStage, Content: stage, Result: summary})
+			}
+		}
+		emit(ctx, out, Event{
+			Kind: KindDone,
+			Usage: &Usage{
+				Provider:         c.provider,
+				Model:            c.modelName,
+				PromptTokens:     usage.Prompt,
+				CompletionTokens: usage.Completion,
+				CachedTokens:     usage.Cached,
+				ReasoningTokens:  usage.Reasoning,
+				ToolCalls:        toolNames,
+				LatencyMs:        time.Since(start).Milliseconds(),
+			},
+		})
 	}()
 
 	return out
+}
+
+// addUsage ikki token hisobini qo'shadi (bir navbatda bir nechta ask bo'lsa yig'indi).
+func addUsage(a, b llm.TokenUsage) llm.TokenUsage {
+	a.Prompt += b.Prompt
+	a.Completion += b.Completion
+	a.Cached += b.Cached
+	a.Reasoning += b.Reasoning
+	return a
 }
 
 // Reset sessiya tarixini tozalaydi.
@@ -166,22 +232,22 @@ func (c *Chat) Reset(ctx context.Context, sessionID string) error {
 
 // ask model'dan bitta javob oladi: stream yoqilgan bo'lsa oqimni jonli o'qiydi,
 // aks holda yaxlit so'rov yuboradi. Ikkalasi ham bir xil Event'larni chiqaradi.
-func (c *Chat) ask(ctx context.Context, msgs []*schema.Message, out chan<- Event) (string, []schema.ToolCall, error) {
+func (c *Chat) ask(ctx context.Context, msgs []*schema.Message, out chan<- Event) (string, []schema.ToolCall, llm.TokenUsage, error) {
 	if !c.stream {
 		return c.generate(ctx, msgs, out)
 	}
 	stream, err := c.model.Stream(ctx, msgs)
 	if err != nil {
-		return "", nil, err
+		return "", nil, llm.TokenUsage{}, err
 	}
 	return c.readStream(ctx, stream, out)
 }
 
 // generate — stream o'chirilgan yo'l: javob yaxlit keladi va bitta content Event bo'ladi.
-func (c *Chat) generate(ctx context.Context, msgs []*schema.Message, out chan<- Event) (string, []schema.ToolCall, error) {
+func (c *Chat) generate(ctx context.Context, msgs []*schema.Message, out chan<- Event) (string, []schema.ToolCall, llm.TokenUsage, error) {
 	msg, err := c.model.Generate(ctx, msgs)
 	if err != nil {
-		return "", nil, err
+		return "", nil, llm.TokenUsage{}, err
 	}
 	if r, ok := llm.Reasoning(msg); ok && r != "" {
 		emit(ctx, out, Event{Kind: KindThinking, Content: r})
@@ -193,12 +259,13 @@ func (c *Chat) generate(ctx context.Context, msgs []*schema.Message, out chan<- 
 		emit(ctx, out, Event{Kind: KindToolCall, Tool: tc.Function.Name})
 		emit(ctx, out, Event{Kind: KindToolArgs, Tool: tc.Function.Name, Args: tc.Function.Arguments})
 	}
-	return msg.Content, msg.ToolCalls, nil
+	u, _ := llm.Usage(msg)
+	return msg.Content, msg.ToolCalls, u, nil
 }
 
 // readStream bitta model oqimini o'qiydi: matnni JONLI content Event sifatida chiqaradi,
 // tool_call'larni index bo'yicha yig'adi (nom -> tool_call, argumentlar EOF'da tool_args).
-func (c *Chat) readStream(ctx context.Context, stream *schema.StreamReader[*schema.Message], out chan<- Event) (string, []schema.ToolCall, error) {
+func (c *Chat) readStream(ctx context.Context, stream *schema.StreamReader[*schema.Message], out chan<- Event) (string, []schema.ToolCall, llm.TokenUsage, error) {
 	defer stream.Close()
 
 	var content strings.Builder
@@ -208,6 +275,9 @@ func (c *Chat) readStream(ctx context.Context, stream *schema.StreamReader[*sche
 	}
 	calls := map[int]*acc{}
 	var order []int
+	// Usage odatda oqimning oxirgi chunk'ida keladi — har chunk'ni alohida qo'shamiz,
+	// shunda provider uni qaysi chunk'da yuborishidan qat'i nazar hisob yo'qolmaydi.
+	var usage llm.TokenUsage
 
 	for {
 		chunk, err := stream.Recv()
@@ -215,7 +285,7 @@ func (c *Chat) readStream(ctx context.Context, stream *schema.StreamReader[*sche
 			break
 		}
 		if err != nil {
-			return "", nil, err
+			return "", nil, llm.TokenUsage{}, err
 		}
 		// O'ylash (reasoning) javobdan OLDIN va alohida oqim bo'lib keladi — uni
 		// content'ga qo'shmaymiz (u javob emas), alohida Event qilamiz.
@@ -225,6 +295,9 @@ func (c *Chat) readStream(ctx context.Context, stream *schema.StreamReader[*sche
 		if chunk.Content != "" {
 			content.WriteString(chunk.Content)
 			emit(ctx, out, Event{Kind: KindContent, Content: chunk.Content}) // JONLI stream
+		}
+		if u, ok := llm.Usage(chunk); ok {
+			usage = addUsage(usage, u)
 		}
 		for _, tc := range chunk.ToolCalls {
 			idx := 0
@@ -260,7 +333,7 @@ func (c *Chat) readStream(ctx context.Context, stream *schema.StreamReader[*sche
 		})
 		emit(ctx, out, Event{Kind: KindToolArgs, Tool: a.name, Args: a.args.String()})
 	}
-	return content.String(), toolCalls, nil
+	return content.String(), toolCalls, usage, nil
 }
 
 // runTool tool_call'ni bajaradi va natija (yoki xato) matnini qaytaradi.

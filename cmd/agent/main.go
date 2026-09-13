@@ -11,14 +11,19 @@ import (
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus"
+	"google.golang.org/grpc"
 
 	"github.com/muhammadvadud/alora-agent/internal/agent"
+	"github.com/muhammadvadud/alora-agent/internal/backend"
 	"github.com/muhammadvadud/alora-agent/internal/config"
+	"github.com/muhammadvadud/alora-agent/internal/curtains"
 	"github.com/muhammadvadud/alora-agent/internal/llm"
 	"github.com/muhammadvadud/alora-agent/internal/observability"
 	"github.com/muhammadvadud/alora-agent/internal/session"
 	"github.com/muhammadvadud/alora-agent/internal/tools"
 	"github.com/muhammadvadud/alora-agent/internal/transport/cli"
+	grpctransport "github.com/muhammadvadud/alora-agent/internal/transport/grpc"
 	httptransport "github.com/muhammadvadud/alora-agent/internal/transport/http"
 )
 
@@ -59,6 +64,38 @@ func run() error {
 	// qila oladi, bir joyda ko'rinadi. Handler/DTO/konstruktor: internal/tools.
 	// Alora domen tool'lari (product_search, curtain_calculate, ...) tasks.md 1.E da qo'shiladi.
 	toolList := []tool.BaseTool{tools.Calculator(), tools.Clock()}
+	var backendConn *grpc.ClientConn
+	var syncer *backend.CatalogSyncer
+	var metrics *observability.Metrics
+	var metricsReg *prometheus.Registry
+	var catalog *curtains.Catalog
+	if cfg.Mode == "grpc" {
+		token := os.Getenv(cfg.GRPC.ServiceTokenEnv)
+		backendConn, err = backend.Dial(ctx, cfg.Backend.Addr, token)
+		if err != nil {
+			return fmt.Errorf("backend ulanishi: %w", err)
+		}
+		defer backendConn.Close()
+		catalog = curtains.NewCatalog(curtains.RealClock{}, cfg.Catalog.StaleAfter)
+		metrics, metricsReg = observability.NewMetrics()
+		syncer = backend.NewCatalogSyncer(backendConn, catalog, backend.SyncOptions{
+			PageSize: int32(cfg.Catalog.PageSize), Metrics: metrics,
+		})
+		go func() {
+			if syncErr := syncer.Run(ctx); syncErr != nil {
+				slog.Error("katalog sinxronizatsiyasi to'xtadi", "error", syncErr)
+			}
+		}()
+		pricing := backend.NewPricingClient(backendConn, cfg.Backend.Timeout, "")
+		// Session state Store API 1.30/1.31 da ulanadi; hozircha nil ataylab beriladi.
+		for _, candidate := range tools.Alora(tools.Deps{
+			Catalog: catalog, Calc: pricing, State: nil, Clock: curtains.RealClock{},
+		}) {
+			if candidate != nil {
+				toolList = append(toolList, candidate)
+			}
+		}
+	}
 
 	// Suhbat xotirasi: DATABASE_URL berilgan bo'lsa Postgres, aks holda in-memory.
 	store, err := newStore(ctx, cfg.DB.URL)
@@ -80,6 +117,18 @@ func run() error {
 	// Transport tanlash. Yangi transport (masalan gRPC/WebSocket) qo'shish uchun
 	// Chat.Stream(...) <-chan Event ni render qiling va shu switch'ga yangi case qo'shing.
 	switch cfg.Mode {
+	case "grpc":
+		service := grpctransport.New(chat, grpctransport.Options{
+			ServiceToken: os.Getenv(cfg.GRPC.ServiceTokenEnv), AuthRequired: cfg.GRPC.AuthRequired,
+			MaxSessions: cfg.GRPC.MaxSessions, Ready: syncer, Metrics: metrics,
+			Health: func() (string, string) {
+				if catalog.View().Stale {
+					return "degraded", "katalog eskirgan"
+				}
+				return "ok", ""
+			},
+		})
+		return serveGRPC(ctx, cfg, service, metrics, metricsReg, syncer)
 	case "http":
 		// HTTP transport faqat /healthz, /readyz, /metrics (rules.md §0.7).
 		// Katalog/outbox sinxroni (HealthState) gRPC rejimida ulanadi; http rejimida
@@ -116,7 +165,30 @@ func systemPrompt(cfg *config.Config) string {
 	if cfg.Agent.SystemPrompt != "" {
 		return cfg.Agent.SystemPrompt
 	}
+	if cfg.Fallback.SystemPrompt != "" {
+		return cfg.Fallback.SystemPrompt
+	}
 	return defaultSystemPrompt
+}
+
+func serveGRPC(ctx context.Context, cfg *config.Config, srv *grpctransport.Server, metrics *observability.Metrics, reg *prometheus.Registry, ready observability.Readiness) error {
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	errs := make(chan error, 2)
+	go func() { errs <- httptransport.Serve(runCtx, cfg.HTTP.Addr, reg, ready) }()
+	go func() {
+		errs <- grpctransport.Serve(runCtx, cfg.GRPC.Addr, srv, grpctransport.ServeConfig{
+			ServiceToken: os.Getenv(cfg.GRPC.ServiceTokenEnv), AuthRequired: cfg.GRPC.AuthRequired,
+			MaxSessions: cfg.GRPC.MaxSessions, Metrics: metrics,
+		})
+	}()
+	first := <-errs
+	cancel()
+	second := <-errs
+	if first != nil {
+		return first
+	}
+	return second
 }
 
 func configPath() string {

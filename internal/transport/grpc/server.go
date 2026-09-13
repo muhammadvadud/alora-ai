@@ -1,0 +1,179 @@
+package grpc
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net"
+	"sync/atomic"
+	"time"
+
+	"github.com/muhammadvadud/alora-agent/gen/alorav1"
+	"github.com/muhammadvadud/alora-agent/internal/agent"
+	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-agent/internal/observability"
+	"github.com/muhammadvadud/alora-agent/internal/session"
+	grpcgo "google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/status"
+)
+
+// Streamer — agent Chat'ni test va keyingi transportlar uchun kichik kontraktga ajratadi.
+type Streamer interface {
+	Stream(context.Context, string, string) <-chan agent.Event
+	Reset(context.Context, string) error
+}
+
+type Options struct {
+	ServiceToken string
+	AuthRequired bool
+	MaxSessions  int
+	Version      string
+	Ready        observability.Readiness
+	Metrics      *observability.Metrics
+	Health       func() (status string, lastErr string)
+}
+
+type Server struct {
+	alorav1.UnimplementedAgentServer
+	chat    Streamer
+	ready   observability.Readiness
+	health  func() (string, string)
+	version string
+	active  atomic.Int64
+}
+
+func New(chat Streamer, opts Options) *Server {
+	if opts.Ready == nil {
+		opts.Ready = readyOK{}
+	}
+	if opts.Health == nil {
+		opts.Health = func() (string, string) { return "ok", "" }
+	}
+	return &Server{chat: chat, ready: opts.Ready, health: opts.Health, version: opts.Version}
+}
+
+func (s *Server) Chat(req *alorav1.ChatRequest, stream grpcgo.ServerStreamingServer[alorav1.ChatEvent]) error {
+	if s.chat == nil {
+		return status.Error(codes.FailedPrecondition, "agent tayyor emas")
+	}
+	s.active.Add(1)
+	defer s.active.Add(-1)
+
+	ctx := session.WithID(stream.Context(), req.GetSessionId())
+	info := requestInfo(req)
+	ctx = WithRequestInfo(ctx, info)
+	ctx = curtains.WithUser(ctx, curtains.UserInfo{
+		UserID: info.UserID, TenantID: info.TenantID, Role: curtains.UserRole(info.Role),
+		Locale: info.Locale, CustomerMode: info.CustomerMode, ConversationID: info.ConversationID,
+	})
+	for ev := range s.chat.Stream(ctx, req.GetSessionId(), req.GetMessage()) {
+		if ev.Kind == agent.KindThinking {
+			continue
+		}
+		mapped := toProto(ev)
+		if mapped == nil {
+			continue
+		}
+		if err := stream.Send(mapped); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func requestInfo(req *alorav1.ChatRequest) RequestInfo {
+	values := req.GetContext()
+	return RequestInfo{
+		UserID: req.GetUserId(), TenantID: req.GetTenantId(), Locale: req.GetLocale(),
+		Role: values["role"], CustomerMode: values["customer_mode"] == "1",
+		ConversationID: values["conversation_id"],
+	}
+}
+
+func (s *Server) VoiceChat(grpcgo.BidiStreamingServer[alorav1.VoiceChunk, alorav1.VoiceEvent]) error {
+	return status.Error(codes.Unimplemented, "VoiceChat 3-bosqichda ulanadi")
+}
+
+func (s *Server) ResetSession(ctx context.Context, req *alorav1.ResetRequest) (*alorav1.ResetResponse, error) {
+	if s.chat == nil {
+		return nil, status.Error(codes.FailedPrecondition, "agent tayyor emas")
+	}
+	if err := s.chat.Reset(session.WithID(ctx, req.GetSessionId()), req.GetSessionId()); err != nil {
+		return nil, status.Error(codes.Internal, "sessiyani tozalab bo'lmadi")
+	}
+	return &alorav1.ResetResponse{Success: true}, nil
+}
+
+func (s *Server) Health(context.Context, *alorav1.Empty) (*alorav1.HealthResponse, error) {
+	state, lastErr := s.health()
+	ready, reason := s.ready.Ready()
+	if !ready {
+		state = "degraded"
+		if lastErr == "" {
+			lastErr = reason
+		}
+	}
+	if state != "ok" {
+		state = "degraded"
+	}
+	return &alorav1.HealthResponse{Status: state, Version: s.version, ActiveSessions: int32(s.active.Load()), LastError: lastErr}, nil
+}
+
+type readyOK struct{}
+
+func (readyOK) Ready() (bool, string) { return true, "" }
+
+type ServeConfig struct {
+	ServiceToken string
+	AuthRequired bool
+	MaxSessions  int
+	Version      string
+	Ready        observability.Readiness
+	Metrics      *observability.Metrics
+}
+
+func Serve(ctx context.Context, addr string, srv *Server, cfg ServeConfig) error {
+	maxSessions := cfg.MaxSessions
+	if maxSessions <= 0 {
+		maxSessions = 100
+	}
+	server := grpcgo.NewServer(
+		grpcgo.KeepaliveParams(keepalive.ServerParameters{Time: 30 * time.Second}),
+		grpcgo.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{MinTime: 10 * time.Second, PermitWithoutStream: true}),
+		grpcgo.MaxRecvMsgSize(4<<20), grpcgo.MaxSendMsgSize(4<<20),
+		grpcgo.MaxConcurrentStreams(uint32(maxSessions)),
+		grpcgo.ChainUnaryInterceptor(unaryInterceptors(interceptorOptions{
+			token: cfg.ServiceToken, authRequired: cfg.AuthRequired, metrics: cfg.Metrics, limiter: newRateLimiter(),
+		})...),
+		grpcgo.ChainStreamInterceptor(streamInterceptors(interceptorOptions{
+			token: cfg.ServiceToken, authRequired: cfg.AuthRequired, metrics: cfg.Metrics, limiter: newRateLimiter(),
+		})...),
+	)
+	alorav1.RegisterAgentServer(server, srv)
+
+	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", addr)
+	if err != nil {
+		return err
+	}
+	serveErr := make(chan error, 1)
+	go func() { serveErr <- server.Serve(listener) }()
+	select {
+	case err := <-serveErr:
+		if errors.Is(err, grpcgo.ErrServerStopped) {
+			return nil
+		}
+		return fmt.Errorf("grpc server: %w", err)
+	case <-ctx.Done():
+		stopped := make(chan struct{})
+		go func() { server.GracefulStop(); close(stopped) }()
+		select {
+		case <-stopped:
+			return nil
+		case <-time.After(15 * time.Second):
+			server.Stop()
+			return nil
+		}
+	}
+}

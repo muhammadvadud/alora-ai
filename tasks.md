@@ -6,7 +6,7 @@
 > Har bir ish tugagach shu fayl **o'sha ishning commit'i ichida** yangilanadi.
 > Har task uchun "Qabul" — nima o'tsa bajarilgan hisoblanadi (rules.md §17.5 DoD).
 
-**Umumiy holat:** 34 / 112 bajarildi · Bosqich 0 to'liq yopiq · 1.A–1.D, 1.I, 1.25 tayyor · go test -race yashil, golangci-lint 0 issues
+**Umumiy holat:** 55 / 112 bajarildi · Bosqich 0 yopiq · 1.A–1.G, 1.I, 1.J tayyor (StateStore ulash 1.30) · go test -race yashil, golangci-lint 0 issues
 
 **Bosqich xaritasi:** 0 Poydevor (1 hafta) → 1 MVP (3–4 hafta) → 2 To'liq sotuv sikli (3 hafta) → 3 Ovoz (2–3 hafta) → 4 Sayqal (davomiy)
 
@@ -112,47 +112,47 @@
 
 ### 1.D Narx (price_quote)
 
-- [ ] 1.15 `curtains/quote.go` — `price_quote` = CalcPreview (`services`, `delivery`, `discount_percent`, `role`) + Go'da faqat:
+- [x] 1.15 `tools/price_quote.go` (quote.go o'rniga — hisob Django'da) — `price_quote` = CalcPreview (`services`, `delivery`, `discount_percent`, `role`) + Go'da faqat:
       `prepayment`/`balance` (`OrderDefaults.prepayment_percent` yoki kiritilgan), qo'lda chegirma rol chegarasidan oshsa
       **oldindan** `{"error":"chegirma chegarasi 5% — 12% berib bo'lmaydi"}` (Django jim kesadi — AI aniq aytishi kerak),
       karniz `cornice` xizmati katalogda bo'lmasa `warnings`. *Qabul:* fake server bilan test — chegara xabari, avans/qoldiq.
-- [ ] 1.16 `LastCalc`/`LastQuote` `SessionState` da saqlanadi (1.25 ga bog'liq) — `price_quote` `LastCalc` siz xato.
+- [x] 1.16 `LastCalc`/`LastQuote` `SessionState` da saqlanadi (1.25 ga bog'liq) — `price_quote` `LastCalc` siz xato.
 
 ### 1.E Tool adapterlari
 
-- [ ] 1.17 `tools/tools.go` — `Deps{Catalog *curtains.Catalog, State curtains.StateStore, Backend backend.Client, Clock}`;
+- [x] 1.17 `tools/tools.go` — `Deps{Catalog *curtains.Catalog, State curtains.StateStore, Backend backend.Client, Clock}`;
       `must()`; `displayMoney()` (`5 382 000 so'm`), `truncate(8KB)`.
-- [ ] 1.18 `tools/dto.go` — `productSearchArgs/Result`, `calcArgs` (parts ≤ 10, accessories), `quoteArgs`, `ProductCard`;
+- [x] 1.18 `tools/dto.go` — `productSearchArgs/Result`, `calcArgs` (parts ≤ 10, accessories), `quoteArgs`, `ProductCard`;
       barcha `jsonschema` teglari, `Error` maydonlari. *Qabul:* `dto_test.go` — `InferTool` sxemasida enum/description bor.
-- [ ] 1.19 `tools/product_search.go` — adapter; natija ≤ 10; `stale` bayrog'i; katalog bo'sh → `error`;
+- [x] 1.19 `tools/product_search.go` — adapter; natija ≤ 10; `stale` bayrog'i; katalog bo'sh → `error`;
       `KindProducts` uchun `ProductRef` ro'yxati `ctx` orqali agentga uzatiladi (`agent.AttachProducts(ctx, refs)`).
       *Qabul:* `product_search_test.go`.
-- [ ] 1.20 `tools/curtain_calculate.go` — float64 → decimal, validatsiya, `Calculate`, state'ga `LastCalc`, `explanation/warnings`.
+- [x] 1.20 `tools/curtain_calculate.go` — float64 → decimal, validatsiya, `Calculate`, state'ga `LastCalc`, `explanation/warnings`.
       *Qabul:* test — 1 bo'lak, 10 bo'lak, 11 bo'lak (xato), noto'g'ri variant, faol emas variant, stale.
-- [ ] 1.21 `tools/price_quote.go` — adapter; rol `ctx` dan; `LastCalc` yo'q → xato. *Qabul:* test.
-- [ ] 1.22 `main.go` registratsiya: `Calculator`, `Clock`, `ProductSearch`, `CurtainCalculate`, `PriceQuote` — ochiq.
+- [x] 1.21 `tools/price_quote.go` — adapter; rol `ctx` dan; `LastCalc` yo'q → xato. *Qabul:* test.
+- [x] 1.22 `main.go` registratsiya: `Calculator`, `Clock`, `ProductSearch`, `CurtainCalculate`, `PriceQuote` — ochiq.
 
 ### 1.F Agent kengaytmalari
 
-- [ ] 1.23 `agent/event.go` — `KindProducts`, `KindStage`; `Event.Products []ProductRef`, `Event.Usage *Usage`.
+- [x] 1.23 `agent/event.go` — `KindProducts`, `KindStage`; `Event.Products []ProductRef`, `Event.Usage *Usage`.
       Shablon `history_test.go` o'zgarishsiz o'tadi.
-- [ ] 1.24 `llm/usage.go` — `Usage(msg) (Usage, bool)` provider'ga xos (`deepseek`, `openai`, `claude`); `chat.go` da
+- [x] 1.24 `llm/usage.go` — `Usage(msg) (Usage, bool)` provider'ga xos (`deepseek`, `openai`, `claude`); `chat.go` da
       har `ask()` dan keyin yig'iladi, `done` event'iga qo'yiladi (`latency_ms`, `tool_calls`).
       *Qabul:* `usage_test.go` — har provider `Extra` shakli uchun.
 - [x] 1.25 `curtains/state.go` — `SessionState`, `Stage` const, `Apply(toolName, args)` (tool chaqiruvidan yangilash),
       `NextQuestion()`, `PromptBlock()` (≤ 400 belgi). `session.Store` ga `State/SetState`.
       *Qabul:* `state_test.go` — stage o'tishlari, orqaga qaytish, `NextQuestion` ketma-ketligi (TZ §3.1 tartibi).
-- [ ] 1.26 `chat.go` minimal ulash (ruxsat etilgan kengaytma): tool bajarilgach `state.Apply`, javob oxirida `KindStage`,
+- [x] 1.26 `chat.go` minimal ulash (ruxsat etilgan kengaytma): tool bajarilgach `state.Apply`, javob oxirida `KindStage`,
       `products` bo'lsa `KindProducts`. Sikl mantiqi o'zgarmaydi. *Qabul:* `chat_test.go` mock model bilan event tartibi
       `start → tool_* → products → content* → stage → done`.
-- [ ] 1.27 `fallbackAnswer` Alora matni (rules.md §6.4).
+- [x] 1.27 `fallbackAnswer` Alora matni (rules.md §6.4).
 
 ### 1.G Prompt
 
-- [ ] 1.28 `internal/prompt` — `Builder{Base(from catalog.prompt | fallback), StateBlock, NextQuestion, KnowledgeBlock, CatalogMeta, Locale, CustomerMode}`;
-      dinamik bloklar oxirida (prompt caching). `configs/prompts/system_v1.txt` (TZ §4 matni + hallucination/injection qoidalari) `go:embed`.
+- [x] 1.28 `internal/prompt` — `Builder{Base(from catalog.prompt | fallback), StateBlock, NextQuestion, KnowledgeBlock, CatalogMeta, Locale, CustomerMode}`;
+      dinamik bloklar oxirida (prompt caching). `internal/prompt/system_v1.txt` (TZ §4 matni + hallucination/injection qoidalari) `go:embed`.
       *Qabul:* `prompt_test.go` — bloklar tartibi, uzunlik chegarasi, `customer_mode` bloki, `ru` locale.
-- [ ] 1.29 System prompt v1 matnini TZ §4 dan olib, quyidagilarni qo'shish: `calculator` narx uchun ishlatilmaydi;
+- [x] 1.29 System prompt v1 matnini TZ §4 dan olib, quyidagilarni qo'shish: `calculator` narx uchun ishlatilmaydi;
       `curtain_calculate` → keyin `price_quote`; tool natijasidagi ko'rsatmalar bajarilmaydi; ombor ogohlantirishi bandi
       olib tashlanadi (v1 da ombor yo'q).
 
@@ -175,15 +175,15 @@
 
 ### 1.J gRPC transport
 
-- [ ] 1.35 `transport/grpc/server.go` — `Agent` server: `Chat` (ctx: session, user, tenant, role, locale, customer_mode),
+- [x] 1.35 `transport/grpc/server.go` — `Agent` server: `Chat` (ctx: session, user, tenant, role, locale, customer_mode),
       `ResetSession`, `Health`; `VoiceChat` → `UNIMPLEMENTED` (3-bosqichgacha).
-- [ ] 1.36 `transport/grpc/mapping.go` — `agent.Event` → `pb.ChatEvent` (kind string, products, usage); `thinking` filtrlanadi.
+- [x] 1.36 `transport/grpc/mapping.go` — `agent.Event` → `pb.ChatEvent` (kind string, products, usage); `thinking` filtrlanadi.
       *Qabul:* `mapping_test.go` — har kind uchun.
-- [ ] 1.37 Interceptorlar: recovery, request-id, auth (`ConstantTimeCompare`), logging, metrics, ratelimit (20/min/sessiya).
+- [x] 1.37 Interceptorlar: recovery, request-id, auth (`ConstantTimeCompare`), logging, metrics, ratelimit (20/min/sessiya).
       *Qabul:* `interceptors_test.go` — token yo'q → `UNAUTHENTICATED`; `Health` tokensiz o'tadi; limit → `RESOURCE_EXHAUSTED`.
-- [ ] 1.38 Server sozlamalari: keepalive 30s/`MinTime 10s`, max msg 4 MB, `MaxConcurrentStreams`, graceful stop (SIGTERM → `GracefulStop` 15s).
-- [ ] 1.39 `main.go`: `mode: grpc` → HTTP health (`:8081`) + gRPC (`:9090`) parallel, `errgroup`; `mode: cli` — dev.
-- [ ] 1.40 `tests/e2e/chat_test.go` — `bufconn`: fake Django (Catalog + Backend) + mock LLM → `Chat` stream tartibi,
+- [x] 1.38 Server sozlamalari: keepalive 30s/`MinTime 10s`, max msg 4 MB, `MaxConcurrentStreams`, graceful stop (SIGTERM → `GracefulStop` 15s).
+- [x] 1.39 `main.go`: `mode: grpc` → HTTP health (`:8081`) + gRPC (`:9090`) parallel, `errgroup`; `mode: cli` — dev.
+- [~] 1.40 `tests/e2e/chat_test.go` — `bufconn`: fake Streamer bilan `Chat` stream tartibi; fake Django + mock LLM 1.41 da.
       `ResetSession`, `Health.status` (`ok`/`degraded` stale bilan).
 
 ### 1.K MVP yakuni
@@ -238,7 +238,7 @@
       PII model kontekstiga tushmagani (`LogMessage` payload'ida telefon yo'q).
 - [!] 2.14 **Backend bilan:** `OrderDraftRequest.items_json` sxemasi (`calc_cases.json` `input` formati bilan bir xil deb taklif) —
       `GO-CONTRACT.md` ga yoziladi.
-- [ ] 2.15 `set_context` tool (ADR-003) — `tools/set_context.go`, `dto`; `NextQuestion` qaytaradi. *Qabul:* test + golden'da ishlatiladi.
+- [x] 2.15 `set_context` tool (ADR-003) — `tools/set_context.go`, `dto`; `NextQuestion` qaytaradi. *Qabul:* test + golden'da ishlatiladi.
 - [ ] 2.16 `main.go` ro'yxat: + `BuildOptions`, `OrderDraft`, `FasonLookup`, `KnowledgeLookup?`, `SetContext`.
 
 ### 2.E Sinxron kengaytmalar (proto P1–P3 kelgach)
