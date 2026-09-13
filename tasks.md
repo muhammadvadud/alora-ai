@@ -196,7 +196,7 @@
       *Qabul:* TTFT p95 ≤ 1.5 s, 2-tool javob ≤ 6 s (bo'lmasa `max_tokens`/prompt hajmi sozlanadi, natija yoziladi).
 - [x] 1.44 Backend bilan integratsiya sinovi (`tests/e2e/django_sse_test.go`, real DeepSeek): Django SSE → Go → tool'lar → Django Pricing → SSE; `products`, `done.usage`, tool natijasidan kelgan summa, xabarlar va usage summary tekshiriladi. Tarixdagi eski tool natijalari model nusxasida 3000 rune bilan cheklanadi.
 - [x] 1.45 `docs/ARCHITECTURE.md` (paket xaritasi, oqim diagrammasi), `docs/RUNBOOK.md` (stale, outbox dead, Watch uzilishi nima qilish).
-- [ ] 1.46 Teg `v0.1.0`.
+- [x] 1.46 Teg `v0.1.0` (2026-09-14, push qilindi).
 
 ---
 
