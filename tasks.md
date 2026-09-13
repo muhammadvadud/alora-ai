@@ -98,7 +98,7 @@
       Django `input` bilan bir xil (JSON tenglik), javob `CalcResult` ↔ `expected` Decimal tengligi. *Qabul:* 20/20.
 - [ ] 1.9 `curtains/explain.go` — `explanation`/`warnings`: chiqindi (Django `warnings` + `waste_percent`), koeffitsient −0.5 tejami
       (ikkinchi CalcPreview, parallel), arzonroq analog (katalog, ≤ 80% narx/m²). *Qabul:* fake server bilan 3 ssenariy.
-- [ ] 1.10 Live test (`//go:build live`): real Django (`docker compose`) bilan 20/20 CalcPreview.
+- [x] 1.10 Live test (`//go:build live`): real Django (`docker compose`) bilan 20/20 CalcPreview.
 - [ ] 1.11 Etalonda ≥ 6 ta ko'p matoli holat borligini tekshiruvchi test (`TestFixture_HasMultiPartCases`) — hozir 4 ta (2, 3, 3, 10 bo'lak) → backend bilan 2 ta qo'shiladi [!].
 
 ### 1.C Qidiruv
@@ -158,10 +158,10 @@
 
 ### 1.H Sessiya (Postgres)
 
-- [ ] 1.30 `session/migrations/0001_sessions.sql` (`agent` schema: `sessions` + `state jsonb`, `user_id`, `tenant_id`, `updated_at`),
+- [x] 1.30 `session/migrations/0001_sessions.sql` (`agent` schema: `sessions` + `state jsonb`, `user_id`, `tenant_id`, `updated_at`),
       `golang-migrate` embed; `db.auto_migrate` dev. *Qabul:* `postgres_test.go` (testcontainers yoki `DATABASE_URL` bo'lsa) —
       `Append` + `SetState` bir tranzaksiyada; egasi tekshiruvi.
-- [ ] 1.31 In-memory `Store` ga `State/SetState` (dev/CLI).
+- [x] 1.31 In-memory `Store` ga `State/SetState` (dev/CLI).
 
 ### 1.I Katalog sync klienti (Django → Go)
 
@@ -194,9 +194,9 @@
 - [ ] 1.42 `hallucination_test.go` (rules.md §14.5). *Qabul:* CI'da `-run Halluc` alohida job.
 - [ ] 1.43 Live sinov (`//go:build live`, DeepSeek): 5 ssenariy, TTFT/tool soni `docs/LIVE-RUNS.md` ga.
       *Qabul:* TTFT p95 ≤ 1.5 s, 2-tool javob ≤ 6 s (bo'lmasa `max_tokens`/prompt hajmi sozlanadi, natija yoziladi).
-- [ ] 1.44 Backend bilan integratsiya sinovi: `docker compose` (backend + agent) → Django `POST /api/v1/chat/.../messages/` SSE →
+- [~] 1.44 Backend bilan integratsiya sinovi (gRPC qismi tayyor: `tests/live` — real Django run_grpc bilan snapshot + 20 etalon CalcPreview o'tdi; SSE/LLM qismi DEEPSEEK_API_KEY kutmoqda): `docker compose` (backend + agent) → Django `POST /api/v1/chat/.../messages/` SSE →
       Go → javob. *Qabul:* mobil/`curl -N` da `content` oqimi va `products` keladi; Django `UsageRecord` yozilgan.
-- [ ] 1.45 `docs/ARCHITECTURE.md` (paket xaritasi, oqim diagrammasi), `docs/RUNBOOK.md` (stale, outbox dead, Watch uzilishi nima qilish).
+- [x] 1.45 `docs/ARCHITECTURE.md` (paket xaritasi, oqim diagrammasi), `docs/RUNBOOK.md` (stale, outbox dead, Watch uzilishi nima qilish).
 - [ ] 1.46 Teg `v0.1.0`.
 
 ---
