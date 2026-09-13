@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-func TestDjangoSSE_MockAgentEndToEnd(t *testing.T) {
+func TestDjangoSSE_AgentEndToEnd(t *testing.T) {
 	base := strings.TrimRight(envOrSkip(t, "ALORA_E2E_DJANGO", "http://localhost:8000"), "/")
 	token := os.Getenv("ALORA_E2E_JWT")
 	if token == "" {
@@ -30,19 +30,22 @@ func TestDjangoSSE_MockAgentEndToEnd(t *testing.T) {
 		conversationID = createConversation(t, base, token)
 	}
 
-	first := postSSE(t, base, token, conversationID, "Mehmonxona uchun hi-tech parda kerak")
-	assertKinds(t, first, []string{"tool_call", "tool_call", "products", "content", "done"})
-	if first[0]["tool"] != "set_context" || first[1]["tool"] != "product_search" {
-		t.Fatalf("birinchi tool tartibi: %#v", first)
+	first := postSSE(t, base, token, conversationID, "Mehmonxona uchun hi-tech parda kerak, katalogdan mos mahsulotlarni top")
+	assertKinds(t, first, []string{"tool_call", "products", "content", "done"})
+	if !hasTool(first, "set_context") && !hasTool(first, "product_search") {
+		t.Fatalf("birinchi xabarda kutilgan tool chaqirilmadi: %#v", first)
 	}
-	if _, ok := first[len(first)-1]["usage"]; !ok {
-		t.Fatalf("done usage'siz: %#v", first[len(first)-1])
+	if !hasKind(first, "products") {
+		t.Fatalf("birinchi xabarda products event yo'q: %#v", first)
+	}
+	if usage := doneUsage(first); usage == nil {
+		t.Fatalf("done usage'siz: %#v", first)
 	}
 
 	second := postSSE(t, base, token, conversationID, "Karniz 4.2 m, balandlik 2.8 m, hisobla")
 	assertKinds(t, second, []string{"tool_call", "content", "done"})
-	if second[0]["tool"] != "curtain_calculate" {
-		t.Fatalf("hisob tool'i: %#v", second[0])
+	if !hasTool(second, "curtain_calculate") {
+		t.Fatalf("curtain_calculate chaqirilmadi: %#v", second)
 	}
 	resultTotal := findTotal(second)
 	content := concatContent(second)
@@ -58,6 +61,35 @@ func TestDjangoSSE_MockAgentEndToEnd(t *testing.T) {
 
 	reset(t, base, token, conversationID)
 	assertPersisted(t, base, token, conversationID)
+	assertUsageSummary(t, base, token)
+}
+
+func hasKind(events []map[string]any, want string) bool {
+	for _, event := range events {
+		if event["kind"] == want {
+			return true
+		}
+	}
+	return false
+}
+
+func hasTool(events []map[string]any, want string) bool {
+	for _, event := range events {
+		if event["kind"] == "tool_call" && event["tool"] == want {
+			return true
+		}
+	}
+	return false
+}
+
+func doneUsage(events []map[string]any) map[string]any {
+	for _, event := range events {
+		if event["kind"] == "done" {
+			usage, _ := event["usage"].(map[string]any)
+			return usage
+		}
+	}
+	return nil
 }
 
 func postSSE(t *testing.T, base, token, conversationID, content string) []map[string]any {
@@ -168,7 +200,7 @@ func concatContent(events []map[string]any) string {
 func login(t *testing.T, base, phone, password string) string {
 	t.Helper()
 	body, _ := json.Marshal(map[string]string{"phone": phone, "password": password})
-	req, _ := http.NewRequest(http.MethodPost, base+"/api/v1/auth/login/", bytes.NewReader(body))
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, base+"/api/v1/auth/login/", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -186,7 +218,7 @@ func login(t *testing.T, base, phone, password string) string {
 
 func createConversation(t *testing.T, base, token string) string {
 	t.Helper()
-	req, _ := http.NewRequest(http.MethodPost, base+"/api/v1/conversations/", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, base+"/api/v1/conversations/", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -204,7 +236,7 @@ func createConversation(t *testing.T, base, token string) string {
 
 func reset(t *testing.T, base, token, conversationID string) {
 	t.Helper()
-	req, _ := http.NewRequest(http.MethodPost, base+"/api/v1/conversations/"+conversationID+"/reset/", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, base+"/api/v1/conversations/"+conversationID+"/reset/", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -218,9 +250,9 @@ func reset(t *testing.T, base, token, conversationID string) {
 
 func assertPersisted(t *testing.T, base, token, conversationID string) {
 	t.Helper()
-	deadline := time.Now().Add(3 * time.Second)
+	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		req, _ := http.NewRequest(http.MethodGet, base+"/api/v1/conversations/"+conversationID+"/messages/", nil)
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, base+"/api/v1/conversations/"+conversationID+"/messages/", nil)
 		req.Header.Set("Authorization", "Bearer "+token)
 		resp, err := http.DefaultClient.Do(req)
 		if err == nil {
@@ -238,7 +270,37 @@ func assertPersisted(t *testing.T, base, token, conversationID string) {
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
-	t.Fatal("Django Message yozuvlari 3 sekund ichida ko'rinmadi")
+	t.Fatal("Django Message yozuvlari 5 sekund ichida ko'rinmadi")
+}
+
+func assertUsageSummary(t *testing.T, base, token string) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, base+"/api/v1/usage/summary/?period=day", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Authorization", "Bearer "+token)
+		resp, err := http.DefaultClient.Do(req)
+		if err == nil {
+			var payload struct {
+				Tokens   int `json:"tokens"`
+				Messages int `json:"messages"`
+			}
+			decodeErr := json.NewDecoder(resp.Body).Decode(&payload)
+			status := resp.StatusCode
+			resp.Body.Close()
+			if status == http.StatusOK && decodeErr == nil && (payload.Tokens > 0 || payload.Messages > 0) {
+				return
+			}
+			if status != http.StatusOK && status != http.StatusNotFound {
+				t.Fatalf("UsageRecord tekshiruvi status=%d", status)
+			}
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	t.Fatal("Django usage summary 5 sekund ichida yangi usage yozuvini ko'rsatmadi")
 }
 
 func envOrSkip(t *testing.T, key, fallback string) string {

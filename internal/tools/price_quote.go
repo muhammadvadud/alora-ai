@@ -16,8 +16,8 @@ import (
 func PriceQuote(d Deps) tool.BaseTool {
 	h := &priceQuoteHandler{d: d}
 	return must(utils.InferTool("price_quote",
-		"curtain_calculate natijasiga tikuv, tasma, ilgich, montaj, yetkazish va chegirmani qo'shib "+
-			"yakuniy narx, avans va qoldiqni beradi. Avval curtain_calculate chaqirilgan bo'lishi shart.",
+		"curtain_calculate natijasiga tikuv, montaj, yetkazish va chegirmani qo'shib yakuniy narx, "+
+			"avans va qoldiqni beradi. Faqat chegirma yoki yakuniy taklif so'ralganda, curtain_calculate dan keyin chaqir.",
 		h.do))
 }
 

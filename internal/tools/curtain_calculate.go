@@ -18,8 +18,8 @@ import (
 func CurtainCalculate(d Deps) tool.BaseTool {
 	h := &curtainCalcHandler{d: d}
 	return must(utils.InferTool("curtain_calculate",
-		"Parda uchun mato (m2), bezaklar va ularning narxini hisoblaydi — bir pardada 1 tadan 10 tagacha bo'lak. "+
-			"Karniz uzunligi, balandlik va har bo'lak uchun variant_id kerak. Narxni FAQAT shu tool beradi; keyin price_quote chaqir.",
+		"Parda uchun mato (m2), bezaklar va narxini hisoblaydi — o'lchamlar ma'lum bo'lgach, hisob so'ralganda chaqir. "+
+			"Natijadagi total ni aynan ayting. Narxni FAQAT shu tool beradi.",
 		h.do))
 }
 

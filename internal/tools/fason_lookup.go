@@ -17,8 +17,8 @@ const fasonLookupLimit = 5
 func FasonLookup(d Deps) tool.BaseTool {
 	h := &fasonLookupHandler{d: d}
 	return must(utils.InferTool("fason_lookup",
-		"Xona va uslub bo'yicha tayyor fason shablonini beradi: nechta bo'lak, har birining roli, "+
-			"ulushi va koeffitsienti. curtain_calculate uchun parts ni shu shablondan tuz.",
+		"Tayyor fason shablonini beradi: nechta bo'lak, har birining roli, ulushi va koeffitsienti. "+
+			"Faqat murakkab fason, lambrekan yoki ko'p qatlamli parda so'ralganda yoki premium taklifda chaqir.",
 		h.do))
 }
 

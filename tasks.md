@@ -194,8 +194,7 @@
 - [x] 1.42 `hallucination_test.go` (rules.md §14.5). *Qabul:* CI'da `-run Halluc` alohida job.
 - [x] 1.43 (2026-09-14: deepseek-v4-pro, 3 xabar, set_context→product_search→curtain_calculate→price_quote, TTFT 2.3–4.2 s, narxlar tool'dan) Live sinov (`//go:build live`, DeepSeek): 5 ssenariy, TTFT/tool soni `docs/LIVE-RUNS.md` ga.
       *Qabul:* TTFT p95 ≤ 1.5 s, 2-tool javob ≤ 6 s (bo'lmasa `max_tokens`/prompt hajmi sozlanadi, natija yoziladi).
-- [~] 1.44 Backend bilan integratsiya sinovi (mock provider bilan Django SSE oxirigacha o'tdi; real LLM kalit kutmoqda): `docker compose` (backend + agent) → Django `POST /api/v1/chat/.../messages/` SSE →
-      Go → javob. *Qabul:* mobil/`curl -N` da `content` oqimi va `products` keladi; Django `UsageRecord` yozilgan.
+- [x] 1.44 Backend bilan integratsiya sinovi (`tests/e2e/django_sse_test.go`, real DeepSeek): Django SSE → Go → tool'lar → Django Pricing → SSE; `products`, `done.usage`, tool natijasidan kelgan summa, xabarlar va usage summary tekshiriladi. Tarixdagi eski tool natijalari model nusxasida 3000 rune bilan cheklanadi.
 - [x] 1.45 `docs/ARCHITECTURE.md` (paket xaritasi, oqim diagrammasi), `docs/RUNBOOK.md` (stale, outbox dead, Watch uzilishi nima qilish).
 - [ ] 1.46 Teg `v0.1.0`.
 
@@ -253,8 +252,9 @@
 - [x] 2.20 Golden ssenariylar 20 taga yetkaziladi (TZ §12): xona turlari ×7, yorug'lik, balkon eshigi, ko'p matoli (5 bo'lak),
       10 bo'lak, chiqindi ogohlantirishi, e'tirozlar ("qimmat", "boshqa rang"), buyurtma to'liq, orqaga qaytish (o'lcham o'zgardi),
       rus tili, mijoz rejimi (tannarx aytilmaydi).
-- [ ] 2.21 Live sinov 20 ssenariy DeepSeek vs Claude (A/B) → `docs/LIVE-RUNS.md`; hallucination 0/100 (TZ §10.2) — 100 ta suhbat
-      skriptli yugurtiriladi, regex tekshiruv.
+- [~] 2.21 Live sinov 20 ssenariy (DeepSeek/Claude endpointlari A/B uchun qayta ishga tushiriladi) → `tests/live/README.md`;
+      real gRPC LLM oqimi, tool/stage/error tekshiruvi va narx hallucination regex audit qo'shildi. Xarajat limiti sabab 40 suhbat
+      (20 + 20) ishlatiladi; 100 suhbatlik TZ auditi bajarilmadi.
 - [x] 2.22 Yuklama testi: 50 parallel sessiya (`ghz` yoki Go bench, mock LLM) — xotira, goroutine sizishi (`goleak`).
 - [ ] 2.23 Teg `v0.2.0`.
 

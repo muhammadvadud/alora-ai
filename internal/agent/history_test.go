@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/cloudwego/eino/schema"
@@ -13,6 +14,42 @@ func turn(text string) []*schema.Message {
 		schema.AssistantMessage("", []schema.ToolCall{{ID: "c1", Function: schema.FunctionCall{Name: "t"}}}),
 		schema.ToolMessage("natija", "c1"),
 		schema.AssistantMessage("javob", nil),
+	}
+}
+
+func TestLimitToolResultsKeepsLatestTwoAndStoreContent(t *testing.T) {
+	const originalSize = 10000
+	const limit = 3000
+	content := strings.Repeat("x", originalSize)
+	msgs := make([]*schema.Message, 0, 10)
+	for i := 0; i < 5; i++ {
+		msgs = append(msgs,
+			schema.UserMessage("savol"),
+			schema.AssistantMessage("", []schema.ToolCall{{ID: "c", Function: schema.FunctionCall{Name: "t"}}}),
+			schema.ToolMessage(content, "c"),
+		)
+	}
+
+	got := limitToolResults(msgs, limit)
+	toolIndex := 0
+	for _, msg := range got {
+		if msg.Role != schema.Tool {
+			continue
+		}
+		toolIndex++
+		if toolIndex <= 3 {
+			if len([]rune(msg.Content)) > limit+len([]rune(" …[qisqartirildi, 10000 belgi]")) {
+				t.Fatalf("eski tool natijasi limitdan oshdi: %d", len([]rune(msg.Content)))
+			}
+			if !strings.Contains(msg.Content, "[qisqartirildi, 10000 belgi]") {
+				t.Fatalf("qisqartirish suffix'i yo'q: %q", msg.Content[len(msg.Content)-40:])
+			}
+		} else if msg.Content != content {
+			t.Fatalf("oxirgi tool natijasi qisqartirildi: tool=%d", toolIndex)
+		}
+	}
+	if msgs[2].Content != content || msgs[8].Content != content {
+		t.Fatal("store tarixidagi asl tool natijasi o'zgardi")
 	}
 }
 

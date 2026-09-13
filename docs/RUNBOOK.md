@@ -60,3 +60,16 @@ Loglar JSON formatda `slog` orqali yoziladi. Har bir zaprosni diagnostika qilish
 ## 4. Versiyani Bilish
 Tizim qaysi build'da ekanligini bilish uchun Health gRPC chaqiruvi qilinadi. Qaytarilgan javobda `version` qiymati mavjud bo'ladi (ldflags orqali build vaqtida berilgan semver, masalan: `v0.1.0`).
 *(Asosiy kod: `internal/transport/grpc/server.go` yoki `cmd/agent/main.go` Health resolver)*
+
+## 5. Live Sinov
+
+Agentni real provayder (LLM) bilan lokal muhitda ko'tarish:
+1. Asosiy config fayldan nusxa oling va zarur LLM kalitlarini qo'ying. Portlarni 9095 (gRPC) va 8082 (HTTP) qilib sozlang.
+2. Django gRPC backend portini ko'rsating (masalan 9091).
+3. Serverni ko'taring.
+4. `tools/livechat` orqali gRPC so'rov yuborib agent bilan suhbatlashing.
+
+**Nimaga e'tibor berish kerak?**
+* **Tool tartibi:** LLM modelining to'g'ri tool'larni ketma-ket chaqirishi.
+* **TTFT (Time To First Token):** Birinchi tokengacha bo'lgan vaqt 1.5 - 2 sekunddan oshmasligi kerak.
+* **Token sarfi:** Agar 2-xabardayoq 34k gacha token sarflanayotgan bo'lsa, tarixni qisqartirish uchun konfiguratsiyada `agent.max_tool_result_chars` sozlamasidan foydalanishni inobatga oling.

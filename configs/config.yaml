@@ -33,6 +33,8 @@ agent:
   # (savol + tool chaqiruvi + tool natijasi + javob), ya'ni 120 ≈ 25-30 navbat.
   # Suhbat oqimi uzun bo'lsa oshiring. Kesim doim savol chegarasidan boshlanadi.
   max_history: 120
+  # Eski tool natijasining model kontekstidagi nusxasi; store'dagi asl xabar o'zgarmaydi.
+  max_tool_result_chars: 3000
   # Javobni jonli (bo'lak-bo'lak) yuborish. false — javob yaxlit, bir marta keladi.
   # ENV bilan ustidan yozish: ALORA_AGENT_STREAM=false
   stream: true

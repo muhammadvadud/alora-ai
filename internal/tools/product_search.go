@@ -16,7 +16,8 @@ func ProductSearch(d Deps) tool.BaseTool {
 	h := &productSearchHandler{d: d}
 	return must(utils.InferTool("product_search",
 		"Mijoz talabiga mos mato yoki bezak/furnituralarni do'kon katalogidan topadi. "+
-			"Mahsulot yoki narx aytishdan OLDIN chaqir; natijadagi variant_id ni curtain_calculate ga uzat.",
+			"Natija bo'sh bo'lsa filtrlarni yumshatib 1 marta qayta qidir, aks holda qayta chaqirma; "+
+			"natijadagi variant_id ni curtain_calculate ga uzat.",
 		h.do))
 }
 
