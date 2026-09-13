@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/muhammadvadud/alora-ai/gen/alorav1"
@@ -49,7 +50,7 @@ func productFromPB(p *alorav1.CatalogProduct) (curtains.Product, error) {
 	if err != nil {
 		return curtains.Product{}, fmt.Errorf("product default_width_m: %w", err)
 	}
-	tags, err := mapJSON(p.GetTagsJson())
+	tags, err := tagsJSON(p.GetTagsJson())
 	if err != nil {
 		return curtains.Product{}, fmt.Errorf("product tags_json: %w", err)
 	}
@@ -366,4 +367,29 @@ func deltaFromPB(d *alorav1.CatalogDelta) (curtains.Delta, error) {
 		return curtains.Delta{}, err
 	}
 	return result, nil
+}
+
+// tagsJSON — kontrakt bo'yicha teglar RO'YXAT (`["rim","rulon"]`, Django JSONField
+// default=list); eski yozuvlarda obyekt ham uchraydi. Ikkalasi ham map ko'rinishiga
+// keltiriladi (ro'yxat elementi → kalit=true), chunki bitta noto'g'ri mahsulot
+// butun snapshot'ni yiqitmasligi kerak (2026-09-14 live: katalog umuman yuklanmadi).
+func tagsJSON(raw string) (map[string]any, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "null" {
+		return nil, nil
+	}
+	if strings.HasPrefix(raw, "[") {
+		var list []any
+		if err := json.Unmarshal([]byte(raw), &list); err != nil {
+			return nil, err
+		}
+		out := make(map[string]any, len(list))
+		for _, it := range list {
+			if s, ok := it.(string); ok && s != "" {
+				out[s] = true
+			}
+		}
+		return out, nil
+	}
+	return mapJSON(raw)
 }

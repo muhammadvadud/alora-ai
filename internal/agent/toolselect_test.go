@@ -126,8 +126,16 @@ func TestChatStream_ToolSelector_FiltersModelTools(t *testing.T) {
 	rec.s.mu.Lock()
 	bound := append([][]string(nil), rec.s.bound...)
 	rec.s.mu.Unlock()
-	if len(bound) != 1 || !reflect.DeepEqual(bound[0], []string{"tool_b"}) {
-		t.Fatalf("modelga bog'langan tool'lar = %v, want [[tool_b]]", bound)
+	// Har ReAct qadamida qayta bog'lanadi (bosqich o'zgargan bo'lishi mumkin) —
+	// shuning uchun bir nechta bog'lash bo'ladi, lekin HAR BIRI faqat selector
+	// qaytarganini o'z ichiga oladi.
+	if len(bound) == 0 {
+		t.Fatal("model hech bog'lanmadi")
+	}
+	for i, b := range bound {
+		if !reflect.DeepEqual(b, []string{"tool_b"}) {
+			t.Fatalf("bog'lash #%d = %v, want [tool_b]", i, b)
+		}
 	}
 }
 
