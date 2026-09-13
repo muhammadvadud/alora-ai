@@ -19,7 +19,6 @@ import (
 	"github.com/muhammadvadud/alora-agent/internal/tools"
 	"github.com/muhammadvadud/alora-agent/internal/transport/cli"
 	httptransport "github.com/muhammadvadud/alora-agent/internal/transport/http"
-	"github.com/muhammadvadud/alora-agent/internal/transport/telegram"
 )
 
 func main() {
@@ -31,7 +30,7 @@ func main() {
 
 func run() error {
 	configFile := flag.String("config", configPath(), "config fayl yo'li")
-	modeFlag := flag.String("mode", "", "ishga tushirish rejimi: cli | http (config'ni ustidan yozadi)")
+	modeFlag := flag.String("mode", "", "ishga tushirish rejimi: cli | http | grpc (config'ni ustidan yozadi)")
 	flag.Parse()
 
 	_ = godotenv.Load() // .env bo'lsa yuklaymiz (majburiy emas)
@@ -84,17 +83,8 @@ func run() error {
 		return httptransport.Serve(ctx, chat, cfg.Server.Addr)
 	case "cli":
 		return cli.Run(ctx, chat)
-	case "telegram":
-		if cfg.Telegram.Token == "" {
-			return fmt.Errorf("TELEGRAM_BOT_TOKEN o'rnatilmagan (telegram rejimi uchun zarur)")
-		}
-		return telegram.Serve(ctx, chat, telegram.Options{
-			Token:        cfg.Telegram.Token,
-			AdminChatID:  1769851684,
-			EditInterval: cfg.Telegram.EditInterval,
-		})
 	default:
-		return fmt.Errorf("noma'lum mode %q (cli, http yoki telegram)", cfg.Mode)
+		return fmt.Errorf("noma'lum mode %q (cli yoki http)", cfg.Mode)
 	}
 }
 
