@@ -3,18 +3,16 @@ package tools
 import (
 	"context"
 	"errors"
-	"fmt"
-	"strings"
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
-	"github.com/shopspring/decimal"
 
 	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
 
 // CurtainCalculate — kompozitsion material hisobi. Formula Django'da (ADR-009):
-// bu yerda faqat validatsiya, so'rov va tavsiya matni.
+// bu yerda faqat validatsiya, so'rov va ixcham natija. Natijadagi total ni
+// aynan ayting. Narxni FAQAT shu tool beradi.
 func CurtainCalculate(d Deps) tool.BaseTool {
 	h := &curtainCalcHandler{d: d}
 	return must(utils.InferTool("curtain_calculate",
@@ -44,9 +42,11 @@ func (h *curtainCalcHandler) do(ctx context.Context, a curtainCalcArgs) (curtain
 		return curtainCalcResult{Error: calcErrorText(err)}, nil
 	}
 
+	t, lines, services := compactCalc(v, res)
 	out := curtainCalcResult{
-		RoomName: a.RoomName,
-		Calc:     toAny(res),
+		Totals:   t,
+		Lines:    lines,
+		Services: services,
 		Display:  displayTotals(res),
 		Warnings: append([]string{}, res.Warnings...),
 		Stale:    stale,
@@ -54,7 +54,6 @@ func (h *curtainCalcHandler) do(ctx context.Context, a curtainCalcArgs) (curtain
 	if stale {
 		out.Warnings = append(out.Warnings, warnStale)
 	}
-	out.Explanation = explain(v, res, in)
 
 	st, sid := loadState(ctx, h.d)
 	st.Apply("curtain_calculate", argsMap(a), now(h.d))
@@ -85,70 +84,4 @@ func calcErrorText(err error) string {
 		return ve.Msg
 	}
 	return errCalcUnavailable
-}
-
-// explain — hisob paytida ham tavsiya (TZ §3.2). Sonlar Django natijasidan, matn shu yerda.
-// Chiqindi ogohlantirishi Django `warnings` da; bu yerda mato eni/balandlik izohi va
-// arzonroq analog (katalogdan, ≤ 80% narx/m²) — hisob emas, taqqoslash (rules §4.2.5).
-func explain(v *curtains.View, res curtains.CalcResult, in curtains.CalcInput) string {
-	if len(res.Measurements) == 0 {
-		return ""
-	}
-	var parts []string
-	m := res.Measurements[0]
-	for _, p := range m.Parts {
-		variant, ok := v.Variant(p.VariantID)
-		if !ok {
-			continue
-		}
-		if variant.WidthM.GreaterThan(decimal.Zero) && variant.WidthM.GreaterThanOrEqual(p.HeightM) {
-			parts = append(parts, fmt.Sprintf("%s: mato eni %s m, balandlik %s m — chok kerak emas",
-				p.SKU, variant.WidthM.String(), p.HeightM.String()))
-		}
-		if alt, ok := cheaperAnalog(v, variant); ok {
-			parts = append(parts, fmt.Sprintf("%s o'rniga %s (%s/m², %s%% arzon) ham mos kelishi mumkin",
-				p.SKU, alt.SKU, displayMoney(alt.Price), savingPct(variant.Price, alt.Price)))
-		}
-	}
-	return strings.Join(parts, ". ")
-}
-
-// cheaperAnalog — o'sha mahsulotning arzonroq varianti yoki bir kategoriyadagi ≤ 80% narxli mato.
-func cheaperAnalog(v *curtains.View, cur curtains.Variant) (curtains.Variant, bool) {
-	limit := cur.Price.Mul(decimal.NewFromFloat(0.8))
-	best, found := curtains.Variant{}, false
-	consider := func(c curtains.Variant) {
-		if c.ID == cur.ID || !c.IsActive || c.PriceUnit != cur.PriceUnit || c.Price.GreaterThan(limit) {
-			return
-		}
-		if !found || c.Price.LessThan(best.Price) {
-			best, found = c, true
-		}
-	}
-	for _, c := range v.VariantsOf(cur.ProductID) {
-		consider(c)
-	}
-	if found {
-		return best, true
-	}
-	p, ok := v.Product(cur.ProductID)
-	if !ok {
-		return curtains.Variant{}, false
-	}
-	for _, other := range v.Products() {
-		if other.CategoryID != p.CategoryID || other.ID == p.ID {
-			continue
-		}
-		for _, c := range v.VariantsOf(other.ID) {
-			consider(c)
-		}
-	}
-	return best, found
-}
-
-func savingPct(from, to decimal.Decimal) string {
-	if from.IsZero() {
-		return "0"
-	}
-	return from.Sub(to).Div(from).Mul(decimal.NewFromInt(100)).Round(0).StringFixed(0)
 }

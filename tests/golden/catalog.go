@@ -248,7 +248,11 @@ func (f *fakeCalc) Calculate(_ context.Context, in curtains.CalcInput) (curtains
 	for i := range res.Services {
 		res.Total = res.Total.Add(res.Services[i].LineTotal)
 	}
-	return res, nil
+	pct := decimal.NewFromInt(50)
+	if !in.PrepaymentPercent.IsZero() {
+		pct = in.PrepaymentPercent
+	}
+	return withPrepayment(res, pct), nil
 }
 
 func (f *fakeCalc) coefDefault() decimal.Decimal {
@@ -278,4 +282,13 @@ type fakeOrders struct{}
 
 func (fakeOrders) SaveOrderDraft(_ context.Context, _ curtains.OrderDraft) (curtains.OrderDraftResult, error) {
 	return curtains.OrderDraftResult{OrderID: "ord-7", OrderNumber: "ALR-2026-0007"}, nil
+}
+
+// withPrepayment — Django (kontrakt 1.4.2) kabi avans/qoldiqni natijaga qo'shadi.
+// Bu TEST fake'i: Go ishlab chiqarish kodi bu summalarni hisoblamaydi (rules §0.2).
+func withPrepayment(res curtains.CalcResult, pct decimal.Decimal) curtains.CalcResult {
+	pre := res.Total.Mul(pct).Div(decimal.NewFromInt(100)).Round(2)
+	bal := res.Total.Sub(pre)
+	res.PrepaymentPercent, res.PrepaymentAmount, res.BalanceAmount = &pct, &pre, &bal
+	return res
 }

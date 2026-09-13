@@ -32,13 +32,17 @@ llm:
   trace_file: ""
 
 agent:
-  max_step: 20
+  max_step: 6
   # Modelga yuboriladigan eski xabarlar chegarasi. Har navbat 4+ xabar qo'shadi
   # (savol + tool chaqiruvi + tool natijasi + javob), ya'ni 120 ≈ 25-30 navbat.
   # Suhbat oqimi uzun bo'lsa oshiring. Kesim doim savol chegarasidan boshlanadi.
-  max_history: 120
+  max_history: 40
   # Eski tool natijasining model kontekstidagi nusxasi; store'dagi asl xabar o'zgarmaydi.
   max_tool_result_chars: 3000
+  # Bitta savol-javob (Stream) ichida yig'ilgan prompt tokenlar chegarasi. Oshsa
+  # sikl "javob byudjeti tugadi" deb to'xtaydi va tarixga yozilmaydi (xarajat
+  # qo'riqchisi). 0 — o'chiq. ENV: ALORA_AGENT_PROMPT_TOKEN_BUDGET
+  prompt_token_budget: 40000
   # Javobni jonli (bo'lak-bo'lak) yuborish. false — javob yaxlit, bir marta keladi.
   # ENV bilan ustidan yozish: ALORA_AGENT_STREAM=false
   stream: true

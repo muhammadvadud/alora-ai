@@ -30,6 +30,8 @@ type Metrics struct {
 	LLMTokens             *prometheus.CounterVec   // {provider,model,kind}
 	LLMErrors             *prometheus.CounterVec   // {provider}
 	LLMFallback           prometheus.Counter
+	LLMCachedTokens       *prometheus.CounterVec // {provider} — provider prefix-keshiga urilgan prompt tokenlar
+	LLMBudgetExceeded     *prometheus.CounterVec // {provider} — prompt byudjeti tugagan so'rovlar
 	CatalogVersion        prometheus.Gauge
 	CatalogStale          prometheus.Gauge // 1 = eskirgan (rules §4.1.5)
 	CatalogAgeSeconds     prometheus.Gauge
@@ -65,6 +67,12 @@ func NewMetrics() (*Metrics, *prometheus.Registry) {
 			"LLM chaqiruv xatolari soni", "provider"),
 		LLMFallback: newCounter("alora_llm_fallback_total",
 			"Zaxira provider'ga o'tishlar soni (rules §6.5)"),
+		LLMCachedTokens: newCounterVec("alora_llm_cached_tokens_total",
+			"Provider prefix-keshiga urilgan prompt tokenlari (rules §13; xarajat kuzatuvi)",
+			"provider"),
+		LLMBudgetExceeded: newCounterVec("alora_llm_budget_exceeded_total",
+			"agent.prompt_token_budget tugagan so'rovlar soni (xarajat qo'riqchisi)",
+			"provider"),
 		CatalogVersion: newGauge("alora_catalog_version",
 			"Katalog versiyasi (monoton o'suvchi)"),
 		CatalogStale: newGauge("alora_catalog_stale",
@@ -94,6 +102,8 @@ func NewMetrics() (*Metrics, *prometheus.Registry) {
 		m.LLMTokens,
 		m.LLMErrors,
 		m.LLMFallback,
+		m.LLMCachedTokens,
+		m.LLMBudgetExceeded,
 		m.CatalogVersion,
 		m.CatalogStale,
 		m.CatalogAgeSeconds,

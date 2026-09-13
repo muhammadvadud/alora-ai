@@ -24,8 +24,9 @@ import (
 // butun oqimni o'qishga majbur bo'ladi (DeepSeek matnni tool_call'dan oldin yuboradi), bu esa
 // yakuniy javobni buferlaydi — stream yo'qoladi. Bu sikl ikkalasini ham beradi.
 type Chat struct {
-	model              model.ToolCallingChatModel // tool'lar bog'langan
+	model              model.ToolCallingChatModel // asosi model (tool'lar HAR STREAM'da bog'lanadi)
 	tools              map[string]tool.InvokableTool
+	allTools           []tool.BaseTool // NewChat olgan to'liq ro'yxat (selector shu ro'yxatdan tanlaydi)
 	store              session.Store
 	systemPrompt       string
 	maxStep            int
@@ -36,8 +37,14 @@ type Chat struct {
 	provider           string        // done.usage uchun (main.go to'ldiradi)
 	modelName          string
 	systemPromptFunc   func(context.Context, string) string
-	fallback           model.ToolCallingChatModel
+	fallback           model.ToolCallingChatModel // asosi fallback (ham har Stream'da bog'lanadi)
 	fallbackProvider   string
+	// toolSelector — bosqichga qarab tool to'plamini tanlaydi (nil = hammasi).
+	// Tanlash domen qatlamini bilmaydi (rules §2) — composition root beradi.
+	toolSelector      func(context.Context, string, []tool.BaseTool) []tool.BaseTool
+	promptTokenBudget int                   // bitta Stream'da yig'ilgan prompt token chegarasi (0 = o'chiq)
+	onUsage           func(Usage)           // done'da yig'ilgan usage (metrika hook'i, rules §2)
+	onBudgetExceeded  func(provider string) // byudjet tugaganda (metrika hook'i)
 }
 
 // fallbackAnswer — model matnli javob bermasa (masalan maxStep tugab qolsa)
@@ -65,6 +72,23 @@ type Options struct {
 	// StateHook — suhbat bosqichini transportga xabar qiluvchi hook (stage.go).
 	// nil bo'lsa agent bosqich/state haqida hech narsa chiqarmaydi.
 	StateHook StageReporter
+	// ToolSelector — har Stream boshida bosqichga qarab tool to'plamini tanlaydi
+	// (rules §5.3 nomlari). nil — barcha tool'lar modelga beriladi. Model sxemalari
+	// HAM ijro xaritasi ham shu to'plamdan tuziladi — keraksiz tool sxemalari
+	// (~3k token) kontekstga kirmaydi (buyurtmachi xarajat talabi). Agent domenni
+	// bilmaydi — funksiyani composition root (cmd/agent/wiring.go) bera oladi.
+	ToolSelector func(ctx context.Context, sessionID string, all []tool.BaseTool) []tool.BaseTool
+	// PromptTokenBudget — bitta Stream ichida yig'ilgan prompt tokenlar chegarasi
+	// (har aylanish usage.prompt qo'shiladi). 0 = o'chiq (cheklanmaydi). Oshsa
+	// sikl error event bilan to'xtaydi va tarixga yozilmaydi (mavjud xato naqshi).
+	PromptTokenBudget int
+	// OnUsage — done'da yig'ilgan usage bilan chaqiriladi (masalan cached token
+	// metrikasi). Agent observability'ni bilmaydi (rules §2) — main.go shu hook'ga
+	// ulaydi.
+	OnUsage func(Usage)
+	// OnBudgetExceeded — prompt byudjeti tugaganda provider nomi bilan chaqiriladi
+	// (alora_llm_budget_exceeded_total metrikasi main.go da ulaydi).
+	OnBudgetExceeded func(provider string)
 	// Provider/Model — done.usage markerlari (main.go shu nomlarni to'ldiradi).
 	Provider         string
 	Model            string
@@ -72,7 +96,8 @@ type Options struct {
 	FallbackProvider string
 }
 
-// NewChat model'ga tool'larni bog'laydi va Chat servisini yaratadi.
+// NewChat model'ga tool'larni bog'lamaydi (tanlov har Stream'da bo'ladi — bosqichga
+// qarab) — faqat to'liq ro'yxatni tekshirib, Chat servisini yaratadi.
 func NewChat(ctx context.Context, chatModel model.ToolCallingChatModel, tools []tool.BaseTool, store session.Store, opts Options) (*Chat, error) {
 	if opts.MaxStep <= 0 {
 		opts.MaxStep = defaultMaxStep
@@ -83,9 +108,12 @@ func NewChat(ctx context.Context, chatModel model.ToolCallingChatModel, tools []
 	if opts.MaxToolResultChars <= 0 {
 		opts.MaxToolResultChars = defaultMaxToolResultChars
 	}
-	infos := make([]*schema.ToolInfo, 0, len(tools))
 	byName := make(map[string]tool.InvokableTool, len(tools))
+	allTools := make([]tool.BaseTool, 0, len(tools))
 	for _, t := range tools {
+		if t == nil {
+			continue
+		}
 		info, err := t.Info(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("tool ma'lumotini olish: %w", err)
@@ -94,27 +122,18 @@ func NewChat(ctx context.Context, chatModel model.ToolCallingChatModel, tools []
 		if !ok {
 			return nil, fmt.Errorf("tool %q InvokableTool emas", info.Name)
 		}
-		infos = append(infos, info)
+		allTools = append(allTools, t)
 		byName[info.Name] = it
 	}
-	bound, err := chatModel.WithTools(infos)
-	if err != nil {
-		return nil, fmt.Errorf("tool'larni bog'lash: %w", err)
-	}
-	var fallback model.ToolCallingChatModel
-	if opts.Fallback != nil {
-		fallback, err = opts.Fallback.WithTools(infos)
-		if err != nil {
-			return nil, fmt.Errorf("fallback tool'larini bog'lash: %w", err)
-		}
-	}
 	return &Chat{
-		model: bound, tools: byName, store: store,
+		model: chatModel, tools: byName, allTools: allTools, store: store,
 		systemPrompt: opts.SystemPrompt, maxStep: opts.MaxStep,
 		maxHistory: opts.MaxHistory, maxToolResultChars: opts.MaxToolResultChars, stream: opts.Stream,
 		stateHook: opts.StateHook, provider: opts.Provider, modelName: opts.Model,
-		fallback: fallback, fallbackProvider: opts.FallbackProvider,
+		fallback: opts.Fallback, fallbackProvider: opts.FallbackProvider,
 		systemPromptFunc: opts.SystemPromptFunc,
+		toolSelector:     opts.ToolSelector, promptTokenBudget: opts.PromptTokenBudget,
+		onUsage: opts.OnUsage, onBudgetExceeded: opts.OnBudgetExceeded,
 	}, nil
 }
 
@@ -149,6 +168,45 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 			return
 		}
 
+		// Bosqichga qarab tool to'plami tanlanadi (buyurtmachi xarajat talabi):
+		// HAR doim 10 tool sxemasi (~3k token) o'rniga faqat joriy bosqich uchun
+		// keraklilari modelga yuboriladi. Agent domenni bilmaydi (rules §2) — tanlov
+		// funksiyasi composition root'da (cmd/agent/wiring.go). nil selector = hammasi.
+		selected := c.allTools
+		if c.toolSelector != nil {
+			selected = c.toolSelector(ctx, sessionID, c.allTools)
+		}
+		selectedInfos := make([]*schema.ToolInfo, 0, len(selected))
+		// Ijro xaritasi shu to'plamdan: tanlovda yo'q tool'ni model chaqirsa
+		// runTool "noma'lum tool" qaytaradi va ReAct o'zini tuzatadi.
+		executors := make(map[string]tool.InvokableTool, len(selected))
+		for _, t := range selected {
+			info, infoErr := t.Info(ctx)
+			if infoErr != nil {
+				emit(ctx, out, Event{Kind: KindError, Err: fmt.Sprintf("tool ma'lumoti: %v", infoErr)})
+				return
+			}
+			selectedInfos = append(selectedInfos, info)
+			executors[info.Name] = c.tools[info.Name]
+		}
+
+		// Har Stream o'z tanlangan to'plami bilan model bog'laydi. O'ramlar
+		// (trace, reasoning_effort) WithTools'ni saqlaydi (rules §6) — noto'g'ri
+		// to'g'ridan-to'g'ri bog'lab qo'yilsa ular butunlay yonlab qolardi.
+		primary, err := c.model.WithTools(selectedInfos)
+		if err != nil {
+			emit(ctx, out, Event{Kind: KindError, Err: fmt.Sprintf("tool'lar bog'lash: %v", err)})
+			return
+		}
+		var fallbackM model.ToolCallingChatModel
+		if c.fallback != nil {
+			fallbackM, err = c.fallback.WithTools(selectedInfos)
+			if err != nil {
+				emit(ctx, out, Event{Kind: KindError, Err: fmt.Sprintf("fallback tool'lar bog'lash: %v", err)})
+				return
+			}
+		}
+
 		msgs := make([]*schema.Message, 0, len(history)+4)
 		if systemPrompt != "" {
 			msgs = append(msgs, schema.SystemMessage(systemPrompt))
@@ -168,10 +226,10 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 		)
 
 		answered := false
-		activeModel := c.model
+		activeModel := primary
 		usedFallback := false
 		for step := 0; step < c.maxStep; step++ {
-			content, toolCalls, u, nextModel, switched, err := c.ask(ctx, msgs, out, activeModel)
+			content, toolCalls, u, nextModel, switched, err := c.ask(ctx, msgs, out, activeModel, primary, fallbackM)
 			if err != nil {
 				emit(ctx, out, Event{Kind: KindError, Err: err.Error()})
 				return
@@ -179,6 +237,25 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 			activeModel = nextModel
 			usedFallback = usedFallback || switched
 			usage = addUsage(usage, u)
+
+			// Byudjet qo'riqchisi: bitta navbatda yig'ilgan prompt tokenlar (har aylanish
+			// usage.prompt) chegaradan oshsa sikl darhol to'xtaydi — ortiqcha aylanish va
+			// pul sarflanmaydi. Tarixga yozilmaydi (mavjud xato naqshi: Append faqat quyida,
+			// odatdagi yo'lda bajariladi).
+			if c.promptTokenBudget > 0 && usage.Prompt > c.promptTokenBudget {
+				provider := c.provider
+				if usedFallback {
+					provider = c.fallbackProvider
+				}
+				msg := fmt.Sprintf("javob byudjeti tugadi (%d token)", usage.Prompt)
+				slog.Warn("prompt byudjeti tugadi", "session", sessionID,
+					"tokens", usage.Prompt, "budget", c.promptTokenBudget, "provider", provider)
+				if c.onBudgetExceeded != nil {
+					c.onBudgetExceeded(provider)
+				}
+				emit(ctx, out, Event{Kind: KindError, Err: msg})
+				return
+			}
 			if len(toolCalls) == 0 {
 				// Yakuniy javob. Bo'sh matnni tarixga yozmaymiz — quyida fallback qo'yiladi.
 				if strings.TrimSpace(content) != "" {
@@ -190,7 +267,7 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 			msgs = append(msgs, schema.AssistantMessage(content, toolCalls))
 			// Tool'larni bajaramiz va natijalarni suhbatga qo'shamiz.
 			for _, tc := range toolCalls {
-				result := c.runTool(ctx, tc)
+				result := c.runTool(ctx, tc, executors)
 				emit(ctx, out, Event{Kind: KindToolResult, Tool: tc.Function.Name, Result: result})
 				toolNames = append(toolNames, tc.Function.Name)
 				// State hook: bosqich to'g'ridan-to'g'ri tool argumentlaridan yangilanadi
@@ -234,19 +311,22 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 		if usedFallback {
 			provider = c.fallbackProvider
 		}
-		emit(ctx, out, Event{
-			Kind: KindDone,
-			Usage: &Usage{
-				Provider:         provider,
-				Model:            c.modelName,
-				PromptTokens:     usage.Prompt,
-				CompletionTokens: usage.Completion,
-				CachedTokens:     usage.Cached,
-				ReasoningTokens:  usage.Reasoning,
-				ToolCalls:        toolNames,
-				LatencyMs:        time.Since(start).Milliseconds(),
-			},
-		})
+		doneUsage := &Usage{
+			Provider:         provider,
+			Model:            c.modelName,
+			PromptTokens:     usage.Prompt,
+			CompletionTokens: usage.Completion,
+			CachedTokens:     usage.Cached,
+			ReasoningTokens:  usage.Reasoning,
+			ToolCalls:        toolNames,
+			LatencyMs:        time.Since(start).Milliseconds(),
+		}
+		// Metrika hook'i: agent observability'ni bilmaydi (rules §2) — main.go
+		// OnUsage orqali masalan cached token counter'iga ulaydi.
+		if c.onUsage != nil {
+			c.onUsage(*doneUsage)
+		}
+		emit(ctx, out, Event{Kind: KindDone, Usage: doneUsage})
 	}()
 
 	return out
@@ -268,12 +348,17 @@ func (c *Chat) Reset(ctx context.Context, sessionID string) error {
 
 // ask model'dan bitta javob oladi: stream yoqilgan bo'lsa oqimni jonli o'qiydi,
 // aks holda yaxlit so'rov yuboradi. Ikkalasi ham bir xil Event'larni chiqaradi.
-func (c *Chat) ask(ctx context.Context, msgs []*schema.Message, out chan<- Event, active model.ToolCallingChatModel) (string, []schema.ToolCall, llm.TokenUsage, model.ToolCallingChatModel, bool, error) {
+//
+// primary/fallbackM — shu Stream uchun bog'langan modellar (har Stream'da bir marta
+// WithTools chaqiriladi). Fallback ichida yana fallback bo'lmaydi — retry faqat
+// asosiy modelda, aktiv model fallback bo'lsa xato darhol qaytadi.
+func (c *Chat) ask(ctx context.Context, msgs []*schema.Message, out chan<- Event, active, primary, fallbackM model.ToolCallingChatModel) (string, []schema.ToolCall, llm.TokenUsage, model.ToolCallingChatModel, bool, error) {
 	content, calls, usage, err := c.askOnce(ctx, msgs, out, active)
 	if err == nil {
-		return content, calls, usage, active, active == c.fallback, nil
+		// switched: javob fallback modeldan keldi (done.usage provider'i shu).
+		return content, calls, usage, active, active != primary, nil
 	}
-	if active != c.model || !llm.IsRetryable(err) {
+	if active != primary || !llm.IsRetryable(err) {
 		return "", nil, llm.TokenUsage{}, active, false, err
 	}
 	select {
@@ -281,22 +366,22 @@ func (c *Chat) ask(ctx context.Context, msgs []*schema.Message, out chan<- Event
 	case <-ctx.Done():
 		return "", nil, llm.TokenUsage{}, active, false, ctx.Err()
 	}
-	content, calls, usage, err = c.askOnce(ctx, msgs, out, active)
+	content, calls, usage, err = c.askOnce(ctx, msgs, out, primary)
 	if err == nil {
-		return content, calls, usage, active, false, nil
+		return content, calls, usage, primary, false, nil
 	}
 	if !llm.IsRetryable(err) {
-		return "", nil, llm.TokenUsage{}, active, false, err
+		return "", nil, llm.TokenUsage{}, primary, false, err
 	}
-	if c.fallback == nil {
-		return "", nil, llm.TokenUsage{}, active, false, err
+	if fallbackM == nil {
+		return "", nil, llm.TokenUsage{}, primary, false, err
 	}
 	slog.Warn("llm_fallback", "provider", c.fallbackProvider, "error", err)
-	content, calls, usage, err = c.askOnce(ctx, msgs, out, c.fallback)
+	content, calls, usage, err = c.askOnce(ctx, msgs, out, fallbackM)
 	if err != nil {
-		return "", nil, llm.TokenUsage{}, c.fallback, true, err
+		return "", nil, llm.TokenUsage{}, fallbackM, true, err
 	}
-	return content, calls, usage, c.fallback, true, nil
+	return content, calls, usage, fallbackM, true, nil
 }
 
 func (c *Chat) askOnce(ctx context.Context, msgs []*schema.Message, out chan<- Event, active model.ToolCallingChatModel) (string, []schema.ToolCall, llm.TokenUsage, error) {
@@ -404,8 +489,10 @@ func (c *Chat) readStream(ctx context.Context, stream *schema.StreamReader[*sche
 }
 
 // runTool tool_call'ni bajaradi va natija (yoki xato) matnini qaytaradi.
-func (c *Chat) runTool(ctx context.Context, tc schema.ToolCall) string {
-	t, ok := c.tools[tc.Function.Name]
+// executors — shu Stream uchun tanlangan tool to'plami: tanlovda yo'q tool'ni
+// model chaqirsa "noma'lum tool" qaytariladi va ReAct o'zini tuzatadi.
+func (c *Chat) runTool(ctx context.Context, tc schema.ToolCall, executors map[string]tool.InvokableTool) string {
+	t, ok := executors[tc.Function.Name]
 	if !ok {
 		return fmt.Sprintf(`{"error":"noma'lum tool: %s"}`, tc.Function.Name)
 	}

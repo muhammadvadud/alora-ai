@@ -73,3 +73,52 @@ Agentni real provayder (LLM) bilan lokal muhitda ko'tarish:
 * **Tool tartibi:** LLM modelining to'g'ri tool'larni ketma-ket chaqirishi.
 * **TTFT (Time To First Token):** Birinchi tokengacha bo'lgan vaqt 1.5 - 2 sekunddan oshmasligi kerak.
 * **Token sarfi:** Agar 2-xabardayoq 34k gacha token sarflanayotgan bo'lsa, tarixni qisqartirish uchun konfiguratsiyada `agent.max_tool_result_chars` sozlamasidan foydalanishni inobatga oling.
+
+## 6. Xarajat (Token Kuchaytirish)
+
+Agent token sarfini uch sathda cheklaydi/kuzatadi: **bosqichga qarab tool**
+**to'plami**, **kesh kuzatuvi** va **prompt byudjeti**.
+
+### 6.1 Metrikalar
+
+| Metrika | Tavsif |
+| :--- | :--- |
+| `alora_llm_tokens_total{provider,model,kind}` | kind = `input`/`output`/`cached` — sarf va kesh urlgan tokenlar |
+| `alora_llm_cached_tokens_total{provider}` | Provider prefix-keshiga urlgan prompt tokenlar (DeepSeek `prompt_cache_hit_tokens`) |
+| `alora_llm_budget_exceeded_total{provider}` | Byudjet tugagan so'rovlar soni |
+
+### 6.2 Trace (JSONL)
+
+`llm.trace_file` ko'rsatilgan bo'lsa har so'rov/javob qator qilib yoziladi; `usage`
+maydonida `cached` qiymati bor — kesh samaradorligi uchun `prompt`/`cached` nisbatini
+kuzating. Diagnostika misoli:
+
+```bash
+grep '"usage"' trace.jsonl | jq -r '[.usage.prompt,.usage.cached,.usage.completion] | @tsv'
+```
+
+### 6.3 Sozlash
+
+| Sozlama | ENV | Qiymat | Tavsif |
+| :--- | :--- | :--- | :--- |
+| `agent.prompt_token_budget` | `ALORA_AGENT_PROMPT_TOKEN_BUDGET` | `40000` | Bir Stream ichida yig'ilgan prompt tokenlar chegarasi. **0 = o'chiq.** Oshsa: `error` event "javob byudjeti tugadi", `alora_llm_budget_exceeded_total` o'sadi, **tarixga yozilmaydi**. |
+| `agent.max_history` | `ALORA_AGENT_MAX_HISTORY` | `40` | Tarixdagi xabarlar soni |
+| `agent.max_tool_result_chars` | `ALORA_AGENT_MAX_TOOL_RESULT_CHARS` | `3000` | Tool natijasining model kontekstidagi nusxasi chegarasi |
+
+### 6.4 Bosqichga qarab tool to'plami
+
+Har bir sessiya Stage'iga mos tool'lar modelga beriladi (`cmd/agent/wiring.go` —
+`stageTools`). *Tool syemasi qancha kichik bo'lsa, prompt token shuncha kam va
+DeepSeek prefix-keshi shuncha aniq urladi.* Biznes qoidasi: hisob/order bosqichida
+buyurtmadan tashqari narsani tool'larga kiritmaydi, need bosqichida esa narx
+hisobi ishlamaydi. Model tanlovdan tashqari tool chaqirsa `noma'lum tool` natijasi
+qaytadi va agent o'zini tuzatadi (xato sifatida o'lchanmaydi).
+
+**Eslatma (DeepSeek):** prefix-kesh `DeepSeekReasoner`/`DeepSeekV3V2` rejimida
+avtomatik; tez-tez takrorlanadigan prompt prefixi (system prompt + tarix) keshga
+tushadi. Kesh xotira yoki key-limit bilan pasaysa, `alora_llm_cached_tokens_total`
+o'sishi to'xtaydi — birinchi navbatda `agent.max_history`/`max_tool_result_chars`ni
+kamaytirib profilni tekshiring.
+
+*(Asosiy kod: `internal/agent/chat.go` — byudjet qo'riqchisi, `cmd/agent/wiring.go` —
+tool selectori, `cmd/agent/main.go` — metrika ulanishi, `internal/llm/trace.go`)*

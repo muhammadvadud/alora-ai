@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"strings"
 	"sync"
 
 	"github.com/cloudwego/eino/components/tool"
@@ -47,9 +48,7 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 			outs[i].Error = plans[i].Why
 			continue
 		}
-		outs[i].Parts = optionParts(plans[i].Parts)
-		outs[i].Accessories = optionAccessories(plans[i].Accessories)
-		outs[i].Services = append([]string(nil), plans[i].Services...)
+		outs[i].Lines = optionLines(plans[i], v)
 		in := planInput(plans[i], st, userRole(ctx))
 		wg.Add(1)
 		go func(i int, in curtains.CalcInput) {
@@ -74,9 +73,8 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 			continue
 		}
 		success++
-		outs[i].Calc = toAny(*results[i])
-		outs[i].Display = displayTotals(*results[i])
 		outs[i].Total = displayMoney(results[i].Total)
+		outs[i].Display = displayTotals(*results[i])
 		attachPlanProducts(ctx, v, plans[i])
 	}
 	if success == 0 {
@@ -111,18 +109,26 @@ func planInput(p curtains.OptionPlan, st curtains.SessionState, role curtains.Us
 	return curtains.CalcInput{Measurements: []curtains.MeasurementInput{m}, Services: services, Role: role}
 }
 
-func optionParts(parts []curtains.PartSpec) []curtainOptionPart {
-	out := make([]curtainOptionPart, 0, len(parts))
-	for _, p := range parts {
-		out = append(out, curtainOptionPart{Role: string(p.Role), VariantID: p.VariantID, WidthM: p.WidthM.String(), HeightM: p.HeightM.String(), Coef: p.Coef.String()})
+// optionLines — paket tarkibining qisqa xulosasi (≤ 3 qator): bo'laklar,
+// bezaklar va xizmatlar. To'liq tarkib state'da (ChosenVariants/LastCalc)
+// saqlanadi, LLM'ga faqat mos-tanlov uchun yetarli nom beriladi.
+func optionLines(p curtains.OptionPlan, v *curtains.View) []string {
+	var out []string
+	for _, x := range p.Parts {
+		out = append(out, string(x.Role)+": "+partLabel(v, x.VariantID, ""))
 	}
-	return out
-}
-
-func optionAccessories(xs []curtains.AccessoryInput) []calcAccessory {
-	out := make([]calcAccessory, 0, len(xs))
-	for _, x := range xs {
-		out = append(out, calcAccessory{VariantID: x.VariantID, Qty: x.Qty.InexactFloat64()})
+	for _, x := range p.Accessories {
+		out = append(out, "bezak: "+partLabel(v, x.VariantID, ""))
+	}
+	if len(p.Services) > 0 || p.NeedCornice {
+		sv := append([]string(nil), p.Services...)
+		if p.NeedCornice {
+			sv = append(sv, "cornice")
+		}
+		out = append(out, "xizmatlar: "+strings.Join(sv, ","))
+	}
+	if len(out) > 3 {
+		return out[:3]
 	}
 	return out
 }

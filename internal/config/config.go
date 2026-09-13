@@ -90,6 +90,11 @@ type AgentConfig struct {
 	// MaxToolResultChars — eski tool natijasining modelga yuboriladigan nusxasi
 	// uchun rune chegarasi. ENV: ALORA_AGENT_MAX_TOOL_RESULT_CHARS
 	MaxToolResultChars int `mapstructure:"max_tool_result_chars"`
+	// PromptTokenBudget — bitta Stream (navbat) ichida yig'ilgan prompt tokenlar
+	// chegarasi (har ReAct aylanishi usage.prompt qo'shiladi). Oshsa sikl error
+	// event bilan to'xtaydi, tarixga yozilmaydi. 0 = o'chiq.
+	// ENV: ALORA_AGENT_PROMPT_TOKEN_BUDGET
+	PromptTokenBudget int `mapstructure:"prompt_token_budget"`
 	// SystemPrompt — fallback prompt (Django sinxronlanmaganda). O'rniga
 	// $fallback.system_prompt dan foydalaniladi; eski joylashuv uchun saqlanadi.
 	SystemPrompt string `mapstructure:"system_prompt"`
@@ -201,6 +206,7 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("agent.max_step", 20)
 	v.SetDefault("agent.max_history", 40)
 	v.SetDefault("agent.max_tool_result_chars", 3000)
+	v.SetDefault("agent.prompt_token_budget", 40000)
 	v.SetDefault("agent.stream", true)
 	v.SetDefault("agent.system_prompt", "")
 	v.SetDefault("server.addr", ":8080")
@@ -322,6 +328,9 @@ func (c *Config) Validate() error {
 	default:
 		return fmt.Errorf("llm.reasoning_effort %q noto'g'ri (%s, %s, %s, %s yoki %s)",
 			c.LLM.ReasoningEffort, EffortLow, EffortMedium, EffortHigh, EffortXHigh, EffortMax)
+	}
+	if c.Agent.PromptTokenBudget < 0 {
+		return fmt.Errorf("agent.prompt_token_budget %d noto'g'ri — 0 (o'chiq) yoki musbat", c.Agent.PromptTokenBudget)
 	}
 	return nil
 }
