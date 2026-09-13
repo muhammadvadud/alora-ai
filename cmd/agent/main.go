@@ -20,12 +20,15 @@ import (
 	"github.com/muhammadvadud/alora-agent/internal/curtains"
 	"github.com/muhammadvadud/alora-agent/internal/llm"
 	"github.com/muhammadvadud/alora-agent/internal/observability"
+	"github.com/muhammadvadud/alora-agent/internal/prompt"
 	"github.com/muhammadvadud/alora-agent/internal/session"
 	"github.com/muhammadvadud/alora-agent/internal/tools"
 	"github.com/muhammadvadud/alora-agent/internal/transport/cli"
 	grpctransport "github.com/muhammadvadud/alora-agent/internal/transport/grpc"
 	httptransport "github.com/muhammadvadud/alora-agent/internal/transport/http"
 )
+
+var _ tools.StateStore = (session.Store)(nil)
 
 func main() {
 	if err := run(); err != nil {
@@ -68,7 +71,8 @@ func run() error {
 	var syncer *backend.CatalogSyncer
 	var metrics *observability.Metrics
 	var metricsReg *prometheus.Registry
-	var catalog *curtains.Catalog
+	catalog := curtains.NewCatalog(curtains.RealClock{}, cfg.Catalog.StaleAfter)
+	var calc curtains.Calculator
 	if cfg.Mode == "grpc" {
 		token := os.Getenv(cfg.GRPC.ServiceTokenEnv)
 		backendConn, err = backend.Dial(ctx, cfg.Backend.Addr, token)
@@ -76,7 +80,6 @@ func run() error {
 			return fmt.Errorf("backend ulanishi: %w", err)
 		}
 		defer backendConn.Close()
-		catalog = curtains.NewCatalog(curtains.RealClock{}, cfg.Catalog.StaleAfter)
 		metrics, metricsReg = observability.NewMetrics()
 		syncer = backend.NewCatalogSyncer(backendConn, catalog, backend.SyncOptions{
 			PageSize: int32(cfg.Catalog.PageSize), Metrics: metrics,
@@ -86,27 +89,28 @@ func run() error {
 				slog.Error("katalog sinxronizatsiyasi to'xtadi", "error", syncErr)
 			}
 		}()
-		pricing := backend.NewPricingClient(backendConn, cfg.Backend.Timeout, "")
-		// Session state Store API 1.30/1.31 da ulanadi; hozircha nil ataylab beriladi.
-		for _, candidate := range tools.Alora(tools.Deps{
-			Catalog: catalog, Calc: pricing, State: nil, Clock: curtains.RealClock{},
-		}) {
-			if candidate != nil {
-				toolList = append(toolList, candidate)
-			}
-		}
+		calc = backend.NewPricingClient(backendConn, cfg.Backend.Timeout, "")
 	}
 
 	// Suhbat xotirasi: DATABASE_URL berilgan bo'lsa Postgres, aks holda in-memory.
-	store, err := newStore(ctx, cfg.DB.URL)
+	store, err := newStore(ctx, cfg.DB.URL, cfg.DB.AutoMigrate)
 	if err != nil {
 		return err
 	}
+	for _, candidate := range tools.Alora(tools.Deps{Catalog: catalog, Calc: calc, State: store, Clock: curtains.RealClock{}}) {
+		if candidate != nil {
+			toolList = append(toolList, candidate)
+		}
+	}
 	chat, err := agent.NewChat(ctx, chatModel, toolList, store, agent.Options{
-		SystemPrompt: systemPrompt(cfg),
-		MaxStep:      cfg.Agent.MaxStep,
-		MaxHistory:   cfg.Agent.MaxHistory,
-		Stream:       cfg.Agent.Stream,
+		SystemPrompt:     systemPrompt(cfg),
+		SystemPromptFunc: promptFunc(store, catalog, fallbackPrompt(cfg), cfg.Knowledge.InlineMax),
+		MaxStep:          cfg.Agent.MaxStep,
+		MaxHistory:       cfg.Agent.MaxHistory,
+		Stream:           cfg.Agent.Stream,
+		StateHook:        stateHook{store: store},
+		Provider:         cfg.LLM.Provider,
+		Model:            cfg.LLM.Model,
 	})
 	if err != nil {
 		return err
@@ -148,12 +152,12 @@ type httpReady struct{}
 func (httpReady) Ready() (bool, string) { return true, "" }
 
 // newStore DB URL bo'lsa Postgres store, aks holda in-memory store qaytaradi.
-func newStore(ctx context.Context, dbURL string) (session.Store, error) {
+func newStore(ctx context.Context, dbURL string, autoMigrate bool) (session.Store, error) {
 	if dbURL == "" {
 		slog.Info("suhbat xotirasi: in-memory (DATABASE_URL berilmagan)")
 		return session.NewMemory(), nil
 	}
-	store, err := session.NewPostgres(ctx, dbURL)
+	store, err := session.NewPostgres(ctx, dbURL, session.PostgresOptions{AutoMigrate: autoMigrate})
 	if err != nil {
 		return nil, fmt.Errorf("postgres store: %w", err)
 	}
@@ -169,6 +173,16 @@ func systemPrompt(cfg *config.Config) string {
 		return cfg.Fallback.SystemPrompt
 	}
 	return defaultSystemPrompt
+}
+
+func fallbackPrompt(cfg *config.Config) string {
+	if cfg.Agent.SystemPrompt != "" {
+		return cfg.Agent.SystemPrompt
+	}
+	if cfg.Fallback.SystemPrompt != "" {
+		return cfg.Fallback.SystemPrompt
+	}
+	return prompt.FallbackSystemPrompt
 }
 
 func serveGRPC(ctx context.Context, cfg *config.Config, srv *grpctransport.Server, metrics *observability.Metrics, reg *prometheus.Registry, ready observability.Readiness) error {

@@ -1,0 +1,22 @@
+name: "katalogda yo'q mahsulot — atlas Roma"
+role: employee
+
+steps:
+  - user: "To'y xonamiz uchun atlas Roma mato bor edimi?"
+    llm:
+      - tools:
+          - name: product_search
+            args:
+              room: wedding
+              kind: fabric
+              max_price: 1000
+      - text: >
+          Afsuski, atlas Roma katalogda yo'q. Qolgan matolardan ko'rsatishim
+          mumkin, lekin narxni katalog yangilanmasidan aytolmayman.
+    expect_tools: ["product_search"]
+    expect_stage: recommend
+    expect_products: false
+    expect_result_contains:
+      - '"count":0'
+    forbid_content_regex:
+      - "\\d[\\d\\s]{5,}\\s*so'm"

@@ -1,0 +1,54 @@
+name: "hi-tech mehmonxona — to'liq oqim"
+role: employee
+
+steps:
+  - user: >
+      Mehmonxonaga qorong'i uslubdagi grafit parda kerak.
+      Janub tomonga qaraydi, yorug'lik ko'p tushadi.
+    llm:
+      - tools:
+          - name: set_context
+            args:
+              room: living
+              style: hi_tech
+              colors: "grafit"
+              light: "qorong'i, janubga qaraydi"
+          - name: product_search
+            args:
+              room: living
+              style: hi_tech
+              kind: fabric
+      - text: >
+          Ushbu variantlar mehmonxonangizga mos keladi: Velvet Milano
+          grafiti va beji, Classic Ivoire hamda Velvet Bordo.
+    expect_tools: ["set_context", "product_search"]
+    expect_stage: recommend
+    expect_products: true
+
+  - user: "Karniz 4 metr, balandligi 2.6 metr. Velvet Milano grafitdan hisoblang."
+    llm:
+      - tools:
+          - name: curtain_calculate
+            args:
+              cornice_length_m: 4
+              height_m: 2.6
+              room_name: "Mehmonxona"
+              parts:
+                - variant_id: v-hitech-grafit
+                  role: portyera
+                  coefficient: 2.5
+      - text: "Hisob tayyor: mato 4 680 000 so'm turadi."
+    expect_tools: ["curtain_calculate"]
+    expect_stage: calc
+    expect_products: false
+
+  - user: "Tikuv, tasma, ilgich va yetkazib berishni qo'shib, avansini ayt."
+    llm:
+      - tools:
+          - name: price_quote
+            args:
+              need_delivery: true
+      - text: "Jami 5 070 000 so'm. Avans 2 535 000 so'm."
+    expect_tools: ["price_quote"]
+    expect_stage: calc
+    expect_products: false

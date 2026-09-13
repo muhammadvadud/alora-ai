@@ -1,0 +1,22 @@
+name: "noto'g'ri o'lcham — karniz 50 m"
+role: employee
+
+steps:
+  - user: "Karnizim 50 metr, balandligi 2.6 metr. Velvet Milano bejdan hisoblang."
+    llm:
+      - tools:
+          - name: curtain_calculate
+            args:
+              cornice_length_m: 50
+              height_m: 2.6
+              parts:
+                - variant_id: v-hitech-bej
+                  role: portyera
+                  coefficient: 2.5
+      - text: >
+          Afzallik, karniz uzunligi 0.5–15 metr oralig'ida bo'lishi kerak.
+          Iltimos, to'g'ri o'lchamni ayting.
+    expect_tools: ["curtain_calculate"]
+    expect_stage: need
+    expect_products: false
+    expect_error_contains: "karniz uzunligi"

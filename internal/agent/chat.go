@@ -24,16 +24,17 @@ import (
 // butun oqimni o'qishga majbur bo'ladi (DeepSeek matnni tool_call'dan oldin yuboradi), bu esa
 // yakuniy javobni buferlaydi — stream yo'qoladi. Bu sikl ikkalasini ham beradi.
 type Chat struct {
-	model        model.ToolCallingChatModel // tool'lar bog'langan
-	tools        map[string]tool.InvokableTool
-	store        session.Store
-	systemPrompt string
-	maxStep      int
-	maxHistory   int // modelga yuboriladigan eski xabarlar chegarasi (history.go)
-	stream       bool
-	stateHook    StageReporter // nil bo'lsa stage event'lar chiqmaydi
-	provider     string        // done.usage uchun (main.go to'ldiradi)
-	modelName    string
+	model            model.ToolCallingChatModel // tool'lar bog'langan
+	tools            map[string]tool.InvokableTool
+	store            session.Store
+	systemPrompt     string
+	maxStep          int
+	maxHistory       int // modelga yuboriladigan eski xabarlar chegarasi (history.go)
+	stream           bool
+	stateHook        StageReporter // nil bo'lsa stage event'lar chiqmaydi
+	provider         string        // done.usage uchun (main.go to'ldiradi)
+	modelName        string
+	systemPromptFunc func(context.Context, string) string
 }
 
 // fallbackAnswer — model matnli javob bermasa (masalan maxStep tugab qolsa)
@@ -46,6 +47,8 @@ const fallbackAnswer = "Kechirasiz, bu savolga hozir aniq javob bera olmadim. Qa
 // yuborish oson bo'lardi.
 type Options struct {
 	SystemPrompt string
+	// SystemPromptFunc har navbatda state/katalog o'zgarishi sabab prompt'ni qayta tuzadi.
+	SystemPromptFunc func(context.Context, string) string
 	// MaxStep — ReAct siklining maksimal qadami (tool -> model -> tool ...). 0 = 20.
 	MaxStep int
 	// MaxHistory — modelga yuboriladigan eski xabarlar chegarasi. 0 = 40 (history.go).
@@ -92,6 +95,7 @@ func NewChat(ctx context.Context, chatModel model.ToolCallingChatModel, tools []
 		systemPrompt: opts.SystemPrompt, maxStep: opts.MaxStep,
 		maxHistory: opts.MaxHistory, stream: opts.Stream,
 		stateHook: opts.StateHook, provider: opts.Provider, modelName: opts.Model,
+		systemPromptFunc: opts.SystemPromptFunc,
 	}, nil
 }
 
@@ -115,6 +119,10 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 
 		// Tool'lar joriy sessiyani bilishi uchun (masalan oxirgi order'ga bog'lash).
 		ctx = session.WithID(ctx, sessionID)
+		systemPrompt := c.systemPrompt
+		if c.systemPromptFunc != nil {
+			systemPrompt = c.systemPromptFunc(ctx, sessionID)
+		}
 
 		history, err := c.store.History(ctx, sessionID)
 		if err != nil {
@@ -123,8 +131,8 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 		}
 
 		msgs := make([]*schema.Message, 0, len(history)+4)
-		if c.systemPrompt != "" {
-			msgs = append(msgs, schema.SystemMessage(c.systemPrompt))
+		if systemPrompt != "" {
+			msgs = append(msgs, schema.SystemMessage(systemPrompt))
 		}
 		msgs = append(msgs, trimHistory(history, c.maxHistory)...)
 		msgs = append(msgs, schema.UserMessage(input))
