@@ -9,7 +9,7 @@
 
 Go + [Eino](https://github.com/cloudwego/eino) da **tool-chaqiruvchi ReAct AI agent** blueprinti.
 Alora AI agenti (Go) uchun moslashtirilgan.
-Pluggable LLM provider, CLI + HTTP (SSE) transport, session xotira, streaming tool chaqiruvlari.
+Pluggable LLM provider, CLI + HTTP (SSE) + gRPC transport, session xotira, streaming tool chaqiruvlari.
 
 Yangi agent = shu repodan nusxa → config o'zgartirish → tool qo'shish. **Yadroga tegmang.**
 
@@ -84,16 +84,16 @@ transport (grpc/cli/http) ──► Chat.Stream(ctx, sessionID, input) ──►
 | `done` | javob tugadi | — |
 | `error` | xato | `error` |
 
-Umumiy tartib: `start → (tool_call → tool_args → tool_result)* → content* → done`.
+Umumiy tartib: `start → (tool_call → tool_args → tool_result → products?)* → content* → stage → done`.
 Parallel tool'larda `tool_call`/`tool_args`/`tool_result` `tool` nomi bo'yicha juftlanadi (tartibga tayanmang).
 
 ## Retsept: yangi tool qo'shish
 
 Tool ikki qatlam: **domen paketi** (`internal/curtains/` — tashqi API/mantiq, LLM'dan mustaqil)
 va **yupqa adapter** (`internal/tools/<feature>.go` — DTO validatsiya + domen chaqiruvi).
-Registratsiya `main.go` da (composition root) — **ochiq**, `modules` ro'yxati YO'Q.
+Registratsiya `tools.go` da (`Alora()` yoki `AloraLookups()`).
 
-Misol: **Alora product_search toli**
+Misol: **Alora product_search tooli**
 
 1) Domen paketi `internal/curtains/search.go`:
 ```go
@@ -104,8 +104,8 @@ type SearchQuery struct {
     // Boshqa filtrlar...
 }
 
-func (c *Catalog) Search(ctx context.Context, q SearchQuery) ([]ProductCard, error) {
-    // Katalog orqali qidirish, ballash va tartiblash mantiqi
+func Search(v *View, q SearchQuery) []ProductCard {
+    // Katalog orqali qidirish mantiqi
 }
 ```
 
@@ -115,40 +115,56 @@ type productSearchArgs struct {
 	Room string `json:"room,omitempty" jsonschema:"description=Qaysi xona uchun parda kerak"`
 }
 type productSearchResult struct {
-	Products []ProductCard `json:"products,omitempty"`
+	Products []productCard `json:"products,omitempty"`
 	Error    string        `json:"error,omitempty"` // errors-as-results
 }
 ```
 
-3) Adapter `internal/tools/product_search.go` — konstruktor `Deps` orqali domen obyekti (katalog) oladi:
+3) Adapter `internal/tools/product_search.go` — konstruktor `Deps` oladi:
 ```go
-func ProductSearch(d Deps) []tool.BaseTool {
-	h := &productSearchHandler{catalog: d.Catalog}
-	return []tool.BaseTool{must(utils.InferTool("product_search", "Katalogdan qidirish", h.do))}
+package tools
+
+import (
+	"context"
+	"github.com/cloudwego/eino/components/tool"
+	"github.com/cloudwego/eino/components/tool/utils"
+)
+
+func ProductSearch(d Deps) tool.BaseTool {
+	h := &productSearchHandler{d: d}
+	return must(utils.InferTool("product_search", "Katalogdan qidirish", h.do))
 }
 
-type productSearchHandler struct{ catalog *curtains.Catalog }
+type productSearchHandler struct{ d Deps }
 
 func (h *productSearchHandler) do(ctx context.Context, a productSearchArgs) (productSearchResult, error) {
-	view := h.catalog.View()
-	if view.Version() == 0 {
-		return productSearchResult{Error: "Katalog hali yuklanmadi"}, nil
+	v, errMsg, stale := readyView(h.d)
+	if errMsg != "" {
+		return productSearchResult{Error: errMsg}, nil
 	}
 	
-	results, err := h.catalog.Search(ctx, curtains.SearchQuery{Room: a.Room})
-	if err != nil {
-		return productSearchResult{Error: err.Error()}, nil // Go error EMAS — natijada
-	}
-	return productSearchResult{Products: results}, nil
+	// Domen chaqiruvi
+	cards := curtains.Search(v, curtains.SearchQuery{Room: a.Room})
+	
+	// State'ga yozish
+	st, sid := loadState(ctx, h.d)
+	st.Apply("product_search", argsMap(a), now(h.d))
+	saveState(ctx, h.d, sid, st)
+	
+	return productSearchResult{Products: cards}, nil // Go error EMAS
 }
 ```
-`tools.Deps` ga `Catalog *curtains.Catalog` maydonini qo'shing.
 
-4) `main.go` da OCHIQ register qiling:
+4) `internal/tools/tools.go` dagi `Alora()` (yoki `AloraLookups()`) ro'yxatiga qo'shing:
 ```go
-deps := tools.Deps{Catalog: catalogInstance}
-toolList = append(toolList, tools.ProductSearch(deps)...)
+func Alora(d Deps) []tool.BaseTool {
+	return []tool.BaseTool{
+		ProductSearch(d),
+		// ...
+	}
+}
 ```
+Yangi qo'shilgan tool nomlari albatta `alora_test.go` da (TestAlora_ConstructorsAndNames) qayd etilgan bo'lishi kerak.
 **Tamom.**
 
 **Errors-as-results (MUHIM):** foydalanuvchi kiritmasi/tashqi API xatosida tool `error`

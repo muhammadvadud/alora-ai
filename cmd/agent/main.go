@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/joho/godotenv"
 	"github.com/muhammadvadud/alora-agent/gen/alorav1"
@@ -63,6 +64,24 @@ func run() error {
 	chatModel, err := llm.New(ctx, cfg.LLM)
 	if err != nil {
 		return err
+	}
+	var fallbackModel model.ToolCallingChatModel
+	if provider := cfg.LLM.FallbackProvider; provider != "" {
+		fallbackCfg := cfg.LLM
+		fallbackCfg.Provider = provider
+		fallbackCfg.APIKey = fallbackAPIKey(provider)
+		fallbackCfg.BaseURL = ""
+		fallbackCfg.Thinking = ""
+		fallbackCfg.ReasoningEffort = ""
+		if fallbackCfg.APIKey == "" && provider != "ollama" {
+			slog.Warn("llm fallback o'chirildi: API kalit topilmadi", "provider", provider)
+		} else {
+			fallbackModel, err = llm.New(ctx, fallbackCfg)
+			if err != nil {
+				slog.Warn("llm fallback o'chirildi: model yaratilmadi", "provider", provider, "error", err)
+				fallbackModel = nil
+			}
+		}
 	}
 
 	// Tool'lar shu yerda (composition root) ochiq register qilinadi — kim nima
@@ -150,6 +169,8 @@ func run() error {
 		StateHook:        stateHook{store: store},
 		Provider:         cfg.LLM.Provider,
 		Model:            cfg.LLM.Model,
+		Fallback:         fallbackModel,
+		FallbackProvider: cfg.LLM.FallbackProvider,
 	})
 	if err != nil {
 		return err
@@ -260,6 +281,21 @@ func fallbackPrompt(cfg *config.Config) string {
 		return cfg.Fallback.SystemPrompt
 	}
 	return prompt.FallbackSystemPrompt
+}
+
+func fallbackAPIKey(provider string) string {
+	var env string
+	switch provider {
+	case "deepseek":
+		env = "DEEPSEEK_API_KEY"
+	case "openai":
+		env = "OPENAI_API_KEY"
+	case "claude":
+		env = "ANTHROPIC_API_KEY"
+	default:
+		return ""
+	}
+	return os.Getenv(env)
 }
 
 func serveGRPC(ctx context.Context, cfg *config.Config, srv *grpctransport.Server, metrics *observability.Metrics, reg *prometheus.Registry, ready observability.Readiness) error {

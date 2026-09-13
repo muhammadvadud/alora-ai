@@ -35,6 +35,8 @@ type Chat struct {
 	provider         string        // done.usage uchun (main.go to'ldiradi)
 	modelName        string
 	systemPromptFunc func(context.Context, string) string
+	fallback         model.ToolCallingChatModel
+	fallbackProvider string
 }
 
 // fallbackAnswer — model matnli javob bermasa (masalan maxStep tugab qolsa)
@@ -60,8 +62,10 @@ type Options struct {
 	// nil bo'lsa agent bosqich/state haqida hech narsa chiqarmaydi.
 	StateHook StageReporter
 	// Provider/Model — done.usage markerlari (main.go shu nomlarni to'ldiradi).
-	Provider string
-	Model    string
+	Provider         string
+	Model            string
+	Fallback         model.ToolCallingChatModel
+	FallbackProvider string
 }
 
 // NewChat model'ga tool'larni bog'laydi va Chat servisini yaratadi.
@@ -90,11 +94,19 @@ func NewChat(ctx context.Context, chatModel model.ToolCallingChatModel, tools []
 	if err != nil {
 		return nil, fmt.Errorf("tool'larni bog'lash: %w", err)
 	}
+	var fallback model.ToolCallingChatModel
+	if opts.Fallback != nil {
+		fallback, err = opts.Fallback.WithTools(infos)
+		if err != nil {
+			return nil, fmt.Errorf("fallback tool'larini bog'lash: %w", err)
+		}
+	}
 	return &Chat{
 		model: bound, tools: byName, store: store,
 		systemPrompt: opts.SystemPrompt, maxStep: opts.MaxStep,
 		maxHistory: opts.MaxHistory, stream: opts.Stream,
 		stateHook: opts.StateHook, provider: opts.Provider, modelName: opts.Model,
+		fallback: fallback, fallbackProvider: opts.FallbackProvider,
 		systemPromptFunc: opts.SystemPromptFunc,
 	}, nil
 }
@@ -148,12 +160,16 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 		)
 
 		answered := false
+		activeModel := c.model
+		usedFallback := false
 		for step := 0; step < c.maxStep; step++ {
-			content, toolCalls, u, err := c.ask(ctx, msgs, out)
+			content, toolCalls, u, nextModel, switched, err := c.ask(ctx, msgs, out, activeModel)
 			if err != nil {
 				emit(ctx, out, Event{Kind: KindError, Err: err.Error()})
 				return
 			}
+			activeModel = nextModel
+			usedFallback = usedFallback || switched
 			usage = addUsage(usage, u)
 			if len(toolCalls) == 0 {
 				// Yakuniy javob. Bo'sh matnni tarixga yozmaymiz — quyida fallback qo'yiladi.
@@ -206,10 +222,14 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 				emit(ctx, out, Event{Kind: KindStage, Content: stage, Result: summary})
 			}
 		}
+		provider := c.provider
+		if usedFallback {
+			provider = c.fallbackProvider
+		}
 		emit(ctx, out, Event{
 			Kind: KindDone,
 			Usage: &Usage{
-				Provider:         c.provider,
+				Provider:         provider,
 				Model:            c.modelName,
 				PromptTokens:     usage.Prompt,
 				CompletionTokens: usage.Completion,
@@ -240,11 +260,42 @@ func (c *Chat) Reset(ctx context.Context, sessionID string) error {
 
 // ask model'dan bitta javob oladi: stream yoqilgan bo'lsa oqimni jonli o'qiydi,
 // aks holda yaxlit so'rov yuboradi. Ikkalasi ham bir xil Event'larni chiqaradi.
-func (c *Chat) ask(ctx context.Context, msgs []*schema.Message, out chan<- Event) (string, []schema.ToolCall, llm.TokenUsage, error) {
-	if !c.stream {
-		return c.generate(ctx, msgs, out)
+func (c *Chat) ask(ctx context.Context, msgs []*schema.Message, out chan<- Event, active model.ToolCallingChatModel) (string, []schema.ToolCall, llm.TokenUsage, model.ToolCallingChatModel, bool, error) {
+	content, calls, usage, err := c.askOnce(ctx, msgs, out, active)
+	if err == nil {
+		return content, calls, usage, active, active == c.fallback, nil
 	}
-	stream, err := c.model.Stream(ctx, msgs)
+	if active != c.model || !llm.IsRetryable(err) {
+		return "", nil, llm.TokenUsage{}, active, false, err
+	}
+	select {
+	case <-time.After(200 * time.Millisecond):
+	case <-ctx.Done():
+		return "", nil, llm.TokenUsage{}, active, false, ctx.Err()
+	}
+	content, calls, usage, err = c.askOnce(ctx, msgs, out, active)
+	if err == nil {
+		return content, calls, usage, active, false, nil
+	}
+	if !llm.IsRetryable(err) {
+		return "", nil, llm.TokenUsage{}, active, false, err
+	}
+	if c.fallback == nil {
+		return "", nil, llm.TokenUsage{}, active, false, err
+	}
+	slog.Warn("llm_fallback", "provider", c.fallbackProvider, "error", err)
+	content, calls, usage, err = c.askOnce(ctx, msgs, out, c.fallback)
+	if err != nil {
+		return "", nil, llm.TokenUsage{}, c.fallback, true, err
+	}
+	return content, calls, usage, c.fallback, true, nil
+}
+
+func (c *Chat) askOnce(ctx context.Context, msgs []*schema.Message, out chan<- Event, active model.ToolCallingChatModel) (string, []schema.ToolCall, llm.TokenUsage, error) {
+	if !c.stream {
+		return c.generate(ctx, active, msgs, out)
+	}
+	stream, err := active.Stream(ctx, msgs)
 	if err != nil {
 		return "", nil, llm.TokenUsage{}, err
 	}
@@ -252,8 +303,8 @@ func (c *Chat) ask(ctx context.Context, msgs []*schema.Message, out chan<- Event
 }
 
 // generate — stream o'chirilgan yo'l: javob yaxlit keladi va bitta content Event bo'ladi.
-func (c *Chat) generate(ctx context.Context, msgs []*schema.Message, out chan<- Event) (string, []schema.ToolCall, llm.TokenUsage, error) {
-	msg, err := c.model.Generate(ctx, msgs)
+func (c *Chat) generate(ctx context.Context, active model.ToolCallingChatModel, msgs []*schema.Message, out chan<- Event) (string, []schema.ToolCall, llm.TokenUsage, error) {
+	msg, err := active.Generate(ctx, msgs)
 	if err != nil {
 		return "", nil, llm.TokenUsage{}, err
 	}

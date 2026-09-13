@@ -57,6 +57,25 @@ func TestLive_Snapshot(t *testing.T) {
 	t.Logf("version=%d products=%d", v.Version, len(v.Products()))
 }
 
+// TestLive_SnapshotContract11 — kontrakt 1.1 dagi qo'shimcha katalog bo'limlari
+// mapping qatlamida xatosiz kelayotganini tekshiradi; ro'yxatlar bo'sh bo'lishi mumkin.
+func TestLive_SnapshotContract11(t *testing.T) {
+	_, _, catalog := dial(t)
+	v := catalog.View()
+	_ = v.DiscountTiers()
+	_ = v.Fasons()
+	_ = v.Knowledge()
+	if _, ok := v.OrderDefaults(); !ok {
+		t.Log("Django order_defaults qaytarmadi")
+	}
+	if _, ok := v.Prompt(); !ok {
+		t.Log("Django joriy PromptVersion qaytarmadi")
+	}
+	if _, ok := v.Service("sewing"); !ok {
+		t.Log("Django service_prices ichida sewing yo'q")
+	}
+}
+
 // TestLive_ReferenceCases — 20 etalon haqiqiy Django CalcPreview orqali (1.10).
 func TestLive_ReferenceCases(t *testing.T) {
 	ctx, pricing, _ := dial(t)
