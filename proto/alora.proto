@@ -502,3 +502,30 @@ message Ack {
   // Qo'shimcha xabar.
   string message = 2;
 }
+
+// ──────────────────────────────────────────────
+// Pricing servisi (Go → Django: narx hisobi)
+// ──────────────────────────────────────────────
+
+service Pricing {
+  // Narx hisobini faqat Django kalkulyatori bajaradi.
+  rpc CalcPreview(CalcPreviewRequest) returns (CalcPreviewResponse);
+}
+
+message CalcPreviewRequest {
+  // calc_cases.json dagi input sxemasi.
+  string payload_json = 1;
+  // employee | manager | admin — qo'lda chegirma chegarasi uchun.
+  string user_role = 2;
+  string tenant_id = 3;
+  string session_id = 4;
+}
+
+message CalcPreviewResponse {
+  // calc_cases.json dagi expected sxemasi.
+  string result_json = 1;
+  // Umumiy xato matni; muvaffaqiyatda bo'sh.
+  string error = 2;
+  // Maydon xatolari JSON ko'rinishida.
+  string error_fields_json = 3;
+}
