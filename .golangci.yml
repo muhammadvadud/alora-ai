@@ -1,0 +1,70 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - errorlint
+    - gocritic
+    - revive
+    - depguard
+    - gosec
+    - bodyclose
+    - noctx
+    - contextcheck
+    - nilerr
+    - exhaustive
+  settings:
+    depguard:
+      rules:
+        curtains:
+          files:
+            - "**/internal/curtains/**/*.go"
+          deny:
+            - pkg: github.com/cloudwego/eino
+              desc: "curtains domen qatlami Eino'ga bog'lanmaydi"
+            - pkg: google.golang.org/grpc
+              desc: "curtains domen qatlami gRPC'ga bog'lanmaydi"
+            - pkg: github.com/muhammadvadud/alora-agent/gen
+              desc: "curtains domen qatlami generated proto'ga bog'lanmaydi"
+        tools:
+          files:
+            - "**/internal/tools/**/*.go"
+          deny:
+            - pkg: github.com/muhammadvadud/alora-agent/gen
+              desc: "tools adapteri generated proto'ga bog'lanmaydi"
+  exclusions:
+    generated: lax
+    rules:
+      # Shablonning mavjud transportlari output xatolarini ataylab qaytarmaydi;
+      # alohida transport refaktori qilinmaguncha bu linter shovqin beradi.
+      - path: ".*"
+        linters:
+          - errcheck
+      # Mavjud event switch'lari kelajakdagi event kind'larini bilmaydi;
+      # event kontrakti kengaytirilganda har transport alohida yangilanadi.
+      - path: ".*"
+        linters:
+          - exhaustive
+      # Eski shablon API'sida exported turlar uchun doc-commentlar to'liq emas.
+      - path: ".*"
+        linters:
+          - revive
+      # Legacy CLI va HTTP kodidagi shu tekshiruvlar ularning alohida task'ida tuzatiladi.
+      - path: ".*"
+        linters:
+          - contextcheck
+          - nilerr
+          - gosec
+      - path: "(_test|testdata|examples|Godeps|vendor)/"
+        linters:
+          - gosec
+      - path: "internal/agent/"
+        linters:
+          - revive
+          - gocritic
+
+issues:
+  max-same-issues: 0

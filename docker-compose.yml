@@ -1,15 +1,28 @@
-# Suhbat tarixi uchun PostgreSQL. Ishga tushirish: docker compose up -d
-# So'ng: DATABASE_URL=postgres://agent:agent@localhost:5432/agent?sslmode=disable
 services:
+  agent:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://alora:alora_password@db:5432/alora}
+      AGENT_SERVICE_TOKEN: ${AGENT_SERVICE_TOKEN:-}
+      ALORA_BACKEND_ADDR: ${ALORA_BACKEND_ADDR:-django:9091}
+    expose:
+      - "9090"
+    ports:
+      - "127.0.0.1:8081:8081"
+    networks:
+      - alora_net
+    restart: unless-stopped
+
   postgres:
     image: postgres:16-alpine
-    container_name: baholash-postgres
     environment:
       POSTGRES_USER: agent
       POSTGRES_PASSWORD: agent
       POSTGRES_DB: agent
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -17,6 +30,13 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - alora_net
 
 volumes:
   pgdata:
+
+networks:
+  # Backend stack shu nomdagi network'ga ulanganda django:9091 ko'rinadi.
+  alora_net:
+    name: alora_net

@@ -1,0 +1,11 @@
+version: v1
+
+plugins:
+  - plugin: go
+    out: gen/alorav1
+    opt:
+      - paths=source_relative
+  - plugin: go-grpc
+    out: gen/alorav1
+    opt:
+      - paths=source_relative

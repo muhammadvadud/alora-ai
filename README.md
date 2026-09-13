@@ -1,120 +1,55 @@
-# AI Agent Blueprint (Go + Eino)
+# Alora AI Agent (Go)
 
-Go'da tool-chaqiruvchi **ReAct AI agent** qurish uchun qayta ishlatiladigan asos.
-Yangi agent kerak bo'lsa: shu repodan nusxa oling, config'ni o'zgartiring, tool qo'shing — tayyor.
+Alora AI agent (Go) — parda do'koni uchun AI sotuvchi-yordamchi. Loyihaning asosiy maqsadi mijozlar bilan muloqot qilish, ehtiyojlarini aniqlash, katalogni qidirish va hisob-kitob qilishda yordam berishdir.
 
-## Imkoniyatlar
+Tizim ishlashi gRPC protokoli orqali Django gateway va Go agenti o'rtasidagi aloqaga asoslangan. Arxitektura yupqa tool adapterlari va markaziy domen qatlami atrofida qurilgan bo'lib, qat'iy ma'lumotlar sinxronizatsiyasi Django backend bilan ta'minlanadi.
 
-- **Pluggable LLM provider** — DeepSeek / OpenAI / Claude / Ollama, config orqali almashadi
-- **Ikki transport** — interaktiv **CLI** va **HTTP API** (SSE streaming)
-- **Session xotira** — `Store` interfeysi + in-memory (keyin Redis/DB)
-- **Tool'lar** — bitta modulda bir nechta tool; real tashqi API namunasi (Open-Meteo)
-- **Streaming** — javob va tool chaqiruvlari real vaqtda. Event ketma-ketligi:
-  `start` → `tool_call` (tool nomi) → `tool_args` (params) → `tool_result` → `content…` → `done`.
-  Tool nomi model oqimidan paydo bo'lishi bilanoq keladi, argumentlar to'lishini kutmasdan.
-
-## Tuzilma
-
-```
-cmd/agent/main.go            # wiring: config→llm→tools→agent→(cli|http)
-configs/config.yaml          # provider, model, server, mode, log
-internal/
-├── config/                  # Viper: provider'ga qarab API-kalit ENV'ini yechadi
-├── llm/                     # PLUGGABLE PROVIDER (registry; har provider 1 fayl)
-├── agent/                   # ReAct agent + delivery-agnostik Event oqimi (chat.go)
-├── session/                 # Store interfeysi + in-memory xotira
-├── tools/                   # tool modullari (utils.go = 2 tool, weather.go = real API)
-└── transport/
-    ├── cli/                 # REPL: Event → stdout
-    └── http/                # net/http: /chat, /chat/stream (SSE), /healthz
-```
-
-Barcha transport bitta manbadan — `agent.Chat.Stream(ctx, sessionID, input) <-chan Event` — render qiladi.
+## Arxitektura
+Tizim arxitekturasi: **Django gateway ↔ Go agent gRPC**
 
 ## Ishga tushirish
+Talablar:
+- Go 1.26+
 
-```bash
-cp .env.example .env        # provider'ga mos kalit (masalan DEEPSEEK_API_KEY)
+Ishga tushirish jarayoni:
+1. `make install-tools` buyrug'ini ishga tushiring (kerakli generatsiya va lint vositalari).
+2. `.env.example` faylidan `.env` nusxasini yarating va kalitlarni kiriting.
+3. CLI rejimida sinab ko'rish uchun: `make run-cli`
+4. gRPC serverni ishga tushirish uchun: `make run-grpc`
+5. Docker compose orqali ishga tushirish uchun: `docker compose up agent -d`
 
-make cli                    # interaktiv terminal
-make http                   # HTTP server (:8080)
-make test                   # testlar
-make dev                    # hot reload (avval: make install-tools)
-```
+## ENV Kalitlar Jadvali
 
-CLI'da tool chaqiruvi real vaqtda ko'rinadi:
-```
-Siz: Toshkent obhavosi va 25 ni 4 ga bo'l?
-  ⚙ get_weather({"city": "Toshkent"})
-  ⚙ calculator({"op": "div", "a": 25, "b": 4})
-  ↳ 6.25
-  ↳ {"city":"Tashkent, Uzbekistan","temperature_c":38.5,"condition":"ochiq havo"}
-Agent: Toshkentda 38.5°C, ochiq havo. 25 / 4 = 6.25.
-```
+| Kalit | Tavsifi |
+| --- | --- |
+| `DEEPSEEK_API_KEY` | DeepSeek LLM uchun API kaliti |
+| `ANTHROPIC_API_KEY` | Anthropic (Claude) uchun API kaliti |
+| `OPENAI_API_KEY` | OpenAI API kaliti (zaxira va Whisper uchun) |
+| `ELEVENLABS_API_KEY` | ElevenLabs TTS uchun API kaliti |
+| `GOOGLE_API_KEY` | Google TTS/STT zaxirasi uchun API kaliti |
+| `AGENT_SERVICE_TOKEN` | gRPC ulanishlarini xavfsizligini ta'minlovchi service token |
+| `DATABASE_URL` | PostgreSQL ulanishi uchun URL manzili |
+| `ALORA_BACKEND_ADDR` | Django backend serverining gRPC manzili |
 
-## HTTP API
+## Make Buyruqlari
+- `make build` - Loyihani build qilish.
+- `make test` - Testlarni ishga tushirish.
+- `make vet` - Go vet analizatoridan o'tkazish.
+- `make lint` - Linterlarni ishga tushirish.
+- `make fmt` - Kodni formatlash.
+- `make tidy` - Go modullar ro'yxatini tozalash va yangilash.
+- `make proto` - Proto fayllarni generatsiya qilish.
+- `make check-fixtures` - Fixture'lar sinxronligini tekshirish.
+- `make sync-fixtures` - Fixture'larni backenddan tortib olish.
+- `make run-cli` - CLI rejimida ishga tushirish.
+- `make run-grpc` - gRPC rejimida ishga tushirish.
 
-```bash
-curl localhost:8080/healthz
+## Testlash
+Loyiha bir necha bosqichli testlashga ega:
+- **Etalon `calc_cases.json`:** Backend bilan bir xil narx va hisob-kitob mexanizmi qo'llanilishi uchun umumiy etalon testlar o'tkaziladi.
+- **Golden dialoglar:** 20 ta yozib olingan etalon ssenariylar mock LLM yordamida sinovdan o'tkazilib, tool ketma-ketligi va holat (stage) to'g'ri ishlashini kafolatlaydi. Hallucination testlari alohida olib boriladi.
 
-# JSON javob (tool tafsilotlari bilan)
-curl -XPOST localhost:8080/chat -d '{"session_id":"u1","message":"Toshkent obhavosi?"}'
-
-# SSE streaming (content + tool_call/tool_result event'lari)
-curl -N -XPOST localhost:8080/chat/stream -d '{"session_id":"u1","message":"100 ni 7 ga bo'l"}'
-```
-
-Bir xil `session_id` bilan yuborilgan xabarlar suhbat tarixini saqlaydi. `session_id` bo'sh bo'lsa avtomatik generatsiya qilinadi.
-
-## Konfiguratsiya
-
-`configs/config.yaml` — provider, model, agent, server, mode. Har qiymat muhit
-o'zgaruvchisi bilan ustidan yoziladi: `MODE`, `LLM_MODEL`, `LLM_PROVIDER`,
-`SERVER_ADDR`, `LOG_LEVEL`. `-mode cli|http` flag'i config'dagi mode'ni ustidan yozadi.
-
-**Provider almashtirish** — `llm.provider` ni o'zgartiring va mos kalitni bering:
-
-| provider | model misoli | kalit ENV |
-|----------|--------------|-----------|
-| deepseek | `deepseek-v4-pro` | `DEEPSEEK_API_KEY` |
-| openai | `gpt-4o` | `OPENAI_API_KEY` |
-| claude | `claude-sonnet-4` | `ANTHROPIC_API_KEY` |
-| ollama | `llama3.1` | — (lokal) |
-
-## Yangi tool qo'shish
-
-Mavjud modulga (`internal/tools/utils.go`) funksiya + `InferTool` qatorini qo'shing,
-yoki yangi modul yarating:
-
-1. `internal/tools/dto.go`: kirish/chiqish struct'lari (jsonschema teglari bilan).
-2. `internal/tools/<nom>.go`: handler funksiya va konstruktor —
-   `func <Nom>(d Deps) []tool.BaseTool` (tashqi bog'liqlik kerak bo'lsa `Deps` orqali),
-   yoki bog'liqliksiz bo'lsa `func <Nom>() tool.BaseTool`.
-3. `cmd/agent/main.go` da (composition root) OCHIQ register qiling:
-   `toolList = append(toolList, tools.<Nom>(deps)...)`.
-   Aggregator/`modules` ro'yxati YO'Q — kim nima qila olishi bir joyda ko'rinadi.
-
-## Yangi provider qo'shish
-
-1. `internal/llm/<nom>.go`: `func init() { register("<nom>", build<Nom>) }` va
-   `build<Nom>(ctx, cfg) (model.ToolCallingChatModel, error)` — mos eino-ext paketini chaqiradi.
-2. `config/config.go` dagi `providerKeyEnv` ga kalit ENV nomini qo'shing.
-
-Keraksiz provayderni o'chirish: `internal/llm/<nom>.go` ni o'chiring + `go mod tidy`.
-
-## Docker
-
-```bash
-make docker
-docker run -p 8080:8080 -e DEEPSEEK_API_KEY=sk-... baholash-agent
-```
-
-## Kengaytirish / hissa qo'shish
-
-Kodni o'zgartirishdan oldin **[AGENTS.md](./AGENTS.md)** ni o'qing — u yerda arxitektura
-qoidalari, Event kontrakti, retseptlar (tool/provider/transport/xotira qo'shish) va kritik
-nozikliklar bor. AI kod-agentlari uchun ham shu fayl mo'ljallangan.
-
-## Stek
-
-Eino · DeepSeek/OpenAI/Claude/Ollama · Viper · godotenv · stdlib `net/http` + `slog`
+## Hujjatlar Havolasi
+- [Ishlab chiqish qoidalari (rules.md)](rules.md)
+- [Ish rejasi (tasks.md)](tasks.md)
+- [Backend bilan shartnoma (GO-CONTRACT.md)](../backend/docs/GO-CONTRACT.md)

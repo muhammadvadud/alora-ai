@@ -1,9 +1,11 @@
-# API kalit bu yerda EMAS — provider'ga qarab ENV'dan olinadi:
+# API kalit bu yerda EMAS — provider'ga qarab ENV'dan olinadi (faqat ENV):
 #   deepseek -> DEEPSEEK_API_KEY,  openai -> OPENAI_API_KEY,  claude -> ANTHROPIC_API_KEY
-#   ollama   -> kalit talab qilmaydi (lokal)
-# Har qiymatni MUHIT orqali ustidan yozish mumkin: LLM_MODEL, MODE, LOG_LEVEL, SERVER_ADDR ...
+#   whisper -> OPENAI_API_KEY,  elevenlabs -> ELEVENLABS_API_KEY,  google -> GOOGLE_API_KEY
+#   ollama -> kalit talab qilmaydi (lokal)
+# Har qiymatni MUHIT orqali ustidan yozish mumkin: ALORA_MODE, ALORA_LLM_MODEL,
+# ALORA_BACKEND_ADDR, ALORA_CATALOG_STALE_AFTER ...  (ALORA_ prefiks, `.` -> `_`)
 
-mode: http # cli | http | telegram  (main -mode flag bilan ustidan yoziladi)
+mode: grpc # grpc | cli | http  (main -mode flag bilan ustidan yoziladi)
 
 llm:
   provider: deepseek # deepseek | openai | claude | ollama
@@ -12,46 +14,79 @@ llm:
   model: deepseek-v4-pro
   base_url: https://api.deepseek.com/v1
   max_tokens: 2048
-  temperature: 0.7
+  temperature: 0.5 # sotuvda barqarorlik uchun 0.7 dan pastroq
   timeout: 60s
   # Model "o'ylashi" (reasoning): adaptive | enabled | disabled. Bo'sh — provider standarti.
   # O'ylash matni stream'da alohida `thinking` event bo'lib chiqadi (javobga qo'shilmaydi).
-  # ENV: LLM_THINKING
   thinking: adaptive
   # O'ylash chuqurligi: low | medium | high | xhigh | max. Bo'sh — provider standarti.
-  # thinking: disabled bo'lsa ta'sir qilmaydi. ENV: LLM_REASONING_EFFORT
+  # thinking: disabled bo'lsa ta'sir qilmaydi.
   reasoning_effort: ""
+  # Asosiy provider ketma-ket 2 marta xato/timeout bersa, o'sha navbat shu provider
+  # bilan qayta so'raladi (rules.md §6.5).
+  fallback_provider: claude
 
 agent:
   max_step: 20
   # Modelga yuboriladigan eski xabarlar chegarasi. Har navbat 4+ xabar qo'shadi
-  # (savol + tool chaqiruvi + tool natijasi + javob), ya'ni 40 ≈ 8-10 navbat.
+  # (savol + tool chaqiruvi + tool natijasi + javob), ya'ni 120 ≈ 25-30 navbat.
   # Suhbat oqimi uzun bo'lsa oshiring. Kesim doim savol chegarasidan boshlanadi.
-  # ENV: AGENT_MAX_HISTORY
-  max_history: 200
+  max_history: 120
   # Javobni jonli (bo'lak-bo'lak) yuborish. false — javob yaxlit, bir marta keladi.
-  # ENV bilan ustidan yozish: AGENT_STREAM=false
+  # ENV bilan ustidan yozish: ALORA_AGENT_STREAM=false
   stream: true
-  system_prompt: |
-    Sen Rocket Park uchun zakaz qabul qiluvchi AI yordamchisan.
-    Faqat mavjud paketlar va narxlar bilan ishlagin, yangi menyu o'ylab topma.
-    Mijozdan kerakli ma'lumotlarni bosqichma-bosqich yig':
-    paket nomi, bolalar soni, sana, vaqt, buyurtmachi ismi, telefon va izoh.
-    Paket nomi noaniq bo'lsa katalog tool'idan foydalan.
-    Bolalar soni paket sig'imidan oshsa, mosroq variantni taklif qil.
-    Zakaz to'liq bo'lsa tool orqali tasdiqlashni yakunla va admin chatga yuborilishi uchun tayyorla.
-    Javoblarni foydalanuvchi tilida, aniq va qisqa ber.
+  # Prompt Django'dan sinxronlanadi; bu yerda emas — $fallback.system_prompt ga qarang.
+  system_prompt: ""
 
-server:
-  addr: ":8080"
+# Asosiy gRPC transport (rules.md §8). Token qiymati config'da YO'Q —
+# service_token_env da ko'rsatilgan ENV'dan o'qiladi.
+grpc:
+  addr: ":9090"
+  service_token_env: AGENT_SERVICE_TOKEN
+  auth_required: true
+  max_sessions: 100
+  keepalive: 30s
 
-# Telegram transporti.
-telegram:
-  token: "" # token faqat ENV'dan: TELEGRAM_BOT_TOKEN (kodga/yaml'ga yozmang)
-  # Stream paytida xabarni yangilash oralig'i (Telegram rate-limit). ENV: TELEGRAM_EDIT_INTERVAL
-  edit_interval: 800ms
+# HTTP — faqat /healthz, /readyz, /metrics (biznes endpoint yo'q, alohida port).
+http:
+  addr: ":8081"
+
+# Go -> Django klient
+backend:
+  addr: "django:9091" # docker tarmog'ida; dev'da ALORA_BACKEND_ADDR=localhost:9091
+  timeout: 5s
+  retry: 3
+
+# Katalog cache sinxroni (rules.md §4.1). Django hali ulanmaganda falsafiy default —
+# quyidagilar faqat fallback sozlamalar.
+catalog:
+  snapshot_on_start: true
+  stale_after: 10m
+  page_size: 500
+
+# Bilim qoidalarini prompt'ga joylash chegarasi (rules.md §4.6.2).
+knowledge:
+  inline_max: 50
+
+# Ovoz (3-bosqichga tayyorlik; kalitlar ENV'dan: OPENAI_API_KEY, ELEVENLABS_API_KEY).
+stt:
+  provider: whisper
+  language: uz
+tts:
+  provider: elevenlabs
+  voice: "uz_female_1"
+  speed: 1.0
 
 db:
-  url: "" # suhbat tarixi PostgreSQL URL — faqat ENV'dan: DATABASE_URL (bo'sh bo'lsa in-memory)
+  url: "" # Postgres URL — faqat ENV'dan: DATABASE_URL (bo'sh bo'lsa in-memory)
+  auto_migrate: false # dev'da true qilish mumkin (prod'da alohida buyruq)
+
+# faqat Django ulanmaganda
+fallback:
+  system_prompt: "" # Django PromptVersion kelmaguncha ishlatiladigan system prompt
+
+# Legacy (shablon transportlari): http rejimi uchun port.
+server:
+  addr: ":8080"
 
 log_level: info # debug | info | warn | error

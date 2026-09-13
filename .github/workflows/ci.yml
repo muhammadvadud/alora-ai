@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout agent
+        uses: actions/checkout@v4
+
+      - name: Checkout backend fixtures
+        uses: actions/checkout@v4
+        with:
+          repository: muhammadvadud/alora-backend
+          ref: main
+          path: backend
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+          cache: true
+
+      - name: Install tools
+        run: make install-tools
+
+      - name: Buf lint
+        run: buf lint
+
+      - name: Buf breaking
+        run: buf breaking --against 'https://github.com/muhammadvadud/alora-backend.git#branch=main,subdir=protos'
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Lint
+        run: golangci-lint run
+
+      - name: Tests with race and coverage
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Coverage gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          total=$(go tool cover -func=coverage.out | awk '/total:/{print substr($3, 1, length($3)-1)}')
+          go test -race -cover ./internal/curtains ./internal/tools > coverage-packages.txt
+          curtains=$(awk '/internal\/curtains/{print $NF}' coverage-packages.txt | tail -1 | tr -d '%')
+          tools=$(awk '/internal\/tools/{print $NF}' coverage-packages.txt | tail -1 | tr -d '%')
+          awk -v v="$total" 'BEGIN { if (v < 75) exit 1 }'
+          if [ -n "$curtains" ]; then awk -v v="$curtains" 'BEGIN { if (v < 90) exit 1 }'; fi
+          if [ -n "$tools" ]; then awk -v v="$tools" 'BEGIN { if (v < 85) exit 1 }'; fi
+
+      - name: Vulnerability scan
+        run: govulncheck ./...
+
+      - name: Check fixtures
+        run: make check-fixtures BACKEND_DIR=backend
+
+      - name: Docker build
+        run: docker build -f docker/Dockerfile .

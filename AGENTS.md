@@ -2,10 +2,13 @@
 
 > Bu fayl AI kod-agentlari (va odamlar) uchun. Kodni o'zgartirishdan **oldin** o'qing.
 > Maqsad: shu asosdan yangi AI agent qurishda arxitekturani buzmaslik.
+> Umumiy ishlab chiqish qoidalari uchun [rules.md](rules.md) (xususan §0 Qat'iy qonun) ga qarang.
+> Loyiha ish rejasi bilan tanishish uchun [tasks.md](tasks.md) ni ko'ring.
 
 ## Bu nima
 
 Go + [Eino](https://github.com/cloudwego/eino) da **tool-chaqiruvchi ReAct AI agent** blueprinti.
+Alora AI agenti (Go) uchun moslashtirilgan.
 Pluggable LLM provider, CLI + HTTP (SSE) transport, session xotira, streaming tool chaqiruvlari.
 
 Yangi agent = shu repodan nusxa → config o'zgartirish → tool qo'shish. **Yadroga tegmang.**
@@ -16,30 +19,38 @@ Yangi agent = shu repodan nusxa → config o'zgartirish → tool qo'shish. **Yad
    (`config.resolveAPIKey`, provider→ENV xaritasi `providerKeyEnv`). Yangi provider — yangi ENV.
 2. **Barcha transport bitta manbadan render qiladi:** `agent.Chat.Stream(ctx, sessionID, input) <-chan Event`.
    Yangi UI/transport yozsangiz — shu Event oqimini render qiling, agentga to'g'ridan-to'g'ri tegmang.
-3. **Tool = sof funksiya + struct.** Biznes mantiq `internal/tools/` da; LLM'ga bog'liq emas.
+3. **Tool = sof funksiya + struct.** Biznes mantiq `internal/curtains/` yoki `internal/tools/` da; LLM'ga bog'liq emas.
    Struct maydonlarida `jsonschema` teglari **majburiy** (Eino shu orqali schema yasaydi).
 4. **Provider qo'shish = registry'ga fayl.** `internal/llm/<nom>.go` da `init()` orqali
    `register(...)`. Yadro fayllar (`llm.go`, `agent.go`, `chat.go`) o'zgarmaydi.
 5. **Xatolar aniq qaytariladi**, jim yutilmaydi. Tashqi kirish tekshiriladi (masalan bo'sh shahar).
-6. **O'zgartirishdan keyin doim:** `go build ./... && go vet ./... && go test ./...` + qo'lda sinov.
+6. **O'zgartirishdan keyin doim:** `go build ./... && go vet ./... && golangci-lint run && go test -race ./...` + qo'lda sinov.
 7. **Kod izohlari — NEGA, WHAT emas.** Mavjud uslubga mos (o'zbekcha izohlar, `gofmt`).
 
 ## Arxitektura xaritasi
 
 ```
-cmd/agent/main.go        # wiring (DI): config→llm→tools→agent→chat→(cli|http|telegram). tool'lar shu yerda OCHIQ register qilinadi
-configs/config.yaml      # provider, model, server, telegram, db, mode, log (Viper; ENV ustidan yozadi)
-internal/
-├── config/              # config.Load(path) -> *Config; providerKeyEnv (provider→ENV kaliti)
-├── llm/                 # llm.New(ctx,cfg) -> model.ToolCallingChatModel; registry (har provider 1 fayl)
-├── agent/               # agent.New(...)=ReAct; Chat.Stream=Event oqimi; Event/Kind turlari
-├── session/             # Store interfeysi (ctx+error) + NewMemory (in-memory) / NewPostgres (DB)
-├── weather/             # domen-feature namunasi: tashqi API mijozi + domen turi (tools'dan alohida)
-├── tools/               # yupqa adapter qatlami: dto.go + <feature>.go konstruktorlar (registratsiya main.go da)
-└── transport/
-    ├── cli/             # cli.Run(ctx, chat) — Event → stdout
-    ├── http/            # http.Serve(ctx, chat, addr) — /chat, /chat/stream (SSE), /healthz
-    └── telegram/        # telegram.Serve(ctx, chat, token) — long-polling bot; har chat = sessiya
+alora-agent/
+├── cmd/agent/main.go              # composition root: config→llm→catalog→tools→agent→transport
+├── configs/config.yaml            # fallback sozlamalar; kalitlar YO'Q
+├── proto/alora.proto              # backend repodan NUSXA (export_proto.sh); qo'lda tahrirlanmaydi
+├── gen/alorav1/                   # buf generate natijasi (*.pb.go, *_grpc.pb.go); qo'lda tahrirlanmaydi
+├── buf.yaml · buf.gen.yaml        # generatsiya konfiguratsiyasi
+├── internal/
+│   ├── config/                    # Load(), providerKeyEnv; grpc/backend/catalog/stt/tts bo'limlari
+│   ├── llm/                       # providerlar + usage helpers
+│   ├── agent/                     # ReAct sikli (chat.go), Event turlari, history.go
+│   ├── session/                   # Store interfeysi + Postgres / Memory holat saqlash
+│   ├── curtains/                  # ★ DOMEN — LLM, gRPC, Eino'dan MUSTAQIL (katalog, narx hisobi)
+│   ├── tools/                     # ★ yupqa adapterlar (registratsiya main.go da)
+│   ├── prompt/                    # system prompt yig'uvchi (Django prompt + holat + bilimlar)
+│   ├── backend/                   # Go→Django gRPC klient + outbox navbati
+│   ├── voice/                     # STT/TTS interfeyslar + registry
+│   ├── observability/             # slog sozlash, Prometheus metrikalar
+│   └── transport/
+│       ├── grpc/                  # ★ asosiy: Agent server (Chat, VoiceChat)
+│       ├── http/                  # /healthz, /metrics
+│       └── cli/                   # dev: terminalda sinash
 ```
 
 ### Ma'lumot oqimi (bir so'rov)
@@ -48,7 +59,7 @@ internal/
 foydalanuvchi kirishi
       │
       ▼
-transport (cli/http/telegram) ──► Chat.Stream(ctx, sessionID, input) ──► <-chan Event
+transport (grpc/cli/http) ──► Chat.Stream(ctx, sessionID, input) ──► <-chan Event
                               │
                               ├─ session.WithID(ctx, sessionID)         (tool'lar sessiyani biladi)
                               ├─ session.Store.History(ctx, sessionID)  (tarixni yuklaydi)
@@ -78,68 +89,70 @@ Parallel tool'larda `tool_call`/`tool_args`/`tool_result` `tool` nomi bo'yicha j
 
 ## Retsept: yangi tool qo'shish
 
-Tool ikki qatlam: **domen paketi** (`internal/<feature>/` — tashqi API/mantiq, LLM'dan mustaqil)
+Tool ikki qatlam: **domen paketi** (`internal/curtains/` — tashqi API/mantiq, LLM'dan mustaqil)
 va **yupqa adapter** (`internal/tools/<feature>.go` — DTO validatsiya + domen chaqiruvi).
 Registratsiya `main.go` da (composition root) — **ochiq**, `modules` ro'yxati YO'Q.
 
-**Trivial tool** (tashqi API kerak emas, masalan `utils.go` dagi calculator/clock):
-handler funksiya + DTO'ni `dto.go` ga + `Xxx() tool.BaseTool` konstruktor (`must` bilan).
+Misol: **Alora product_search toli**
 
-**Domen-feature tool** (tashqi API bilan, `weather` namunasidek):
-
-1) Domen paketi `internal/foo/`:
+1) Domen paketi `internal/curtains/search.go`:
 ```go
-package foo
+package curtains
 
-type Result struct { /* domen turi, json teglari bilan */ }
+type SearchQuery struct {
+    Room string
+    // Boshqa filtrlar...
+}
 
-type Client struct { /* http.Client ... */ }
-func NewClient() *Client { /* ... */ }
-func (c *Client) Do(ctx context.Context, q string) (Result, error) { /* mantiq */ }
+func (c *Catalog) Search(ctx context.Context, q SearchQuery) ([]ProductCard, error) {
+    // Katalog orqali qidirish, ballash va tartiblash mantiqi
+}
 ```
 
 2) DTO'lar `internal/tools/dto.go` (jsonschema teglari MAJBURIY, `error` maydoni bilan):
 ```go
-type fooArgs struct {
-	Query string `json:"query" jsonschema:"description=nima qidirilsin"`
+type productSearchArgs struct {
+	Room string `json:"room,omitempty" jsonschema:"description=Qaysi xona uchun parda kerak"`
 }
-type fooResult struct {
-	Value string `json:"value,omitempty"`
-	Error string `json:"error,omitempty"` // errors-as-results
+type productSearchResult struct {
+	Products []ProductCard `json:"products,omitempty"`
+	Error    string        `json:"error,omitempty"` // errors-as-results
 }
 ```
 
-3) Adapter `internal/tools/foo.go` — konstruktor `Deps` orqali domen mijozini oladi:
+3) Adapter `internal/tools/product_search.go` — konstruktor `Deps` orqali domen obyekti (katalog) oladi:
 ```go
-func Foo(d Deps) []tool.BaseTool {
-	h := &fooHandler{c: d.Foo}
-	return []tool.BaseTool{must(utils.InferTool("foo", "Foo qiladi.", h.do))}
+func ProductSearch(d Deps) []tool.BaseTool {
+	h := &productSearchHandler{catalog: d.Catalog}
+	return []tool.BaseTool{must(utils.InferTool("product_search", "Katalogdan qidirish", h.do))}
 }
 
-type fooHandler struct{ c *foo.Client }
+type productSearchHandler struct{ catalog *curtains.Catalog }
 
-func (h *fooHandler) do(ctx context.Context, a fooArgs) (fooResult, error) {
-	if strings.TrimSpace(a.Query) == "" {
-		return fooResult{Error: "query bo'sh"}, nil // Go error EMAS — natijada
+func (h *productSearchHandler) do(ctx context.Context, a productSearchArgs) (productSearchResult, error) {
+	view := h.catalog.View()
+	if view.Version() == 0 {
+		return productSearchResult{Error: "Katalog hali yuklanmadi"}, nil
 	}
-	r, err := h.c.Do(ctx, a.Query)
+	
+	results, err := h.catalog.Search(ctx, curtains.SearchQuery{Room: a.Room})
 	if err != nil {
-		return fooResult{Error: err.Error()}, nil
+		return productSearchResult{Error: err.Error()}, nil // Go error EMAS — natijada
 	}
-	return fooResult{Value: r.Value}, nil
+	return productSearchResult{Products: results}, nil
 }
 ```
-`tools.Deps` ga `Foo *foo.Client` maydonini qo'shing.
+`tools.Deps` ga `Catalog *curtains.Catalog` maydonini qo'shing.
 
 4) `main.go` da OCHIQ register qiling:
 ```go
-deps := tools.Deps{Weather: weatherClient, Foo: fooClient}
-toolList = append(toolList, tools.Foo(deps)...)
+deps := tools.Deps{Catalog: catalogInstance}
+toolList = append(toolList, tools.ProductSearch(deps)...)
 ```
 **Tamom.**
 
 **Errors-as-results (MUHIM):** foydalanuvchi kiritmasi/tashqi API xatosida tool `error`
-maydonli natija qaytaradi (`fooResult{Error: ...}, nil`), Go `error` EMAS — ReAct agent so'rovni
+maydonli natija qaytaradi (`productSearchResult{Error: ...}, nil`), Go `error` EMAS — ReAct agent so'rovni
 yiqitmasdan o'zini tuzatadi. Chinakam dasturlash xatosi (masalan `InferTool` ta'rifi) — `must` panic.
 
 **Sessiya:** tool `session.IDFromContext(ctx)` orqali joriy sessiya ID'sini oladi
@@ -156,7 +169,7 @@ import (
 	"context"
 	"github.com/cloudwego/eino-ext/components/model/<nom>"
 	"github.com/cloudwego/eino/components/model"
-	"baholash-chatbot/internal/config"
+	"github.com/muhammadvadud/alora-agent/internal/config"
 )
 
 func init() { register("<nom>", build<Nom>) }
@@ -185,9 +198,8 @@ Yangi backend (masalan Redis) — `Store` ni implement qiling va `newStore` ga u
 ## Retsept: yangi transport qo'shish
 
 `Chat.Stream(ctx, sessionID, input) <-chan Event` ni chaqirib, Event'larni o'z formatingizga
-render qiling (`transport/cli`, `transport/http` yoki `transport/telegram` ni namuna oling).
-`main.go` `switch cfg.Mode` ga yangi `case` qo'shing. Telegram namunasi: `-mode telegram`,
-token `TELEGRAM_BOT_TOKEN` ENV'dan (har chat ID alohida sessiya).
+render qiling (`transport/cli`, `transport/grpc` yoki `transport/http` ni namuna oling).
+`main.go` `switch cfg.Mode` ga yangi `case` qo'shing.
 
 ## Kritik nozikliklar (bularni noto'g'ri qilsangiz sinadi)
 
@@ -217,11 +229,9 @@ token `TELEGRAM_BOT_TOKEN` ENV'dan (har chat ID alohida sessiya).
 
 ```bash
 go build ./... && go vet ./... && go test ./...     # toza bo'lishi shart
-go run ./cmd/agent -mode cli                         # tool sinash (calculator/clock/weather)
-go run ./cmd/agent -mode http                        # so'ng: curl localhost:8080/healthz
-go run ./cmd/agent -mode telegram                    # TELEGRAM_BOT_TOKEN kerak
+make run-cli                         # CLI rejimida ishga tushirish (dev rejim)
+make run-grpc                        # gRPC rejimida ishga tushirish (prod rejim)
 ```
-SSE tekshiruvi: `curl -N -XPOST localhost:8080/chat/stream -d '{"message":"..."}'`.
 
 ## Qilmang (anti-patternlar)
 
