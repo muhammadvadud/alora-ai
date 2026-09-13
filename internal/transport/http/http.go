@@ -1,34 +1,37 @@
-// Package http agentni HTTP xizmat sifatida ochadi (JSON + SSE streaming).
+// Package http faqat sog'liq va metrika endpointlarini beradi (rules.md §0.7):
+// /healthz (liveness), /readyz (readiness), /metrics (Prometheus). Biznes endpoint
+// yo'q — u yerda agent yoki chat soni ko'rinishi arxitekturani buzadi.
 package http
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
 
-	"github.com/muhammadvadud/alora-agent/internal/agent"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/muhammadvadud/alora-agent/internal/observability"
 )
 
-type handler struct {
-	svc *agent.Chat
-}
+// Serve HTTP serverini ishga tushiradi va ctx bekor bo'lganda 5 soniya ichida
+// toza yopadi (graceful shutdown — boshlangan so'rovlar tugaydi).
+// Timeout'lar goxavfsizlik uchun: uzoq/bo'sh ulanish serverni yopib qo'ymasligi kerak.
+func Serve(ctx context.Context, addr string, reg *prometheus.Registry, ready observability.Readiness) error {
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           newHandler(reg, ready),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+	}
 
-// Serve HTTP serverini ishga tushiradi va ctx bekor bo'lganda toza to'xtatadi.
-func Serve(ctx context.Context, chat *agent.Chat, addr string) error {
-	h := &handler{svc: chat}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", h.healthz)
-	mux.HandleFunc("POST /chat", h.chat)
-	mux.HandleFunc("POST /chat/stream", h.chatStream)
-
-	srv := &http.Server{Addr: addr, Handler: mux}
-
+	// Shutdown'ni alohida goroutine'da — Shutdown barcha faol ulanishlarni to'xtatadi
+	// va shu yerda kutish jarayonni osib qo'ymaydi (contextcheck: ctx bu yerda ushlanadi).
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -38,142 +41,45 @@ func Serve(ctx context.Context, chat *agent.Chat, addr string) error {
 
 	slog.Info("HTTP server tinglayapti", "addr", addr)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return err
+		return fmt.Errorf("http server: %w", err)
 	}
 	return nil
 }
 
-type chatRequest struct {
-	SessionID string `json:"session_id"`
-	Message   string `json:"message"`
+// newHandler mux'ni yig'adi — test'da httptest bilan to'g'ridan-to'g'ri ishlatiladi,
+// real port ochish shart emas.
+func newHandler(reg *prometheus.Registry, ready observability.Readiness) http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /healthz", healthz)
+	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, _ *http.Request) {
+		readyz(w, ready)
+	})
+	mux.Handle("GET /metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+	return mux
 }
 
-type toolInfo struct {
-	Name   string `json:"name"`
-	Args   string `json:"args"`
-	Result string `json:"result,omitempty"`
+// healthz liveness: jarayon tirikmi. Tashqi bog'liqliklarni tekshirmaydi — agar
+// shu erda tekshirilsa, Django yotganda orchestrator podni o'ldirishi mumkin (rules §8.7).
+func healthz(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-type chatResponse struct {
-	SessionID string     `json:"session_id"`
-	Response  string     `json:"response"`
-	Tools     []toolInfo `json:"tools,omitempty"`
-}
-
-func (h *handler) healthz(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("ok"))
-}
-
-// chat butun javobni yig'ib JSON qaytaradi (streaming emas).
-func (h *handler) chat(w http.ResponseWriter, r *http.Request) {
-	req, ok := decodeRequest(w, r)
+// readyz readiness: servis xizmat ko'rsatishga tayyormi. Katalog snapshoti
+// tugamaguncha 503 (rules §4.1.3) — K8s/HEALTHCHECK podni aylanishdan chiqaradi.
+func readyz(w http.ResponseWriter, ready observability.Readiness) {
+	ok, reason := ready.Ready()
 	if !ok {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"status": "not_ready",
+			"reason": reason,
+		})
 		return
 	}
-
-	var (
-		resp  chatResponse
-		tools []toolInfo
-		text  string
-	)
-	resp.SessionID = req.SessionID
-
-	for ev := range h.svc.Stream(r.Context(), req.SessionID, req.Message) {
-		switch ev.Kind {
-		case agent.KindContent:
-			text += ev.Content
-		case agent.KindToolCall:
-			tools = append(tools, toolInfo{Name: ev.Tool})
-		case agent.KindToolArgs:
-			setToolArgs(tools, ev.Tool, ev.Args)
-		case agent.KindToolResult:
-			setToolResult(tools, ev.Tool, ev.Result)
-		case agent.KindError:
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": ev.Err})
-			return
-		}
-	}
-
-	resp.Response = text
-	resp.Tools = tools
-	writeJSON(w, http.StatusOK, resp)
-}
-
-// chatStream javobni Server-Sent Events sifatida oqim qiladi.
-func (h *handler) chatStream(w http.ResponseWriter, r *http.Request) {
-	req, ok := decodeRequest(w, r)
-	if !ok {
-		return
-	}
-
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "streaming qo'llab-quvvatlanmaydi", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-
-	enc := json.NewEncoder(w)
-	for ev := range h.svc.Stream(r.Context(), req.SessionID, req.Message) {
-		if _, err := w.Write([]byte("data: ")); err != nil {
-			return
-		}
-		if err := enc.Encode(ev); err != nil { // Encode oxiriga \n qo'shadi
-			return
-		}
-		if _, err := w.Write([]byte("\n")); err != nil {
-			return
-		}
-		flusher.Flush()
-	}
-}
-
-// decodeRequest so'rovni o'qiydi, xabarni tekshiradi va session_id ni ta'minlaydi.
-func decodeRequest(w http.ResponseWriter, r *http.Request) (chatRequest, bool) {
-	var req chatRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "noto'g'ri JSON", http.StatusBadRequest)
-		return req, false
-	}
-	if req.Message == "" {
-		http.Error(w, "message bo'sh bo'lishi mumkin emas", http.StatusBadRequest)
-		return req, false
-	}
-	if req.SessionID == "" {
-		req.SessionID = newSessionID()
-	}
-	return req, true
-}
-
-func setToolArgs(tools []toolInfo, name, args string) {
-	for i := range tools {
-		if tools[i].Name == name && tools[i].Args == "" {
-			tools[i].Args = args
-			return
-		}
-	}
-}
-
-func setToolResult(tools []toolInfo, name, result string) {
-	for i := range tools {
-		if tools[i].Name == name && tools[i].Result == "" {
-			tools[i].Result = result
-			return
-		}
-	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)
-}
-
-func newSessionID() string {
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return hex.EncodeToString(b)
 }

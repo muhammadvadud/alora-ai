@@ -15,6 +15,7 @@ import (
 	"github.com/muhammadvadud/alora-agent/internal/agent"
 	"github.com/muhammadvadud/alora-agent/internal/config"
 	"github.com/muhammadvadud/alora-agent/internal/llm"
+	"github.com/muhammadvadud/alora-agent/internal/observability"
 	"github.com/muhammadvadud/alora-agent/internal/session"
 	"github.com/muhammadvadud/alora-agent/internal/tools"
 	"github.com/muhammadvadud/alora-agent/internal/transport/cli"
@@ -42,7 +43,7 @@ func run() error {
 	if *modeFlag != "" {
 		cfg.Mode = *modeFlag
 	}
-	setupLogger(cfg.LogLevel)
+	observability.SetupLogger(cfg.LogLevel)
 
 	// SIGINT/SIGTERM da toza to'xtash.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -80,13 +81,22 @@ func run() error {
 	// Chat.Stream(...) <-chan Event ni render qiling va shu switch'ga yangi case qo'shing.
 	switch cfg.Mode {
 	case "http":
-		return httptransport.Serve(ctx, chat, cfg.Server.Addr)
+		// HTTP transport faqat /healthz, /readyz, /metrics (rules.md §0.7).
+		// Katalog/outbox sinxroni (HealthState) gRPC rejimida ulanadi; http rejimida
+		// tayyorlik jarayon o'zi — ularsiz ham xizmat bera oladi.
+		_, reg := observability.NewMetrics()
+		return httptransport.Serve(ctx, cfg.HTTP.Addr, reg, httpReady{})
 	case "cli":
 		return cli.Run(ctx, chat)
 	default:
 		return fmt.Errorf("noma'lum mode %q (cli yoki http)", cfg.Mode)
 	}
 }
+
+// httpReady — http rejimida katalog/backed sinxroni yo'q, shuning uchun doim tayyor.
+type httpReady struct{}
+
+func (httpReady) Ready() (bool, string) { return true, "" }
 
 // newStore DB URL bo'lsa Postgres store, aks holda in-memory store qaytaradi.
 func newStore(ctx context.Context, dbURL string) (session.Store, error) {
@@ -107,14 +117,6 @@ func systemPrompt(cfg *config.Config) string {
 		return cfg.Agent.SystemPrompt
 	}
 	return defaultSystemPrompt
-}
-
-func setupLogger(level string) {
-	var l slog.Level
-	if err := l.UnmarshalText([]byte(level)); err != nil {
-		l = slog.LevelInfo
-	}
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: l})))
 }
 
 func configPath() string {
