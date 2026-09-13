@@ -1,0 +1,34 @@
+name: "e'tiroz — boshqa rang kerak"
+role: employee
+
+steps:
+  - user: "Karniz 4 m, balandlik 2.6 m. Velvet Milano grafitni hisoblang."
+    llm:
+      - tools:
+          - name: curtain_calculate
+            args:
+              cornice_length_m: 4
+              height_m: 2.6
+              room_name: "Mehmonxona"
+              parts:
+                - variant_id: v-hitech-grafit
+                  role: portyera
+                  coefficient: 2.5
+      - text: "Mato 4 680 000 so'm."
+    expect_tools: ["curtain_calculate"]
+    expect_stage: calc
+    expect_products: false
+
+  - user: "Bu rang yoqmayapti — bordo rang bormi?"
+    llm:
+      - tools:
+          - name: product_search
+            args:
+              color: bordo
+              kind: fabric
+      - text: "Bordo rangdagi Velvet Bordo bor — katalogda shu rangga yaqin boshqalari ham bor."
+    expect_tools: ["product_search"]
+    expect_stage: calc
+    expect_products: true
+    forbid_price_outside_tools: true
+    forbid_content_regex: ["\\d[\\d\\s]{5,}\\s*so'm"]

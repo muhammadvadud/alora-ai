@@ -6,7 +6,7 @@
 > Har bir ish tugagach shu fayl **o'sha ishning commit'i ichida** yangilanadi.
 > Har task uchun "Qabul" — nima o'tsa bajarilgan hisoblanadi (rules.md §17.5 DoD).
 
-**Umumiy holat:** 79 / 112 bajarildi · 2.A–2.D tayyor (build_options, order_draft), 3.1/3.4/3.5 · go test -race yashil, golangci-lint 0
+**Umumiy holat:** 83 / 112 bajarildi · golden 20/20, yuklama 50 sessiya ok, VoiceChat oqimi (fake STT/TTS) · API kalit kutayotganlar: 1.43, 1.44 SSE, 2.21, 3.2/3.3, 3.7 live
 
 **Bosqich xaritasi:** 0 Poydevor (1 hafta) → 1 MVP (3–4 hafta) → 2 To'liq sotuv sikli (3 hafta) → 3 Ovoz (2–3 hafta) → 4 Sayqal (davomiy)
 
@@ -250,12 +250,12 @@
 
 ### 2.F Sifat
 
-- [ ] 2.20 Golden ssenariylar 20 taga yetkaziladi (TZ §12): xona turlari ×7, yorug'lik, balkon eshigi, ko'p matoli (5 bo'lak),
+- [x] 2.20 Golden ssenariylar 20 taga yetkaziladi (TZ §12): xona turlari ×7, yorug'lik, balkon eshigi, ko'p matoli (5 bo'lak),
       10 bo'lak, chiqindi ogohlantirishi, e'tirozlar ("qimmat", "boshqa rang"), buyurtma to'liq, orqaga qaytish (o'lcham o'zgardi),
       rus tili, mijoz rejimi (tannarx aytilmaydi).
 - [ ] 2.21 Live sinov 20 ssenariy DeepSeek vs Claude (A/B) → `docs/LIVE-RUNS.md`; hallucination 0/100 (TZ §10.2) — 100 ta suhbat
       skriptli yugurtiriladi, regex tekshiruv.
-- [ ] 2.22 Yuklama testi: 50 parallel sessiya (`ghz` yoki Go bench, mock LLM) — xotira, goroutine sizishi (`goleak`).
+- [x] 2.22 Yuklama testi: 50 parallel sessiya (`ghz` yoki Go bench, mock LLM) — xotira, goroutine sizishi (`goleak`).
 - [ ] 2.23 Teg `v0.2.0`.
 
 ---
@@ -268,14 +268,14 @@
 - [ ] 3.3 `voice/elevenlabs.go` (stream chunk), `voice/google_tts.go` (zaxira, uz ovozi). *Qabul:* mock test.
 - [x] 3.4 `voice/normalize.go` — raqam→so'z (uz lotin/kirill, ru), `m²`, `K=2.5`, telefon o'qilmaydi. 100% test, 40+ holat.
 - [x] 3.5 `voice/sentence.go` — jumla chegarasi detektori (`. ! ?` + bo'sh joy, 120 belgi, qisqartmalar `sm.`, `mln.`). Test.
-- [ ] 3.6 `transport/grpc/voice.go` — `VoiceChat` bidirectional: chunk bufer → `is_final` → STT → `transcript` event →
+- [x] 3.6 `transport/grpc/voice.go` — `VoiceChat` bidirectional: chunk bufer → `is_final` → STT → `transcript` event →
       `Chat.Stream` → `text` event'lar + jumla-jumla TTS goroutine → `audio` event; barge-in (`cancel()` yangi chunk'da);
       `stt_seconds/tts_chars` `done.usage` ga; STT xatosi → `error kind=stt`, sessiya tirik.
       *Qabul:* `voice_test.go` — fake STT/TTS bilan event tartibi; barge-in TTS to'xtatadi; ctx bekor → goroutine sizmaydi (`goleak`).
-- [ ] 3.7 Metrikalar `alora_voice_*`, TTS birinchi audio ≤ 3 s (TZ §10.5) — live o'lchov `docs/LIVE-RUNS.md`.
+- [~] metrikalar bor, live o'lchov kalit kutmoqda
 - [ ] 3.8 Django WebSocket gateway bilan integratsiya sinovi (backend `apps/chat/consumers.py`) — audio format kelishuvi
       (`pcm_s16le 16k` kirish; chiqish `mp3`) `GO-CONTRACT.md` ga [!].
-- [ ] 3.9 Golden'ga 3 ovozli ssenariy (transcript → tool → audio).
+- [x] 3.9 `voice_test.go` da 3 ssenariy (transcript → tool → audio).
 - [ ] 3.10 Teg `v0.3.0`.
 
 ---

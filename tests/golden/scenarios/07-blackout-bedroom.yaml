@@ -1,0 +1,32 @@
+name: "yotoqxona — yorug'likka qarshi blackout"
+role: employee
+
+steps:
+  - user: >
+      Yotoqxona janubga qaraydi, qorong'i parda kerak.
+      Rang sifatida kulrang va oqni yoqtiramiz.
+    llm:
+      - tools:
+          - name: set_context
+            args:
+              room: bedroom
+              style: modern
+              colors: "kulrang, oq"
+              light: "qorong'iroq, janubga qaraydi"
+          - name: product_search
+            args:
+              room: bedroom
+              transparency: blackout
+              kind: fabric
+          - name: knowledge_lookup
+            args:
+              topic: light
+              query: blackout
+      - text: >
+          Blackout matolar quyoshni to'liq to'sadi: Blackout Duo
+          va Velvet Chek. Janub tomonda bu eng ishonchli tanlov.
+    expect_tools: ["set_context", "product_search", "knowledge_lookup"]
+    expect_stage: recommend
+    expect_products: true
+    forbid_price_outside_tools: true
+    forbid_content_regex: ["\\d[\\d\\s]{5,}\\s*so'm"]

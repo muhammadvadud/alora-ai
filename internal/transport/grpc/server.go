@@ -15,6 +15,7 @@ import (
 	"github.com/muhammadvadud/alora-agent/internal/curtains"
 	"github.com/muhammadvadud/alora-agent/internal/observability"
 	"github.com/muhammadvadud/alora-agent/internal/session"
+	voicepkg "github.com/muhammadvadud/alora-agent/internal/voice"
 	grpcgo "google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/keepalive"
@@ -41,6 +42,10 @@ type Options struct {
 	Metrics      *observability.Metrics
 	Health       func() (status string, lastErr string)
 	Reporter     Reporter
+	STT          voicepkg.STT
+	TTS          voicepkg.TTS
+	TTSVoice     string
+	STTLang      string
 }
 
 type Server struct {
@@ -49,6 +54,11 @@ type Server struct {
 	ready    observability.Readiness
 	health   func() (string, string)
 	reporter Reporter
+	metrics  *observability.Metrics
+	stt      voicepkg.STT
+	tts      voicepkg.TTS
+	ttsVoice string
+	sttLang  string
 	version  string
 	active   atomic.Int64
 }
@@ -60,7 +70,8 @@ func New(chat Streamer, opts Options) *Server {
 	if opts.Health == nil {
 		opts.Health = func() (string, string) { return "ok", "" }
 	}
-	return &Server{chat: chat, ready: opts.Ready, health: opts.Health, version: opts.Version, reporter: opts.Reporter}
+	return &Server{chat: chat, ready: opts.Ready, health: opts.Health, version: opts.Version, reporter: opts.Reporter, metrics: opts.Metrics,
+		stt: opts.STT, tts: opts.TTS, ttsVoice: opts.TTSVoice, sttLang: opts.STTLang}
 }
 
 func (s *Server) Chat(req *alorav1.ChatRequest, stream grpcgo.ServerStreamingServer[alorav1.ChatEvent]) error {
@@ -138,10 +149,6 @@ func requestInfo(req *alorav1.ChatRequest) RequestInfo {
 		Role: values["role"], CustomerMode: values["customer_mode"] == "1",
 		ConversationID: values["conversation_id"],
 	}
-}
-
-func (s *Server) VoiceChat(grpcgo.BidiStreamingServer[alorav1.VoiceChunk, alorav1.VoiceEvent]) error {
-	return status.Error(codes.Unimplemented, "VoiceChat 3-bosqichda ulanadi")
 }
 
 func (s *Server) ResetSession(ctx context.Context, req *alorav1.ResetRequest) (*alorav1.ResetResponse, error) {

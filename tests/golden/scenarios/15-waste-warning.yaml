@@ -1,0 +1,24 @@
+name: "chiqindi ogohlantirishi — tor mato"
+role: employee
+
+steps:
+  - user: "Velvet Chek matosidan portyera hisoblang: karniz 4 m, balandlik 2.6 m."
+    llm:
+      - tools:
+          - name: curtain_calculate
+            args:
+              cornice_length_m: 4
+              height_m: 2.6
+              room_name: "Yotoqxona"
+              parts:
+                - variant_id: v-velvet-chek
+                  role: portyera
+      - text: >
+          Hisob tayyor: 4 160 000 so'm. Diqqat: mato eni tor,
+          chiqindi bo'ladi.
+    expect_tools: ["curtain_calculate"]
+    expect_stage: calc
+    expect_products: false
+    expect_content_contains:
+      - "chiqindi"
+    forbid_price_outside_tools: true

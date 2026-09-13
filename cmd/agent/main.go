@@ -27,6 +27,7 @@ import (
 	"github.com/muhammadvadud/alora-agent/internal/transport/cli"
 	grpctransport "github.com/muhammadvadud/alora-agent/internal/transport/grpc"
 	httptransport "github.com/muhammadvadud/alora-agent/internal/transport/http"
+	"github.com/muhammadvadud/alora-agent/internal/voice"
 )
 
 var _ tools.StateStore = (session.Store)(nil)
@@ -155,6 +156,7 @@ func run() error {
 	}
 
 	slog.Info("agent tayyor", "provider", cfg.LLM.Provider, "model", cfg.LLM.Model, "mode", cfg.Mode, "stream", cfg.Agent.Stream, "max_history", cfg.Agent.MaxHistory, "thinking", cfg.LLM.Thinking, "effort", cfg.LLM.ReasoningEffort)
+	stt, tts := buildVoiceProviders(ctx, cfg)
 
 	// Transport tanlash. Yangi transport (masalan gRPC/WebSocket) qo'shish uchun
 	// Chat.Stream(...) <-chan Event ni render qiling va shu switch'ga yangi case qo'shing.
@@ -163,6 +165,7 @@ func run() error {
 		service := grpctransport.New(chat, grpctransport.Options{
 			ServiceToken: os.Getenv(cfg.GRPC.ServiceTokenEnv), AuthRequired: cfg.GRPC.AuthRequired,
 			MaxSessions: cfg.GRPC.MaxSessions, Ready: syncer, Metrics: metrics, Reporter: reporter,
+			STT: stt, TTS: tts, TTSVoice: cfg.TTS.Voice, STTLang: cfg.STT.Language,
 			Health: func() (string, string) {
 				if reportOutbox != nil {
 					pending, dead, pendingErr := reportOutbox.Pending(ctx)
@@ -191,6 +194,33 @@ func run() error {
 	default:
 		return fmt.Errorf("noma'lum mode %q (cli yoki http)", cfg.Mode)
 	}
+}
+
+func buildVoiceProviders(ctx context.Context, cfg *config.Config) (voice.STT, voice.TTS) {
+	var stt voice.STT
+	var tts voice.TTS
+	if cfg.STT.Provider != "" {
+		provider, err := voice.NewSTT(ctx, voice.STTConfig{Provider: cfg.STT.Provider, Language: cfg.STT.Language, APIKey: voiceAPIKey(cfg.STT.Provider)})
+		if err == nil {
+			stt = provider
+		} else {
+			slog.Warn("stt ulanmagan", "provider", cfg.STT.Provider, "error", err)
+		}
+	}
+	if cfg.TTS.Provider != "" {
+		provider, err := voice.NewTTS(ctx, voice.TTSConfig{Provider: cfg.TTS.Provider, Voice: cfg.TTS.Voice, Speed: cfg.TTS.Speed, APIKey: voiceAPIKey(cfg.TTS.Provider)})
+		if err == nil {
+			tts = provider
+		} else {
+			slog.Warn("tts ulanmagan", "provider", cfg.TTS.Provider, "error", err)
+		}
+	}
+	return stt, tts
+}
+
+func voiceAPIKey(provider string) string {
+	keyEnv := map[string]string{"whisper": "OPENAI_API_KEY", "elevenlabs": "ELEVENLABS_API_KEY", "google": "GOOGLE_API_KEY"}[provider]
+	return os.Getenv(keyEnv)
 }
 
 // httpReady — http rejimida katalog/backed sinxroni yo'q, shuning uchun doim tayyor.

@@ -15,12 +15,20 @@ import (
 // Variant ID'lar — YAML ssenariylarda variant_id sifatida ishlatiladi. ID'lar
 // ustunlik bilan belgilangan: ssenariy matni qisqa va o'qilishi oson bo'lsin.
 const (
-	VHiTechGrafit = "v-hitech-grafit"
-	VHiTechBej    = "v-hitech-bej"
-	VClassicIvory = "v-classic-ivory"
-	VVelvetBordo  = "v-velvet-bordo"
-	VAccGul       = "v-acc-gul"
-	VAccPodxvat   = "v-acc-podxvat"
+	VHiTechGrafit  = "v-hitech-grafit"
+	VHiTechBej     = "v-hitech-bej"
+	VClassicIvory  = "v-classic-ivory"
+	VVelvetBordo   = "v-velvet-bordo"
+	VAccGul        = "v-acc-gul"
+	VAccPodxvat    = "v-acc-podxvat"
+	VBlackoutDuo   = "v-blackout-duo-grafit"
+	VTulDantel     = "v-tul-dantel-oy"
+	VAstarSoft     = "v-astar-soft-oq"
+	VKantAtlas     = "v-kant-atlas-oltin"
+	VVelvetChek    = "v-velvet-chek"
+	VKidsRainbow   = "v-kids-rainbow"
+	VCarmelKitchen = "v-carmel-kitchen"
+	VOfficeMinimal = "v-office-minimal"
 )
 
 func d(s string) decimal.Decimal { return decimal.RequireFromString(s) }
@@ -48,6 +56,30 @@ func testSnapshot() curtains.Snapshot {
 				VariantIDs: []string{VAccGul}},
 			{ID: "p-podxvat-shnur", CategoryID: "c-accessories", Name: "Podxvat shnur", Segment: curtains.SegmentStandard,
 				VariantIDs: []string{VAccPodxvat}},
+			{ID: "p-blackout-duo", CategoryID: "c-fabrics", Name: "Blackout Duo", Style: "modern",
+				Pattern: "plain", Transparency: "blackout", RecommendedRooms: []string{"bedroom"}, Segment: curtains.SegmentStandard,
+				DefaultWidthM: d("2.8"), VariantIDs: []string{VBlackoutDuo}},
+			{ID: "p-tul-dantel", CategoryID: "c-fabrics", Name: "Tul Dantel", Style: "classic",
+				Pattern: "floral", Transparency: "transparent", RecommendedRooms: []string{"living", "wedding"}, Segment: curtains.SegmentStandard,
+				DefaultWidthM: d("3.0"), VariantIDs: []string{VTulDantel}},
+			{ID: "p-astar-soft", CategoryID: "c-fabrics", Name: "Astar Soft", Style: "modern",
+				Pattern: "plain", RecommendedRooms: []string{"bedroom"}, Segment: curtains.SegmentEconomy,
+				DefaultWidthM: d("2.8"), VariantIDs: []string{VAstarSoft}},
+			{ID: "p-kant-atlas", CategoryID: "c-fabrics", Name: "Kant Atlas", Style: "provence",
+				Pattern: "striped", RecommendedRooms: []string{"bedroom", "hall"}, Segment: curtains.SegmentStandard,
+				DefaultWidthM: d("1.4"), VariantIDs: []string{VKantAtlas}},
+			{ID: "p-velvet-chek", CategoryID: "c-fabrics", Name: "Velvet Chek", Style: "classic",
+				Pattern: "striped", Transparency: "blackout", RecommendedRooms: []string{"bedroom"}, Segment: curtains.SegmentPremium,
+				DefaultWidthM: d("1.4"), VariantIDs: []string{VVelvetChek}},
+			{ID: "p-kids-rainbow", CategoryID: "c-fabrics", Name: "Kids Rainbow", Style: "modern",
+				Pattern: "floral", Transparency: "semi", RecommendedRooms: []string{"kids"}, Segment: curtains.SegmentEconomy,
+				DefaultWidthM: d("2.8"), VariantIDs: []string{VKidsRainbow}},
+			{ID: "p-carmel-kitchen", CategoryID: "c-fabrics", Name: "Carmel Kitchen", Style: "classic",
+				Pattern: "striped", Transparency: "semi", RecommendedRooms: []string{"kitchen"}, Segment: curtains.SegmentEconomy,
+				DefaultWidthM: d("2.4"), VariantIDs: []string{VCarmelKitchen}},
+			{ID: "p-office-minimal", CategoryID: "c-fabrics", Name: "Office Minimal", Style: "minimal",
+				Pattern: "plain", Transparency: "semi", RecommendedRooms: []string{"office"}, Segment: curtains.SegmentStandard,
+				DefaultWidthM: d("2.8"), VariantIDs: []string{VOfficeMinimal}},
 		},
 		Variants: []curtains.Variant{
 			{ID: VHiTechGrafit, ProductID: "p-velvet-milano", SKU: "VM-GRAFIT", ColorName: "grafit",
@@ -62,6 +94,22 @@ func testSnapshot() curtains.Snapshot {
 				Price: d("85000"), PriceUnit: curtains.PerPiece, IsActive: true},
 			{ID: VAccPodxvat, ProductID: "p-podxvat-shnur", SKU: "PSH-SHNUR", ColorName: "bej",
 				Price: d("45000"), PriceUnit: curtains.PerMeter, IsActive: true},
+			{ID: VBlackoutDuo, ProductID: "p-blackout-duo", SKU: "BD-GRAFIT", ColorName: "grafit",
+				ColorHex: "#2E2E2E", WidthM: d("2.8"), Price: d("150000"), PriceUnit: curtains.PerSqm, IsActive: true},
+			{ID: VTulDantel, ProductID: "p-tul-dantel", SKU: "TD-OY", ColorName: "oq",
+				ColorHex: "#F5F2E9", WidthM: d("3.0"), Price: d("80000"), PriceUnit: curtains.PerSqm, IsActive: true},
+			{ID: VAstarSoft, ProductID: "p-astar-soft", SKU: "AS-OQ", ColorName: "oq",
+				ColorHex: "#F0F0EC", WidthM: d("2.8"), Price: d("60000"), PriceUnit: curtains.PerSqm, IsActive: true},
+			{ID: VKantAtlas, ProductID: "p-kant-atlas", SKU: "KA-OLTIN", ColorName: "oltin",
+				ColorHex: "#C9A24B", WidthM: d("1.4"), Price: d("95000"), PriceUnit: curtains.PerSqm, IsActive: true},
+			{ID: VVelvetChek, ProductID: "p-velvet-chek", SKU: "VB-CHK", ColorName: "grafit",
+				ColorHex: "#404040", WidthM: d("1.4"), Price: d("160000"), PriceUnit: curtains.PerSqm, IsActive: true},
+			{ID: VKidsRainbow, ProductID: "p-kids-rainbow", SKU: "KR-RAN", ColorName: "sariq",
+				ColorHex: "#F2C14E", WidthM: d("2.8"), Price: d("70000"), PriceUnit: curtains.PerSqm, IsActive: true},
+			{ID: VCarmelKitchen, ProductID: "p-carmel-kitchen", SKU: "CK-KIT", ColorName: "bej",
+				ColorHex: "#E8DCC8", WidthM: d("2.4"), Price: d("85000"), PriceUnit: curtains.PerSqm, IsActive: true},
+			{ID: VOfficeMinimal, ProductID: "p-office-minimal", SKU: "OM-KUL", ColorName: "kulrang",
+				ColorHex: "#9E9E9E", WidthM: d("2.8"), Price: d("100000"), PriceUnit: curtains.PerSqm, IsActive: true},
 		},
 		CalcRules: []curtains.CalcRule{{Key: "coef_default", Value: d("2.5")}},
 		Services: []curtains.Service{
@@ -73,6 +121,22 @@ func testSnapshot() curtains.Snapshot {
 		},
 		Policy:   &curtains.DiscountPolicy{ManualMaxPercentEmployee: d("5"), ManualMaxPercentManager: d("15")},
 		Defaults: &curtains.OrderDefaults{PrepaymentPercent: d("50"), DeliveryAmount: d("30000"), DeadlineDays: 14},
+		Fasons: []curtains.Fason{
+			{ID: "f-wedding-classic", Name: "Kelin-kuyov klassik", Style: "classic", Rooms: []string{"wedding"}, PartCount: 3,
+				Parts: []curtains.FasonPart{
+					{ID: "fp-wed-1", Role: curtains.RolePortyera, Name: "Portyera", WidthShare: d("1.0"), HeightShare: d("1.0"), DefaultCoef: d("2.5"), SortOrder: 1},
+					{ID: "fp-wed-2", Role: curtains.RoleTul, Name: "Tul", WidthShare: d("1.0"), HeightShare: d("1.0"), DefaultCoef: d("2.5"), SortOrder: 2},
+					{ID: "fp-wed-3", Role: curtains.RoleLambrekan, Name: "Lambreken", WidthShare: d("1.0"), HeightShare: d("0.15"), DefaultCoef: d("2.5"), SortOrder: 3},
+				}},
+		},
+		Knowledge: []curtains.KnowledgeRule{
+			{ID: "k-light-blackout", Kind: "light", Condition: map[string]any{"room": "bedroom"}, Priority: 10,
+				Recommendation: "Janubga qaragan yotoqxonalar uchun blackout matoni tavsiya qilamiz — quyosh nurlarini to'liq to'sadi."},
+			{ID: "k-room-kids", Kind: "room", Condition: map[string]any{"room": "kids"}, Priority: 8,
+				Recommendation: "Bolalar xonasi uchun yuviladigan matoni tavsiya qilamiz — dog'lar tez artiladi."},
+			{ID: "k-construction-balcony", Kind: "construction", Condition: map[string]any{}, Priority: 5,
+				Recommendation: "Balkon eshigi bo'lsa konstruksiyaga mos o'lchov kerak: romlar soni va qanot yo'nalishi hisobga olinadi."},
+		},
 	}
 }
 
@@ -92,6 +156,7 @@ func (f *fakeCalc) Calculate(_ context.Context, in curtains.CalcInput) (curtains
 		sewArea  decimal.Decimal
 		tapeQty  decimal.Decimal
 		partCnt  int64
+		warnings []string
 	)
 	measurements := make([]curtains.MeasurementResult, 0, len(in.Measurements))
 	for i := range in.Measurements {
@@ -102,6 +167,11 @@ func (f *fakeCalc) Calculate(_ context.Context, in curtains.CalcInput) (curtains
 			v, ok := f.view.Variant(p.VariantID)
 			if !ok {
 				continue
+			}
+			// Tor (1.4 m) matolarda chiqindi qoladi — Django warnings'ga tayangan
+			// sohta hisob shu ogohlantirishni beradi (ssenariy 15 shuni tekshiradi).
+			if v.SKU == "VB-CHK" {
+				warnings = append(warnings, "chiqindi: mato eni 1.4 m — hisobda 15% chiqindi qoladi")
 			}
 			w, h, coef := m.Length, m.Height, f.coefDefault()
 			if p.WidthM != nil {
@@ -143,7 +213,7 @@ func (f *fakeCalc) Calculate(_ context.Context, in curtains.CalcInput) (curtains
 		tapeQty = tapeQty.Add(m.Length)
 	}
 
-	res := curtains.CalcResult{Measurements: measurements, Warnings: []string{}}
+	res := curtains.CalcResult{Measurements: measurements, Warnings: warnings}
 	for _, key := range in.Services {
 		sv, ok := f.view.Service(key)
 		if !ok {
@@ -199,4 +269,13 @@ func (f *fakeCalc) serviceQty(key string, sewArea, tapeQty decimal.Decimal, part
 	default:
 		return decimal.NewFromInt(1)
 	}
+}
+
+// fakeOrders — backend.OrderClient o'rnidagi sohta klient (rules §9.4). Confirm
+// chaqirilganda barqaror ID qaytaradi; ItemsJSON'ni tekshirmaydi — golden test
+// faqat agent oqimi va javob kontraktini o'lchaydi.
+type fakeOrders struct{}
+
+func (fakeOrders) SaveOrderDraft(_ context.Context, _ curtains.OrderDraft) (curtains.OrderDraftResult, error) {
+	return curtains.OrderDraftResult{OrderID: "ord-7", OrderNumber: "ALR-2026-0007"}, nil
 }

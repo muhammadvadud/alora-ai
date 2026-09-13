@@ -22,23 +22,31 @@ import (
 
 // YAML ssenariy formati (rules §14.4): `steps: [{user, llm, expect_tools,
 // expect_stage, expect_products, expect_error_contains, expect_result_contains,
-// forbid_content_regex, clock_advance}]`.
+// forbid_content_regex, clock_advance,
+// expect_no_tools, expect_content_contains, expect_content_not_contains,
+// forbid_price_outside_tools}]`.
 type scenario struct {
-	Name  string `yaml:"name"`
-	Role  string `yaml:"role"`
-	Steps []step `yaml:"steps"`
+	Name         string `yaml:"name"`
+	Role         string `yaml:"role"`
+	Locale       string `yaml:"locale,omitempty"`
+	CustomerMode bool   `yaml:"customer_mode,omitempty"`
+	Steps        []step `yaml:"steps"`
 }
 
 type step struct {
-	User                 string    `yaml:"user"`
-	LLM                  []llmStep `yaml:"llm"`
-	ExpectTools          []string  `yaml:"expect_tools"`
-	ExpectStage          string    `yaml:"expect_stage"`
-	ExpectProducts       *bool     `yaml:"expect_products,omitempty"`
-	ExpectErrorContains  string    `yaml:"expect_error_contains,omitempty"`
-	ExpectResultContains []string  `yaml:"expect_result_contains,omitempty"`
-	ForbidContentRegex   []string  `yaml:"forbid_content_regex,omitempty"`
-	ClockAdvance         string    `yaml:"clock_advance,omitempty"` // time.ParseDuration: "11m"
+	User                     string    `yaml:"user"`
+	LLM                      []llmStep `yaml:"llm"`
+	ExpectTools              []string  `yaml:"expect_tools"`
+	ExpectStage              string    `yaml:"expect_stage"`
+	ExpectProducts           *bool     `yaml:"expect_products,omitempty"`
+	ExpectErrorContains      string    `yaml:"expect_error_contains,omitempty"`
+	ExpectResultContains     []string  `yaml:"expect_result_contains,omitempty"`
+	ExpectNoTools            bool      `yaml:"expect_no_tools,omitempty"`
+	ExpectContentContains    []string  `yaml:"expect_content_contains,omitempty"`
+	ExpectContentNotContains []string  `yaml:"expect_content_not_contains,omitempty"`
+	ForbidContentRegex       []string  `yaml:"forbid_content_regex,omitempty"`
+	ForbidPriceOutsideTools  bool      `yaml:"forbid_price_outside_tools,omitempty"`
+	ClockAdvance             string    `yaml:"clock_advance,omitempty"` // time.ParseDuration: "11m"
 }
 
 const (
@@ -57,6 +65,7 @@ type harness struct {
 	catalog   *curtains.Catalog
 	calc      *fakeCalc
 	store     session.Store
+	orders    fakeOrders
 	sessionID string
 }
 
@@ -102,11 +111,12 @@ func (h *harness) runStep(ctx context.Context, st step) (bool, []string) {
 	}
 
 	model := &mockModel{script: st.LLM}
-	deps := tools.Deps{Catalog: h.catalog, Calc: h.calc, State: h.store, Clock: h.clock}
-	chat, err := agent.NewChat(ctx, model, tools.Alora(deps), h.store, agent.Options{
-		Stream: true, StateHook: &stageHook{store: h.store},
-		Provider: "golden-mock", Model: "script",
-	})
+	deps := tools.Deps{Catalog: h.catalog, Calc: h.calc, State: h.store, Clock: h.clock, Orders: h.orders}
+	chat, err := agent.NewChat(ctx, model,
+		append(tools.Alora(deps), tools.AloraLookups(deps)...), h.store, agent.Options{
+			Stream: true, StateHook: &stageHook{store: h.store},
+			Provider: "golden-mock", Model: "script",
+		})
 	if err != nil {
 		return false, []string{"NewChat: " + err.Error()}
 	}
@@ -149,7 +159,8 @@ func collect(evs <-chan agent.Event) stepData {
 }
 
 // checkStep kutilgan tool ketma-ketligi, stage, products, error matni, natija
-// qismlari, forbid_content_regex va (doim) hallucination qoidasini tekshiradi.
+// qismlari, javob matni, forbid_content_regex, forbid_price_outside_tools va
+// (doim) hallucination qoidasini tekshiradi.
 func checkStep(st step, rd stepData, model *mockModel) (bool, []string) {
 	var msgs []string
 	if rd.agentErr != "" {
@@ -161,6 +172,9 @@ func checkStep(st step, rd stepData, model *mockModel) (bool, []string) {
 	if len(st.ExpectTools) > 0 && !slices.Equal(rd.toolSeq, st.ExpectTools) {
 		msgs = append(msgs, fmt.Sprintf("tool ketma-ketligi = %v, kutilgan = %v", rd.toolSeq, st.ExpectTools))
 	}
+	if st.ExpectNoTools && len(rd.toolSeq) > 0 {
+		msgs = append(msgs, fmt.Sprintf("expect_no_tools: tool chaqirilishi kutilmagan edi = %v", rd.toolSeq))
+	}
 	if st.ExpectStage != "" && rd.stage != st.ExpectStage {
 		msgs = append(msgs, fmt.Sprintf("stage = %q, kutilgan = %q", rd.stage, st.ExpectStage))
 	}
@@ -168,6 +182,7 @@ func checkStep(st step, rd stepData, model *mockModel) (bool, []string) {
 		msgs = append(msgs, fmt.Sprintf("products event bo'lishi = %v, kutilgan = %v", rd.sawProducts, *st.ExpectProducts))
 	}
 	joined := strings.Join(rd.results, "\n")
+	content := rd.content.String()
 	if st.ExpectErrorContains != "" && !toolErrorContains(rd.results, st.ExpectErrorContains) {
 		msgs = append(msgs, "tool error'ida qism topilmadi: "+st.ExpectErrorContains)
 	}
@@ -176,12 +191,32 @@ func checkStep(st step, rd stepData, model *mockModel) (bool, []string) {
 			msgs = append(msgs, fmt.Sprintf("tool natijasida qism topilmadi: %q", want))
 		}
 	}
+	for _, want := range st.ExpectContentContains {
+		if !strings.Contains(content, want) {
+			msgs = append(msgs, fmt.Sprintf("javob matnida qism topilmadi: %q", want))
+		}
+	}
+	for _, not := range st.ExpectContentNotContains {
+		if strings.Contains(content, not) {
+			msgs = append(msgs, fmt.Sprintf("javob matnida TAQIQLANGAN qism topildi: %q", not))
+		}
+	}
 	for _, pat := range st.ForbidContentRegex {
-		if regexp.MustCompile(pat).MatchString(rd.content.String()) {
+		if regexp.MustCompile(pat).MatchString(content) {
 			msgs = append(msgs, "forbid_content_regex javobga mos tushdi: "+pat)
 		}
 	}
-	msgs = append(msgs, checkHallucination(rd.content.String(), joined)...)
+	// forbid_price_outside_tools — narx aynan tool natijasida chiqqan ko'rinishda bo'lsa
+	// yozilishi mumkin (rules §0.2: AI o'zi narx chiqarmaydi). Hallucination tekshiruvi
+	// raqamlarni normalizatsiya qiladi, bu qat'iyroq: matn shakli ham natijada bo'lishi shart.
+	if st.ForbidPriceOutsideTools {
+		for _, match := range moneyRe.FindAllString(content, -1) {
+			if !strings.Contains(joined, strings.TrimSpace(match)) {
+				msgs = append(msgs, "forbid_price_outside_tools: javobdagi narx tool natijasida aynan yo'q: "+strings.TrimSpace(match))
+			}
+		}
+	}
+	msgs = append(msgs, checkHallucination(content, joined)...)
 	return len(msgs) == 0, msgs
 }
 
@@ -258,7 +293,9 @@ func runScenario(sc scenario) scenarioResult {
 	if role == "" {
 		role = curtains.RoleEmployee
 	}
-	ctx := curtains.WithUser(context.Background(), curtains.UserInfo{Role: role})
+	ctx := curtains.WithUser(context.Background(), curtains.UserInfo{
+		Role: role, Locale: sc.Locale, CustomerMode: sc.CustomerMode,
+	})
 
 	var msgs []string
 	for i, st := range sc.Steps {

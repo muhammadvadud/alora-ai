@@ -1,0 +1,23 @@
+name: "ofis — minimal uslub"
+role: employee
+
+steps:
+  - user: "Ofis uchun minimal uslubdagi parda kerak."
+    llm:
+      - tools:
+          - name: set_context
+            args:
+              room: office
+              style: minimal
+              colors: "oq, kulrang"
+          - name: product_search
+            args:
+              room: office
+              style: minimal
+              kind: fabric
+      - text: "Office Minimal ofis interyeriga mos variant."
+    expect_tools: ["set_context", "product_search"]
+    expect_stage: recommend
+    expect_products: true
+    forbid_price_outside_tools: true
+    forbid_content_regex: ["\\d[\\d\\s]{5,}\\s*so'm"]

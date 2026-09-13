@@ -1,0 +1,33 @@
+name: "to'y xonasi — klassik fason (uch qism)"
+role: employee
+
+steps:
+  - user: "To'y xonasi uchun klassik fasonni topib, hisoblang. Karniz 4 m, balandlik 2.6 m."
+    llm:
+      - tools:
+          - name: fason_lookup
+            args:
+              room: wedding
+              style: classic
+          - name: curtain_calculate
+            args:
+              cornice_length_m: 4
+              height_m: 2.6
+              room_name: "To'y xonasi"
+              parts:
+                - variant_id: v-velvet-bordo
+                  role: portyera
+                - variant_id: v-tul-dantel-oy
+                  role: tul
+                - variant_id: v-velvet-bordo
+                  role: lambrekan
+                  height_m: 0.39
+      - text: >
+          Klassik kelin-kuyov fasoni uchta qismdan iborat: portyera,
+          tul va lambreken. Mato jami 6 565 000 so'm.
+    expect_tools: ["fason_lookup", "curtain_calculate"]
+    expect_stage: calc
+    expect_products: false
+    expect_result_contains:
+      - '"count":1'
+    forbid_price_outside_tools: true

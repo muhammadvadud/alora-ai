@@ -1,0 +1,36 @@
+name: "zal — besh matoli kompozitsiya"
+role: employee
+
+steps:
+  - user: >
+      Katta zal uchun besh qatlamli klassik parda: portyera, kant,
+      tul, lambreken va astar. Karniz 4 m, balandligi 2.6 m.
+    llm:
+      - tools:
+          - name: set_context
+            args:
+              room: hall
+              style: classic
+              pattern: striped
+          - name: curtain_calculate
+            args:
+              cornice_length_m: 4
+              height_m: 2.6
+              room_name: "Zal"
+              parts:
+                - variant_id: v-hitech-grafit
+                  role: portyera
+                - variant_id: v-kant-atlas-oltin
+                  role: kant
+                - variant_id: v-tul-dantel-oy
+                  role: tul
+                - variant_id: v-classic-ivory
+                  role: lambrekan
+                  height_m: 0.39
+                - variant_id: v-astar-soft-oq
+                  role: astar
+      - text: "Besh matoli kompozitsiya tayyor: jami mato 11 141 000 so'm."
+    expect_tools: ["set_context", "curtain_calculate"]
+    expect_stage: calc
+    expect_products: false
+    forbid_price_outside_tools: true
