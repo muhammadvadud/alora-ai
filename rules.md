@@ -27,11 +27,12 @@
    **faqat tool natijasidan**. Tool yo'q / xato / katalog bo'sh → AI "hisoblab bera olmadim"
    deydi. Bu loyihaning mavjudlik sharti (TZ §10.2: 100 suhbatda 0 hallucination).
 
-3. **Hisob formulasi Django bilan bir xil.** `internal/curtains/calc.go` — Django'dagi
-   `apps/pricing/services/calculator.py` ning **aynan nusxasi** (o'sha tartib, o'sha yaxlitlash,
-   o'sha kalitlar). Yagona haqiqat — `tests/fixtures/calc_cases.json` (backend bilan umumiy).
-   Etalon test o'tmasa — hisob yo'q, tool yo'q, merge yo'q. TZ matnidagi formula bilan etalon
-   fayl farq qilsa — **etalon ustun**, farq backend jamoasi bilan kelishib hal qilinadi.
+3. **Hisob formulasi faqat Django'da.** Go'da narx formulasi **yozilmaydi** (ADR-009,
+   buyurtmachi qarori 2026-09-13). `curtain_calculate`/`price_quote` tool'lari Django'ning
+   `Pricing.CalcPreview` gRPC'sini chaqiradi va natijani o'zgartirmasdan qaytaradi. Go'da
+   faqat kirishni tekshirish (`validate.go`), so'rov/javob mapping va tavsiya matni
+   (`explanation`) bo'ladi. Yagona haqiqat — `tests/fixtures/calc_cases.json`: Go testi
+   mapping'ni shu fayl bilan tekshiradi (fake Django server `expected` ni qaytaradi).
 
 4. **Biznes-qiymat kodda yo'q.** Koeffitsient, zapas, qadam, yaxlitlash, chegirma, avans,
    xizmat narxi, bilim qoidasi, system prompt — hammasi Django'dan sinxronlanadi
@@ -104,9 +105,8 @@ alora-agent/
 │   │   ├── types.go               #   Product, Variant, CalcRule, Service, Tier, Policy, Defaults, Fason, KnowledgeRule
 │   │   ├── catalog.go             #   Catalog: lokal cache, Snapshot/Delta qo'llash, version, stale
 │   │   ├── search.go              #   filtrlash + skorlash (product_search mantiq)
-│   │   ├── calc.go                #   calculator.py NUSXASI: bo'lak, aksessuar, xizmat, chegirma, yaxlitlash
-│   │   ├── calc_types.go          #   CalcInput / CalcResult (Django preview JSON bilan bir xil maydonlar)
-│   │   ├── quote.go               #   price_quote: xizmatlar + tier + manual discount + defaults
+│   │   ├── calc_types.go          #   CalcInput / CalcResult — Django preview JSON bilan bir xil (DTO, formula YO'Q)
+│   │   ├── calc.go                #   Calculator interfeysi + explanation/warnings (formula Django'da, ADR-009)
 │   │   ├── variants.go            #   build_options: arzon/o'rtacha/premium
 │   │   ├── fason.go               #   fason shablonini parts ga aylantirish
 │   │   ├── knowledge.go           #   qoidalarni tanlash (condition_json match) va prompt bloki
@@ -114,7 +114,7 @@ alora-agent/
 │   │   └── validate.go            #   L/H chegaralar, bo'lak soni (1–10), width yig'indisi
 │   ├── tools/                     # ★ yupqa adapterlar: dto.go + <tool>.go; registratsiya main.go da
 │   ├── prompt/                    # system prompt yig'uvchi: Django versiyasi + state bloki + knowledge bloki
-│   ├── backend/                   # Go→Django gRPC klient + outbox navbati (usage, order, log)
+│   ├── backend/                   # Go→Django gRPC klient: CalcPreview (sinxron), outbox (usage, order, log)
 │   ├── voice/                     # STT/TTS interfeyslar + registry + normalize.go (raqam→so'z)
 │   ├── observability/             # slog sozlash, Prometheus metrikalar, request-id
 │   └── transport/
@@ -212,49 +212,27 @@ prompt ──► curtains (state, knowledge)
 8. Katalog **faqat** Django'dan to'ladi. Fayl/CSV yuklash, qo'lda `Add()` — taqiqlanadi
    (testlarda `NewCatalogFromFixture` — faqat `_test.go` da).
 
-### 4.2 Hisob (`calc.go`) — Django `calculator.py` bilan **bit-bit** mos
+### 4.2 Hisob — Django `Pricing.CalcPreview` orqali (ADR-009)
 
-Tartib va nomlar Django'dagi kabi (kod o'qib solishtirish oson bo'lishi uchun):
-
-```
-_part_width / _part_height     → bo'lakda yo'q bo'lsa o'lchovdan (length/height) olinadi
-_part_coef                     → bo'lakda yo'q bo'lsa calc_rules["coef_default"]
-visible_area  = width × coef × height
-raw_area      = width × coef × (height + seam_allowance + hem_allowance)
-area_m2       = round_to_step(raw_area, round_area_to)      ← RoundHalfUp
-waste_area    = raw_area − visible_area
-waste_percent = waste_area / visible_area × 100              ← 2 kasr, RoundHalfUp
-line_total    = quantize_money(area_m2 × unit_price)         ← price_unit variantdan
-accessory     = quantize_money(qty × unit_price)
-xizmat miqdori: hook → ceil(Σlength / hook_step); per_sqm → Σarea_m2; per_meter → Σlength;
-                per_piece → Σparts soni
-tier          = subtotal ≥ min_amount bo'lgan eng yuqori percent
-manual        = rolga qarab policy chegarasi; oshsa → error
-stack_with_tier=false → max(tier, manual); true → yig'indi
-total         = round_to_step(subtotal − discount + delivery, round_total_to)
-prepayment    = total × prepayment_percent; balance = total − prepayment
-```
-
-1. **Har `CalcRule` kaliti `calc_cases.json` dagi `pricing_seed.calc_rules` bilan bir xil.**
-   Kalit topilmasa — `ValidationError{"rules", "'key' hisob qoidasi topilmadi"}`, default qiymat
-   **o'ylab topilmaydi**.
-2. **Chiqindi = zapaslar** (Django ta'rifi). TZ'dagi rulon eni bo'yicha panel/chok hisobi
-   (`N = ceil(B/(W−2s))`) — **faqat ogohlantirish** sifatida `cut` maydonida beriladi, `total` ga
-   ta'sir qilmaydi va etalon testda tekshirilmaydi (backend bilan kelishilgunga qadar — §19 ADR-002).
-3. **Validatsiya (`validate.go`) hisobdan oldin:** `0.5 ≤ L ≤ 15`, `0.5 ≤ H ≤ 6`, `1 ≤ len(parts) ≤ 10`,
-   `K ∈ [1.0, 4.0]`, `qty > 0`, bir o'lchovda qatlam bo'lmagan bo'laklar `Σwidth ≤ L + 0.01`
-   (qatlam rollari: `portyera`, `tul`, `astar` — butun `L` ni egallashi mumkin; `kant`, `lambrekan`,
-   `dekor` — qisman). Xato matni o'zbekcha, maydon nomi bilan.
-4. **Natija strukturasi** Django `calculate_preview` JSON'i bilan bir xil kalitlar
-   (`visible_area_m2`, `raw_area_m2`, `area_m2`, `waste_percent`, `line_total`, `subtotal`,
-   `tier_discount_percent`, `manual_discount_percent`, `discount_amount`, `delivery_amount`, `total`,
-   `warnings`). Qo'shimcha: `explanation`, `stale`, `catalog_version`. Sonlar JSON'da **string**
-   (Django kabi, aniqlik yo'qolmasin); LLM'ga ko'rsatishda tool adapter ularni o'qiladigan
-   ko'rinishga (`5 382 000 so'm`) `display` maydonida qo'shadi.
-5. **`explanation` va `warnings`** — tavsiya mexanizmi (TZ §3.2): chiqindi `waste_warn_percent`
-   dan oshsa, koeffitsientni tushirish tejami (`K−0.5` bilan farq), arzonroq analog
-   (o'sha `product`, boshqa `variant` yoki bir kategoriya, −20% narx) — hammasi **katalogdan**,
-   sonlar **hisobdan**.
+1. **Formula Go'da yo'q.** `curtains.Calculator` interfeysi: `Calculate(ctx, CalcInput) (CalcResult, error)`.
+   Amalga oshirish — `backend.PricingClient` (gRPC `Pricing.CalcPreview`, timeout 3s, retry 1 marta
+   faqat `UNAVAILABLE` da). Testlarda — fake (fixture `expected` qaytaradi).
+2. **Shartnoma = Django payload.** `CalcInput` JSON'i (`calc_types.go`) Django `calculate_preview`
+   payload'i bilan **bir xil** (`calc_cases.json` `input`); `CalcResult` — `expected` bilan bir xil.
+   Proto: `CalcPreviewRequest{payload_json, user_role}` → `CalcPreviewResponse{result_json, error, error_fields_json}`.
+   Django `ValidationError` → Go `ValidationError{Field, Msg}` → tool `{"error"}`.
+3. **Validatsiya (`validate.go`) Django'ga yuborishdan oldin:** `0.5 ≤ L ≤ 15`, `0.5 ≤ H ≤ 6`,
+   `1 ≤ len(parts) ≤ 10`, `K ∈ [1.0, 4.0]`, `qty > 0`, variant katalogda bor va faol. Xato o'zbekcha.
+   (Σwidth ≤ L qoidasi olib tashlandi — lambrekan/tul butun L ni egallaydi, ADR-010.)
+4. **Natija o'zgartirilmaydi:** sonlar Django'dan kelganicha (string decimal). Go faqat
+   qo'shadi: `explanation`, `warnings` (Django'nikiga qo'shimcha), `stale`, `catalog_version`,
+   `display` (o'qiladigan ko'rinish `5 382 000 so'm`).
+5. **`explanation` va `warnings`** (TZ §3.2) — Go'da, lekin **hisob emas, taqqoslash**: koeffitsient
+   −0.5 tejami uchun Go **ikkinchi CalcPreview** so'raydi (parallel), farqni matnda aytadi; arzonroq
+   analog — katalogdan (narx/m² ≤ 80%). Sonlar har doim Django javobidan.
+6. **Kechikish byudjeti:** CalcPreview ≤ 150 ms (Django §15 talabi bilan bir xil); `build_options`
+   uchun 3 paket **parallel** so'raladi. Django yotsa → `{"error":"hisob xizmati vaqtincha ishlamayapti"}`,
+   AI narx aytmaydi.
 
 ### 4.3 Qidiruv (`search.go`)
 
@@ -497,10 +475,11 @@ qo'lda ReAct sikli · tarixga butun navbat yoziladi · `trimHistory` faqat User 
 
 ## 14. Testlar
 
-1. **Etalon (`calc_test.go`)** — `tests/fixtures/calc_cases.json` ni o'qib, har `case` uchun
-   `expected` bilan **string tengligi** (Django ham string qaytaradi). Fixture nusxasi backend
-   bilan `sha256` orqali solishtiriladi (`make check-fixtures`; CI da farq bo'lsa fail).
-   `catalog_seed`/`pricing_seed` dan `NewCatalogFromFixture` yasaladi.
+1. **Etalon (`calc_test.go`)** — `tests/fixtures/calc_cases.json`: fake `Pricing` server (bufconn)
+   har `case.input` uchun `case.expected` qaytaradi; Go klient `CalcInput` → `payload_json` mapping'i
+   Django payload'i bilan **bir xil** ekani va `CalcResult` unmarshal'i `expected` ga teng ekani
+   tekshiriladi (Decimal tengligi). Live (`//go:build live`): real Django `CalcPreview` bilan 20/20.
+   Fixture nusxasi backend bilan `sha256` (`make check-fixtures`).
 2. **Domen testlari:** `search_test.go` (tartib, deterministiklik, kind ajratish), `variants_test.go`
    (o'suvchi tartib invarianti, bo'sh segment), `state_test.go` (stage o'tishlari, `NextQuestion`),
    `validate_test.go` (chegaralar), `knowledge_test.go` (condition match), `normalize_test.go` (100%).
@@ -529,7 +508,8 @@ qo'lda ReAct sikli · tarixga butun navbat yoziladi · `trimHistory` faqat User 
 | Ko'rsatkich | Chegara |
 |---|---|
 | TTFT (birinchi `content`) | ≤ 1.5 s (p95, live) |
-| Tool (lokal cache) | ≤ 5 ms |
+| Tool (lokal cache: search, knowledge, fason) | ≤ 5 ms |
+| `curtain_calculate` / `price_quote` (Django CalcPreview) | ≤ 200 ms |
 | To'liq javob, 2 tool | ≤ 6 s |
 | Parallel sessiya, 1 instans | 50 |
 | Katalog xotirasi, 10k mahsulot | ≤ 200 MB |
@@ -616,3 +596,5 @@ tool **stub** (`{"error":"hali ulanmagan"}`) bilan qoladi, "bajarildi" belgilanm
 | ADR-008 | 2026-09-12 | `SaveOrderDraft` sinxron, qolgan yozuvlar asinxron | Sotuvchiga `order_number` darhol kerak; dublikat buyurtma xavfi retry'ni taqiqlaydi |
 
 Yangi qaror — yangi qator, o'chirilmaydi, bekor bo'lsa `(bekor: ADR-0xx)` belgisi.
+| ADR-009 | 2026-09-13 | **Hisob formulasi faqat Django'da**; Go `Pricing.CalcPreview` gRPC orqali chaqiradi (TZ §2.2-3 "tool'lar lokal xotiradan" dan chetlanish) | Buyurtmachi qarori: bitta kalkulyator ikki joyda yozilmasin. Narx — Django haqiqati, Go preview'ni ham u yerdan oladi. Narx: har hisob Go→Django so'rovi (~50–150 ms), Django yotsa hisob yo'q. Yozilgan `calc.go` (20/20 etalon o'tgan) olib tashlandi; `calc_types.go` DTO sifatida qoldi. |
+| ADR-010 | 2026-09-13 | `Σwidth ≤ L` validatsiyasi olib tashlandi | Etalonda lambrekan butun L ni egallaydi, 10 bo'lakli holatda Σwidth > L; qoida real fasonlarga mos emas |
