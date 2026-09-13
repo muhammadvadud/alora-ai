@@ -1,6 +1,11 @@
 package agent
 
-import "github.com/cloudwego/eino/schema"
+import (
+	"fmt"
+	"unicode/utf8"
+
+	"github.com/cloudwego/eino/schema"
+)
 
 // Standart qiymatlar (config bermasa ishlatiladi).
 //
@@ -10,8 +15,9 @@ import "github.com/cloudwego/eino/schema"
 // ~40 xabar ≈ 8-10 navbat. Suhbat oqimi uzun bo'lsa (ko'p savol-javob) oshiring:
 // oynadan chiqib ketgan ma'lumotni model qaytadan so'raydi.
 const (
-	defaultMaxStep    = 20
-	defaultMaxHistory = 40
+	defaultMaxStep            = 20
+	defaultMaxHistory         = 40
+	defaultMaxToolResultChars = 3000
 )
 
 // trimHistory tarixni oxirgi `max` xabar atrofida cheklaydi.
@@ -37,4 +43,38 @@ func trimHistory(msgs []*schema.Message, max int) []*schema.Message {
 		return msgs
 	}
 	return msgs[start:]
+}
+
+// limitToolResults model kontekstini og'irlashtiradigan eski tool natijalarini
+// qisqartiradi. Store'dagi xabarlar o'zgarmasligi uchun faqat xabar struct'ining
+// nusxasi tahrirlanadi; oxirgi ikki natija esa modelga to'liq kerak bo'ladi.
+func limitToolResults(msgs []*schema.Message, maxChars int) []*schema.Message {
+	if maxChars <= 0 || len(msgs) == 0 {
+		return msgs
+	}
+
+	totalTools := 0
+	for _, msg := range msgs {
+		if msg.Role == schema.Tool {
+			totalTools++
+		}
+	}
+
+	seenTools := 0
+	result := make([]*schema.Message, len(msgs))
+	copy(result, msgs)
+	for i, msg := range msgs {
+		if msg.Role != schema.Tool {
+			continue
+		}
+		seenTools++
+		if seenTools > totalTools-2 || utf8.RuneCountInString(msg.Content) <= maxChars {
+			continue
+		}
+		clone := *msg
+		count := utf8.RuneCountInString(msg.Content)
+		clone.Content = string([]rune(msg.Content)[:maxChars]) + fmt.Sprintf(" …[qisqartirildi, %d belgi]", count)
+		result[i] = &clone
+	}
+	return result
 }

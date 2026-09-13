@@ -1,5 +1,9 @@
 # Alora AI Agent (Go)
 
+[![Version](https://img.shields.io/badge/version-v0.1.0-blue.svg)](CHANGELOG.md)
+
+**Modul yo'li:** `github.com/muhammadvadud/alora-ai`
+
 Alora AI agent (Go) — parda do'koni uchun AI sotuvchi-yordamchi. Loyihaning asosiy maqsadi mijozlar bilan muloqot qilish, ehtiyojlarini aniqlash, katalogni qidirish va hisob-kitob qilishda yordam berishdir.
 
 Tizim ishlashi gRPC protokoli orqali Django gateway va Go agenti o'rtasidagi aloqaga asoslangan. Arxitektura yupqa tool adapterlari va markaziy domen qatlami atrofida qurilgan bo'lib, qat'iy ma'lumotlar sinxronizatsiyasi Django backend bilan ta'minlanadi.
@@ -18,16 +22,18 @@ Agent foydalanadigan asosiy tool'lar:
 - `fason_lookup`: Xona/uslubga tayyor fason shablon topish
 - `knowledge_lookup`: Do'kon bilimlar bazasidan qoidalar olish
 
-## Ishga tushirish
+## Tez boshlash
 Talablar:
 - Go 1.26+
 
 Ishga tushirish jarayoni:
 1. `make install-tools` buyrug'ini ishga tushiring (kerakli generatsiya va lint vositalari).
-2. `.env.example` faylidan `.env` nusxasini yarating va kalitlarni kiriting.
-3. CLI rejimida sinab ko'rish uchun: `make run-cli`
-4. gRPC serverni ishga tushirish uchun: `make run-grpc`
-5. Docker compose orqali ishga tushirish uchun: `docker compose up agent -d`
+2. `.env.example` faylidan `.env` nusxasini yarating.
+3. **Kalitsiz sinov**: `provider: mock` sozlamasidan foydalaning (kalitlar talab qilinmaydi).
+4. **Real provider bilan**: `.env` ichida `DEEPSEEK_API_KEY` kabi kalitlarni kiriting.
+5. CLI rejimida sinab ko'rish uchun: `make run-cli`
+6. gRPC serverni ishga tushirish uchun: `make run-grpc` (yoki Docker orqali: `docker compose up agent -d`)
+7. Qo'lda (manual) live sinov o'tkazish uchun `tools/livechat` dan foydalaning.
 
 ## ENV Kalitlar Jadvali
 
@@ -42,6 +48,7 @@ Ishga tushirish jarayoni:
 | `DATABASE_URL` | PostgreSQL ulanishi uchun URL manzili |
 | `ALORA_BACKEND_ADDR` | Django backend serverining gRPC manzili |
 | `ALORA_LIVE_BACKEND` | Real Django ulanishi manzili (faqat live testlar uchun, masalan 127.0.0.1:50051) |
+| `ALORA_LIVE_AGENT` | Real Live Agent ulanish manzili (live testlar uchun) |
 
 ## Make Buyruqlari
 - `make build` - Loyihani build qilish.
@@ -61,9 +68,10 @@ Ishga tushirish jarayoni:
 
 ## Testlash
 Loyiha bir necha bosqichli testlashga ega:
-- **Unit testlar:** Domen qismi (`go test -race ./...`)
+- **Unit testlar:** Domen, utilitalar (`go test -race ./...`).
 - **Golden dialoglar:** 20 ta etalon ssenariylar mock LLM yordamida sinaladi (`go test ./tests/golden/...`).
-- **Live testlar:** Real Django backend serveriga bog'langan holda sinovdan o'tkazish (`ALORA_LIVE_BACKEND=127.0.0.1:50051 AGENT_SERVICE_TOKEN=secret go test -tags live ./tests/live/`).
+- **Live testlar:** Real LLM javoblari bilan sinaladi (`ALORA_LIVE_BACKEND=127.0.0.1:50051 ALORA_LIVE_AGENT=127.0.0.1:9090 AGENT_SERVICE_TOKEN=secret go test -tags live ./tests/live/`).
+- **E2E testlar:** Tizimning uchdan-uchiga sinovi (`go test ./tests/e2e/...`).
 - **Load testlar:** Tizimning yuklamalarga chidamliligini tekshirish (`go test -tags load ./tests/load/`).
 
 ## Hujjatlar Havolasi

@@ -83,6 +83,9 @@ type AgentConfig struct {
 	// qo'shadi, ya'ni ~40 ≈ 8-10 navbat. Uzun suhbat oqimida oshiring.
 	// ENV: ALORA_AGENT_MAX_HISTORY
 	MaxHistory int `mapstructure:"max_history"`
+	// MaxToolResultChars — eski tool natijasining modelga yuboriladigan nusxasi
+	// uchun rune chegarasi. ENV: ALORA_AGENT_MAX_TOOL_RESULT_CHARS
+	MaxToolResultChars int `mapstructure:"max_tool_result_chars"`
 	// SystemPrompt — fallback prompt (Django sinxronlanmaganda). O'rniga
 	// $fallback.system_prompt dan foydalaniladi; eski joylashuv uchun saqlanadi.
 	SystemPrompt string `mapstructure:"system_prompt"`
@@ -192,6 +195,7 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("llm.fallback_provider", "claude")
 	v.SetDefault("agent.max_step", 20)
 	v.SetDefault("agent.max_history", 40)
+	v.SetDefault("agent.max_tool_result_chars", 3000)
 	v.SetDefault("agent.stream", true)
 	v.SetDefault("agent.system_prompt", "")
 	v.SetDefault("server.addr", ":8080")

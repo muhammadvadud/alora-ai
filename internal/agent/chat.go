@@ -24,19 +24,20 @@ import (
 // butun oqimni o'qishga majbur bo'ladi (DeepSeek matnni tool_call'dan oldin yuboradi), bu esa
 // yakuniy javobni buferlaydi — stream yo'qoladi. Bu sikl ikkalasini ham beradi.
 type Chat struct {
-	model            model.ToolCallingChatModel // tool'lar bog'langan
-	tools            map[string]tool.InvokableTool
-	store            session.Store
-	systemPrompt     string
-	maxStep          int
-	maxHistory       int // modelga yuboriladigan eski xabarlar chegarasi (history.go)
-	stream           bool
-	stateHook        StageReporter // nil bo'lsa stage event'lar chiqmaydi
-	provider         string        // done.usage uchun (main.go to'ldiradi)
-	modelName        string
-	systemPromptFunc func(context.Context, string) string
-	fallback         model.ToolCallingChatModel
-	fallbackProvider string
+	model              model.ToolCallingChatModel // tool'lar bog'langan
+	tools              map[string]tool.InvokableTool
+	store              session.Store
+	systemPrompt       string
+	maxStep            int
+	maxHistory         int // modelga yuboriladigan eski xabarlar chegarasi (history.go)
+	maxToolResultChars int // eski tool natijasi uchun model konteksti chegarasi
+	stream             bool
+	stateHook          StageReporter // nil bo'lsa stage event'lar chiqmaydi
+	provider           string        // done.usage uchun (main.go to'ldiradi)
+	modelName          string
+	systemPromptFunc   func(context.Context, string) string
+	fallback           model.ToolCallingChatModel
+	fallbackProvider   string
 }
 
 // fallbackAnswer — model matnli javob bermasa (masalan maxStep tugab qolsa)
@@ -55,6 +56,9 @@ type Options struct {
 	MaxStep int
 	// MaxHistory — modelga yuboriladigan eski xabarlar chegarasi. 0 = 40 (history.go).
 	MaxHistory int
+	// MaxToolResultChars — eski tool natijasining modelga yuboriladigan nusxasi
+	// uchun rune chegarasi. 0 = 3000.
+	MaxToolResultChars int
 	// Stream — javobni jonli (bo'lak-bo'lak) yuborish. false bo'lsa yaxlit keladi
 	// va bitta content Event bo'ladi (Event shartnomasi o'zgarmaydi — transportlar bilmaydi).
 	Stream bool
@@ -75,6 +79,9 @@ func NewChat(ctx context.Context, chatModel model.ToolCallingChatModel, tools []
 	}
 	if opts.MaxHistory <= 0 {
 		opts.MaxHistory = defaultMaxHistory
+	}
+	if opts.MaxToolResultChars <= 0 {
+		opts.MaxToolResultChars = defaultMaxToolResultChars
 	}
 	infos := make([]*schema.ToolInfo, 0, len(tools))
 	byName := make(map[string]tool.InvokableTool, len(tools))
@@ -104,7 +111,7 @@ func NewChat(ctx context.Context, chatModel model.ToolCallingChatModel, tools []
 	return &Chat{
 		model: bound, tools: byName, store: store,
 		systemPrompt: opts.SystemPrompt, maxStep: opts.MaxStep,
-		maxHistory: opts.MaxHistory, stream: opts.Stream,
+		maxHistory: opts.MaxHistory, maxToolResultChars: opts.MaxToolResultChars, stream: opts.Stream,
 		stateHook: opts.StateHook, provider: opts.Provider, modelName: opts.Model,
 		fallback: fallback, fallbackProvider: opts.FallbackProvider,
 		systemPromptFunc: opts.SystemPromptFunc,
@@ -146,7 +153,8 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 		if systemPrompt != "" {
 			msgs = append(msgs, schema.SystemMessage(systemPrompt))
 		}
-		msgs = append(msgs, trimHistory(history, c.maxHistory)...)
+		modelHistory := trimHistory(history, c.maxHistory)
+		msgs = append(msgs, limitToolResults(modelHistory, c.maxToolResultChars)...)
 		msgs = append(msgs, schema.UserMessage(input))
 
 		// Shu navbatda tug'ilgan xabarlar (user + assistant + tool) shu indeksdan boshlanadi —

@@ -93,11 +93,19 @@ Qarorlar jurnali qat'iy saqlanadi (batafsil `rules.md` §19 da ko'ring: ADR-009,
 **Eng Muhimi: ADR-009 — Hisob Faqat Django'da**
 Buyurtmachi va jamoa qaroriga ko'ra (2026-09-13) narx hisoblash formulalari Go'da yozilmaydi. Buning o'rniga Go `curtain_calculate` va `price_quote` tool'lari ishlaganda, parametrlar `internal/backend/pricing.go` orqali Django gRPC `Pricing.CalcPreview` ga yuboriladi va tayyor hisob qabul qilinadi. Bu logikani takrorlashni va kelishmovchiliklarni oldini oladi (0 hallucination siyosati).
 
-## Testlar Xaritasi
-* **Unit Testlar**: Barcha paketlar (`go test -race ./...`).
-* **Golden Dialoglar**: `tests/golden/` papkasida (20 ssenariy, mock LLM, zero hallucination).
-* **Live Testlar**: Real Django bilan ishlash tekshiruvi. (`go test -tags live ./tests/live/`).
-* **Load (Yuklama) Testlar**: Yuklama tag'i bilan parallel sessiyalar sadoqati (`go test -tags load ./tests/load/`).
+## Sinov piramidasi
+
+Loyihada kod ishonchliligini ta'minlash uchun turli darajadagi testlar mavjud:
+
+| Test turi | Nima tekshiriladi | Qayerda / Qanday |
+| :--- | :--- | :--- |
+| **Unit** | Domen, utilitalar, state | `go test -race ./...` |
+| **Golden** | 20 ta etalon dialog skripti | `tests/golden/` (mock LLM) |
+| **E2E** | Django SSE / Agent gRPC | `tests/e2e/` (bufconn orqali) |
+| **Live LLM** | Real LLM modeli javoblari | `tests/live/llm_test.go` |
+| **Load** | 50 ta parallel sessiya kuchi | `tests/load/` |
+
+**Izoh:** Kalitsiz dev-sinov uchun `provider: mock` mexanizmi bor (u o'zi haqiqiy javob o'ylab topmaydi, faqat tool chaqiradi).
 
 ## Konfiguratsiya va ENV Kalitlari
 Fayl: `configs/config.yaml` va `.env`

@@ -181,16 +181,17 @@ func run() error {
 		}
 	}
 	chat, err := agent.NewChat(ctx, chatModel, toolList, store, agent.Options{
-		SystemPrompt:     systemPrompt(cfg),
-		SystemPromptFunc: promptFunc(store, catalog, fallbackPrompt(cfg), cfg.Knowledge.InlineMax),
-		MaxStep:          cfg.Agent.MaxStep,
-		MaxHistory:       cfg.Agent.MaxHistory,
-		Stream:           cfg.Agent.Stream,
-		StateHook:        stateHook{store: store},
-		Provider:         cfg.LLM.Provider,
-		Model:            cfg.LLM.Model,
-		Fallback:         fallbackModel,
-		FallbackProvider: cfg.LLM.FallbackProvider,
+		SystemPrompt:       systemPrompt(cfg),
+		SystemPromptFunc:   promptFunc(store, catalog, fallbackPrompt(cfg), cfg.Knowledge.InlineMax),
+		MaxStep:            cfg.Agent.MaxStep,
+		MaxHistory:         cfg.Agent.MaxHistory,
+		MaxToolResultChars: cfg.Agent.MaxToolResultChars,
+		Stream:             cfg.Agent.Stream,
+		StateHook:          stateHook{store: store},
+		Provider:           cfg.LLM.Provider,
+		Model:              cfg.LLM.Model,
+		Fallback:           fallbackModel,
+		FallbackProvider:   cfg.LLM.FallbackProvider,
 	})
 	if err != nil {
 		return err

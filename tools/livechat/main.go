@@ -60,8 +60,8 @@ func main() {
 				fmt.Printf("  [tool_call] %s\n", ev.Tool)
 			case "tool_result":
 				r := ev.Result
-				if len(r) > 160 {
-					r = r[:160] + "…"
+				if len(r) > 4000 {
+					r = r[:4000] + "…"
 				}
 				fmt.Printf("  [tool_result] %s\n", r)
 			case "products":

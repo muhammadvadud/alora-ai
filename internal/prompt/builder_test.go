@@ -153,4 +153,16 @@ func TestBuilder_Build(t *testing.T) {
 			t.Error("Fallback prompt ichida 'set_context' bo'lishi shart")
 		}
 	})
+
+	t.Run("Tool calling qoidalari: qayta chaqirma va price_quote", func(t *testing.T) {
+		// NEGA: Kuzatuvda model product_search'ni 2 marta, fason_lookup'ni keraksiz va
+		// so'ralmagan price_quote'ni chaqirgan. Bu qoidalar prompt'da bo'lishi shart.
+		lower := strings.ToLower(FallbackSystemPrompt)
+		if !strings.Contains(lower, "qayta chaqirma") {
+			t.Error("Tool qoidalarida 'qayta chaqirma' so'zi bo'lishi shart")
+		}
+		if !strings.Contains(lower, "price_quote") {
+			t.Error("Tool qoidalarida 'price_quote' qoidasi bo'lishi shart")
+		}
+	})
 }
