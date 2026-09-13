@@ -1,0 +1,22 @@
+name: "katalog eskirgan — narxlar yangilanmagan"
+role: employee
+
+steps:
+  - user: "Mehmonxonamizga Velvet Milano matolarini ko'rsating."
+    clock_advance: "11m"
+    llm:
+      - tools:
+          - name: product_search
+            args:
+              room: living
+              kind: fabric
+      - text: >
+          Diqqat: katalog 11 daqiqadan beri yangilanmagan, narxlar
+          hozircha eskirgan bo'lishi mumkin. Velvet Milano grafiti
+          va beji bor.
+    expect_tools: ["product_search"]
+    expect_stage: recommend
+    expect_products: true
+    expect_result_contains:
+      - '"stale":true'
+      - "narxlar yangilanmagan"

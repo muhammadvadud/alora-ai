@@ -1,0 +1,33 @@
+name: "chegirma limitidan oshib ketish"
+role: employee
+
+steps:
+  - user: "Karniz 4 m, balandlik 2.6 m, Velvet Milano grafit hisoblab bering."
+    llm:
+      - tools:
+          - name: curtain_calculate
+            args:
+              cornice_length_m: 4
+              height_m: 2.6
+              room_name: "Mehmonxona"
+              parts:
+                - variant_id: v-hitech-grafit
+                  role: portyera
+                  coefficient: 2.5
+      - text: "Hisob tayyor: mato 4 680 000 so'm turadi."
+    expect_tools: ["curtain_calculate"]
+    expect_stage: calc
+
+  - user: "12% chegirma beraman, avansini ayt."
+    llm:
+      - tools:
+          - name: price_quote
+            args:
+              discount_pct: 12
+              need_delivery: true
+      - text: >
+          Talab qilingan 12% chegirma sizning limitdan yuqori. Ruxsat
+          etilgan maksimal 5%, lekin to'liq narx va avansni aytishim mumkin.
+    expect_tools: ["price_quote"]
+    expect_stage: calc
+    expect_error_contains: "chegirma chegarasi"

@@ -188,10 +188,10 @@
 
 ### 1.K MVP yakuni
 
-- [ ] 1.41 `tests/golden/` karkasi + mock `ToolCallingChatModel` (skript: user matn → tool chaqiruv/javob) — 5 ta MVP ssenariy:
+- [x] 1.41 `tests/golden/` karkasi + mock `ToolCallingChatModel` (skript: user matn → tool chaqiruv/javob) — 5 ta MVP ssenariy:
       mehmonxona hi-tech to'liq oqim (need→calc→quote), noto'g'ri o'lcham (L=50), katalogda yo'q mahsulot, stale katalog,
       chegirma chegarasi. *Qabul:* `go test ./tests/golden/...` o'tadi; `forbid_content_regex` narx uchun ishlaydi.
-- [ ] 1.42 `hallucination_test.go` (rules.md §14.5). *Qabul:* CI'da `-run Halluc` alohida job.
+- [x] 1.42 `hallucination_test.go` (rules.md §14.5). *Qabul:* CI'da `-run Halluc` alohida job.
 - [ ] 1.43 Live sinov (`//go:build live`, DeepSeek): 5 ssenariy, TTFT/tool soni `docs/LIVE-RUNS.md` ga.
       *Qabul:* TTFT p95 ≤ 1.5 s, 2-tool javob ≤ 6 s (bo'lmasa `max_tokens`/prompt hajmi sozlanadi, natija yoziladi).
 - [~] 1.44 Backend bilan integratsiya sinovi (gRPC qismi tayyor: `tests/live` — real Django run_grpc bilan snapshot + 20 etalon CalcPreview o'tdi; SSE/LLM qismi DEEPSEEK_API_KEY kutmoqda): `docker compose` (backend + agent) → Django `POST /api/v1/chat/.../messages/` SSE →

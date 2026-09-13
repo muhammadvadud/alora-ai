@@ -5,6 +5,9 @@ import (
 	"testing"
 
 	"github.com/cloudwego/eino/schema"
+	"github.com/shopspring/decimal"
+
+	"github.com/muhammadvadud/alora-agent/internal/curtains"
 )
 
 func TestMemoryStore(t *testing.T) {
@@ -44,5 +47,33 @@ func TestMemoryStore(t *testing.T) {
 	_ = s.Reset(ctx, "a")
 	if h := mustHistory("a"); h != nil {
 		t.Errorf("Reset'dan keyin bo'sh bo'lishi kerak, got %v", h)
+	}
+}
+
+func TestMemoryStoreStateReset(t *testing.T) {
+	ctx := context.Background()
+	s := NewMemory()
+	want := curtains.NewSessionState()
+	want.Stage = curtains.StageCalc
+	want.CorniceLengthM = decimal.NewFromInt(4)
+	if err := s.SetState(ctx, "state", want); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.State(ctx, "state")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Stage != curtains.StageCalc || !got.CorniceLengthM.Equal(want.CorniceLengthM) {
+		t.Fatalf("state = %+v, want %+v", got, want)
+	}
+	if err := s.Reset(ctx, "state"); err != nil {
+		t.Fatal(err)
+	}
+	got, err = s.State(ctx, "state")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Stage != curtains.StageNeed || !got.CorniceLengthM.IsZero() {
+		t.Fatalf("Reset state'ni tozalamadi: %+v", got)
 	}
 }

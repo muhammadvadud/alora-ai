@@ -414,9 +414,10 @@ qo'lda ReAct sikli · tarixga butun navbat yoziladi · `trimHistory` faqat User 
 
 ## 10. Sessiya — `internal/session`
 
-1. Jadval `sessions(session_id text pk, user_id uuid, tenant_id uuid, messages jsonb,
-   state jsonb, created_at, updated_at)` + `outbox`. Migratsiya `internal/session/migrations/*.sql`,
-   `golang-migrate` bilan ishga tushganda (`db.auto_migrate: true` dev'da, prod'da alohida buyruq).
+1. Jadval `agent.sessions(session_id text pk, user_id, tenant_id, messages jsonb, state jsonb,
+   created_at, updated_at)` + `agent.outbox`. Migratsiya `internal/session/migrations/*.sql` — `go:embed` +
+   `agent.schema_migrations` jadvali bilan o'z yengil migrator (ADR-011; `golang-migrate` emas),
+   `db.auto_migrate: true` dev'da, prod'da alohida buyruq.
 2. `Store` interfeysi shablondan (`History/Append/Reset` + `ctx`, `error`) + `State/SetState`.
 3. `Append` — `messages` va `state` **bir tranzaksiyada**. Tarix uzunligi `max_history` × 2 dan
    oshsa eski xabarlar `archived` jadvaliga ko'chiriladi (Django'da to'liq nusxa bor —
@@ -599,3 +600,4 @@ tool **stub** (`{"error":"hali ulanmagan"}`) bilan qoladi, "bajarildi" belgilanm
 Yangi qaror — yangi qator, o'chirilmaydi, bekor bo'lsa `(bekor: ADR-0xx)` belgisi.
 | ADR-009 | 2026-09-13 | **Hisob formulasi faqat Django'da**; Go `Pricing.CalcPreview` gRPC orqali chaqiradi (TZ §2.2-3 "tool'lar lokal xotiradan" dan chetlanish) | Buyurtmachi qarori: bitta kalkulyator ikki joyda yozilmasin. Narx — Django haqiqati, Go preview'ni ham u yerdan oladi. Narx: har hisob Go→Django so'rovi (~50–150 ms), Django yotsa hisob yo'q. Yozilgan `calc.go` (20/20 etalon o'tgan) olib tashlandi; `calc_types.go` DTO sifatida qoldi. |
 | ADR-010 | 2026-09-13 | `Σwidth ≤ L` validatsiyasi olib tashlandi | Etalonda lambrekan butun L ni egallaydi, 10 bo'lakli holatda Σwidth > L; qoida real fasonlarga mos emas |
+| ADR-011 | 2026-09-13 | Migratsiya: `golang-migrate` o'rniga `go:embed` SQL + `agent.schema_migrations` bilan yengil migrator | Bog'liqlik qo'shmaslik (rules §0.2); faqat oldinga versiyalangan SQL kerak — kutubxona ortiqcha |

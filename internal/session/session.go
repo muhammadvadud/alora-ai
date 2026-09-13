@@ -5,6 +5,8 @@ import (
 	"context"
 
 	"github.com/cloudwego/eino/schema"
+
+	"github.com/muhammadvadud/alora-agent/internal/curtains"
 )
 
 // Store sessiya bo'yicha suhbat tarixini saqlaydi.
@@ -17,4 +19,6 @@ type Store interface {
 	Append(ctx context.Context, id string, msgs ...*schema.Message) error
 	// Reset sessiya tarixini tozalaydi.
 	Reset(ctx context.Context, id string) error
+	State(ctx context.Context, id string) (curtains.SessionState, error)
+	SetState(ctx context.Context, id string, st curtains.SessionState) error
 }
