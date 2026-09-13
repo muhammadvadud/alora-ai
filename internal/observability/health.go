@@ -24,6 +24,7 @@ type HealthState struct {
 	catalogStale   atomic.Bool // katalog eskirgan (rules §4.1.5)
 	watchConnected atomic.Bool // Catalog.Watch oqimi ulangan (rules §4.1.4)
 	outboxPending  atomic.Int64
+	outboxDead     atomic.Int64
 }
 
 // SetCatalogSynced snapshot yuklash tugaganligini belgilaydi. Tugamaguncha /readyz
@@ -35,6 +36,7 @@ func (h *HealthState) SetCatalogStale(v bool) { h.catalogStale.Store(v) }
 func (h *HealthState) SetWatchConnected(v bool) { h.watchConnected.Store(v) }
 
 func (h *HealthState) SetOutboxPending(n int64) { h.outboxPending.Store(n) }
+func (h *HealthState) SetOutboxDead(n int64)    { h.outboxDead.Store(n) }
 
 // Ready Readiness interfeysini qanoatlantiradi: katalog hali yuklanmaguncha not_ready.
 // Stale esa "xato emas, ogohlantirish" (rules §4.1.5) — servis xizmatni davom ettiradi.
@@ -54,8 +56,9 @@ func (h *HealthState) Status() (string, map[string]any) {
 		"catalog_stale":   h.catalogStale.Load(),
 		"watch_connected": h.watchConnected.Load(),
 		"outbox_pending":  h.outboxPending.Load(),
+		"outbox_dead":     h.outboxDead.Load(),
 	}
-	if !h.catalogSynced.Load() || h.catalogStale.Load() || !h.watchConnected.Load() || h.outboxPending.Load() > degradedOutboxThreshold {
+	if !h.catalogSynced.Load() || h.catalogStale.Load() || !h.watchConnected.Load() || h.outboxPending.Load() > degradedOutboxThreshold || h.outboxDead.Load() > 0 {
 		return "degraded", state
 	}
 	return "ok", state

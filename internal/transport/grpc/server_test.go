@@ -7,6 +7,7 @@ import (
 
 	"github.com/muhammadvadud/alora-agent/gen/alorav1"
 	"github.com/muhammadvadud/alora-agent/internal/agent"
+	"github.com/muhammadvadud/alora-agent/internal/backend"
 	grpcgo "google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -71,6 +72,37 @@ func TestServerChatFiltersThinkingAndPreservesOrder(t *testing.T) {
 	info := requestInfo(&alorav1.ChatRequest{UserId: "u1", TenantId: "t1", Locale: "uz", Context: map[string]string{"role": "manager", "customer_mode": "1", "conversation_id": "c1"}})
 	if info.Role != "manager" || !info.CustomerMode || info.ConversationID != "c1" {
 		t.Fatalf("request info = %#v", info)
+	}
+}
+
+type recordingReporter struct {
+	logs  []backend.MessageLog
+	usage []agent.Usage
+}
+
+func (r *recordingReporter) ReportUsage(_ context.Context, usage agent.Usage, _ backend.UsageIDs) error {
+	r.usage = append(r.usage, usage)
+	return nil
+}
+func (r *recordingReporter) LogMessage(_ context.Context, message backend.MessageLog) error {
+	r.logs = append(r.logs, message)
+	return nil
+}
+
+func TestServerChatReportsMessagesAndUsage(t *testing.T) {
+	reporter := &recordingReporter{}
+	fake := &fakeStreamer{events: []agent.Event{{Kind: agent.KindContent, Content: "javob"}, {Kind: agent.KindDone, Usage: &agent.Usage{PromptTokens: 3, CompletionTokens: 2}}}}
+	srv := New(fake, Options{Reporter: reporter})
+	stream := &fakeChatStream{ctx: context.Background()}
+	req := &alorav1.ChatRequest{SessionId: "s1", UserId: "u1", TenantId: "t1", Message: "savol", Context: map[string]string{"conversation_id": "c1", "message_id": "m1"}}
+	if err := srv.Chat(req, stream); err != nil {
+		t.Fatal(err)
+	}
+	if len(reporter.logs) != 2 || reporter.logs[0].Role != "user" || reporter.logs[1].Role != "assistant" {
+		t.Fatalf("logs = %#v", reporter.logs)
+	}
+	if reporter.logs[1].Content != "javob" || len(reporter.usage) != 1 || reporter.usage[0].CompletionTokens != 2 {
+		t.Fatalf("reporter = %#v, %#v", reporter.logs, reporter.usage)
 	}
 }
 

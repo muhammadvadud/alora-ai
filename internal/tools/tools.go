@@ -39,6 +39,17 @@ func Alora(d Deps) []tool.BaseTool {
 	}
 }
 
+// AloraLookups — fason va bilim qidiruv tool'lari. Alora() ga qo'shilmaydi: o'sha
+// ro'yxatning yaxlitligini TestAlora_ConstructorsAndNames tekshiradi, main.go esa
+// knowledge_lookup'ni faqat qoidalar inline_max dan oshganda qo'shishi kerak
+// (rules §4.6.2) — registratsiyani shart bilan main.go hal qiladi.
+func AloraLookups(d Deps) []tool.BaseTool {
+	return []tool.BaseTool{
+		FasonLookup(d),
+		KnowledgeLookup(d),
+	}
+}
+
 // must — InferTool xatosi handler imzosidagi DASTURLASH xatosi (runtime'da yuz bermaydi),
 // shuning uchun konstruktorlarni soddalashtirish uchun panic qilamiz (regexp.MustCompile uslubi).
 func must(t tool.BaseTool, err error) tool.BaseTool {

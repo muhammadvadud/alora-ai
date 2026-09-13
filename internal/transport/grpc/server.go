@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"sync/atomic"
 	"time"
 
 	"github.com/muhammadvadud/alora-agent/gen/alorav1"
 	"github.com/muhammadvadud/alora-agent/internal/agent"
+	"github.com/muhammadvadud/alora-agent/internal/backend"
 	"github.com/muhammadvadud/alora-agent/internal/curtains"
 	"github.com/muhammadvadud/alora-agent/internal/observability"
 	"github.com/muhammadvadud/alora-agent/internal/session"
@@ -25,6 +27,11 @@ type Streamer interface {
 	Reset(context.Context, string) error
 }
 
+type Reporter interface {
+	ReportUsage(context.Context, agent.Usage, backend.UsageIDs) error
+	LogMessage(context.Context, backend.MessageLog) error
+}
+
 type Options struct {
 	ServiceToken string
 	AuthRequired bool
@@ -33,15 +40,17 @@ type Options struct {
 	Ready        observability.Readiness
 	Metrics      *observability.Metrics
 	Health       func() (status string, lastErr string)
+	Reporter     Reporter
 }
 
 type Server struct {
 	alorav1.UnimplementedAgentServer
-	chat    Streamer
-	ready   observability.Readiness
-	health  func() (string, string)
-	version string
-	active  atomic.Int64
+	chat     Streamer
+	ready    observability.Readiness
+	health   func() (string, string)
+	reporter Reporter
+	version  string
+	active   atomic.Int64
 }
 
 func New(chat Streamer, opts Options) *Server {
@@ -51,7 +60,7 @@ func New(chat Streamer, opts Options) *Server {
 	if opts.Health == nil {
 		opts.Health = func() (string, string) { return "ok", "" }
 	}
-	return &Server{chat: chat, ready: opts.Ready, health: opts.Health, version: opts.Version}
+	return &Server{chat: chat, ready: opts.Ready, health: opts.Health, version: opts.Version, reporter: opts.Reporter}
 }
 
 func (s *Server) Chat(req *alorav1.ChatRequest, stream grpcgo.ServerStreamingServer[alorav1.ChatEvent]) error {
@@ -68,9 +77,35 @@ func (s *Server) Chat(req *alorav1.ChatRequest, stream grpcgo.ServerStreamingSer
 		UserID: info.UserID, TenantID: info.TenantID, Role: curtains.UserRole(info.Role),
 		Locale: info.Locale, CustomerMode: info.CustomerMode, ConversationID: info.ConversationID,
 	})
+	info = requestInfo(req)
+	if s.reporter != nil {
+		if err := s.reporter.LogMessage(ctx, backend.MessageLog{SessionID: req.GetSessionId(), ConversationID: info.ConversationID, Role: "user", Content: req.GetMessage()}); err != nil {
+			slog.Error("foydalanuvchi xabarini outbox'ga qo'shib bo'lmadi", "error", err, "session_id", req.GetSessionId())
+		}
+	}
+	var assistantContent string
 	for ev := range s.chat.Stream(ctx, req.GetSessionId(), req.GetMessage()) {
 		if ev.Kind == agent.KindThinking {
 			continue
+		}
+		if ev.Kind == agent.KindContent {
+			assistantContent += ev.Content
+		}
+		if ev.Kind == agent.KindToolResult && s.reporter != nil {
+			if err := s.reporter.LogMessage(ctx, backend.MessageLog{SessionID: req.GetSessionId(), ConversationID: info.ConversationID, Role: "tool", Content: ev.Result, ToolResult: ev.Result}); err != nil {
+				slog.Error("tool xabarini outbox'ga qo'shib bo'lmadi", "error", err, "session_id", req.GetSessionId())
+			}
+		}
+		if ev.Kind == agent.KindDone && s.reporter != nil {
+			if err := s.reporter.LogMessage(ctx, backend.MessageLog{SessionID: req.GetSessionId(), ConversationID: info.ConversationID, Role: "assistant", Content: assistantContent, TokensIn: usageIn(ev.Usage), TokensOut: usageOut(ev.Usage)}); err != nil {
+				slog.Error("assistant xabarini outbox'ga qo'shib bo'lmadi", "error", err, "session_id", req.GetSessionId())
+			}
+			if ev.Usage != nil {
+				ids := backend.UsageIDs{SessionID: req.GetSessionId(), UserID: info.UserID, TenantID: info.TenantID, ConversationID: info.ConversationID, MessageID: req.GetContext()["message_id"]}
+				if err := s.reporter.ReportUsage(ctx, *ev.Usage, ids); err != nil {
+					slog.Error("usage outbox'ga qo'shib bo'lmadi", "error", err, "session_id", req.GetSessionId())
+				}
+			}
 		}
 		mapped := toProto(ev)
 		if mapped == nil {
@@ -81,6 +116,19 @@ func (s *Server) Chat(req *alorav1.ChatRequest, stream grpcgo.ServerStreamingSer
 		}
 	}
 	return nil
+}
+
+func usageIn(usage *agent.Usage) int {
+	if usage == nil {
+		return 0
+	}
+	return usage.PromptTokens
+}
+func usageOut(usage *agent.Usage) int {
+	if usage == nil {
+		return 0
+	}
+	return usage.CompletionTokens
 }
 
 func requestInfo(req *alorav1.ChatRequest) RequestInfo {

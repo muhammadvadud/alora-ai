@@ -131,3 +131,64 @@ type setContextResult struct {
 	NextQuestion string `json:"next_question,omitempty"`
 	Error        string `json:"error,omitempty"`
 }
+
+// ---- fason_lookup ----
+
+type fasonLookupArgs struct {
+	Room  string `json:"room,omitempty"  jsonschema:"description=xona turi,enum=living,enum=bedroom,enum=wedding,enum=kids,enum=kitchen,enum=office,enum=hall"`
+	Style string `json:"style,omitempty" jsonschema:"description=uslub,enum=classic,enum=modern,enum=hi_tech,enum=minimal,enum=oriental,enum=provence"`
+}
+
+type fasonPartCard struct {
+	Role        string `json:"role"`
+	Name        string `json:"name"`
+	WidthShare  string `json:"width_share"`
+	HeightShare string `json:"height_share"`
+	DefaultCoef string `json:"default_coef"`
+}
+
+type fasonAccessoryCard struct {
+	Category   string `json:"category"`
+	DefaultQty string `json:"default_qty"`
+	QtyFormula string `json:"qty_formula"`
+}
+
+type fasonCard struct {
+	ID          string               `json:"id"`
+	Name        string               `json:"name"`
+	Style       string               `json:"style"`
+	Rooms       []string             `json:"rooms,omitempty"`
+	PartCount   int                  `json:"part_count"`
+	Parts       []fasonPartCard      `json:"parts,omitempty"`
+	Accessories []fasonAccessoryCard `json:"accessories,omitempty"`
+}
+
+type fasonLookupResult struct {
+	Fasons   []fasonCard `json:"fasons,omitempty"`
+	Count    int         `json:"count"`
+	Warnings []string    `json:"warnings,omitempty"`
+	Stale    bool        `json:"stale,omitempty"`
+	Error    string      `json:"error,omitempty"`
+}
+
+// ---- knowledge_lookup ----
+
+type knowledgeLookupArgs struct {
+	Topic string `json:"topic,omitempty" jsonschema:"description=qoida turi,enum=room,enum=style,enum=objection,enum=light,enum=construction,enum=color"`
+	Query string `json:"query,omitempty" jsonschema:"description=tavsiya matnida qidiriladigan kalit so'z"`
+}
+
+type knowledgeRuleCard struct {
+	Kind           string `json:"kind"`
+	Recommendation string `json:"recommendation"`
+	Priority       int    `json:"priority"`
+}
+
+type knowledgeLookupResult struct {
+	Note     string              `json:"note"`
+	Rules    []knowledgeRuleCard `json:"rules,omitempty"`
+	Count    int                 `json:"count"`
+	Warnings []string            `json:"warnings,omitempty"`
+	Stale    bool                `json:"stale,omitempty"`
+	Error    string              `json:"error,omitempty"`
+}

@@ -6,7 +6,7 @@
 > Har bir ish tugagach shu fayl **o'sha ishning commit'i ichida** yangilanadi.
 > Har task uchun "Qabul" — nima o'tsa bajarilgan hisoblanadi (rules.md §17.5 DoD).
 
-**Umumiy holat:** 55 / 112 bajarildi · Bosqich 0 yopiq · 1.A–1.G, 1.I, 1.J tayyor (StateStore ulash 1.30) · go test -race yashil, golangci-lint 0 issues
+**Umumiy holat:** 71 / 112 bajarildi · Bosqich 1 deyarli (1.43/1.44 LLM kalitini kutmoqda) · 2.A outbox, 2.7–2.9, 3.4 tayyor · go test -race yashil, golangci-lint 0 issues
 
 **Bosqich xaritasi:** 0 Poydevor (1 hafta) → 1 MVP (3–4 hafta) → 2 To'liq sotuv sikli (3 hafta) → 3 Ovoz (2–3 hafta) → 4 Sayqal (davomiy)
 
@@ -205,21 +205,21 @@
 
 ### 2.A Backend'ga yozuv (outbox)
 
-- [ ] 2.1 `session/migrations/0002_outbox.sql` (`outbox(id, kind, payload jsonb, attempts, next_at, created_at)`), in-memory variant.
-- [ ] 2.2 `backend/outbox.go` — `Enqueue(kind, payload)`, worker (batch 50, retry jadvali `1s,5s,30s,2m,10m`, 10 → `dead`),
+- [x] 2.1 `session/migrations/0002_outbox.sql` (`outbox(id, kind, payload jsonb, attempts, next_at, created_at)`), in-memory variant.
+- [x] 2.2 `backend/outbox.go` — `Enqueue(kind, payload)`, worker (batch 50, retry jadvali `1s,5s,30s,2m,10m`, 10 → `dead`),
       metrikalar `alora_outbox_pending/dead_total`. *Qabul:* `outbox_test.go` — fake Django yotganda yig'iladi, tirilganda bo'shaydi; dead.
-- [ ] 2.3 `backend/usage.go` — `done.usage` → `UsageRequest` (`message_id`, `conversation_id` `context` dan), outbox orqali.
-- [ ] 2.4 `backend/log.go` — `LogMessage` (user, assistant, tool) — `pii.Mask()` bilan; `seq` idempotent.
-- [ ] 2.5 `internal/pii` — `Mask(phone)`, `MaskName`, `ScrubToolResult` — 100% test.
-- [ ] 2.6 `Health.status=degraded` outbox > 1000 yoki dead > 0 bo'lsa.
+- [x] 2.3 `backend/usage.go` — `done.usage` → `UsageRequest` (`message_id`, `conversation_id` `context` dan), outbox orqali.
+- [x] 2.4 `backend/log.go` — `LogMessage` (user, assistant, tool) — `pii.Mask()` bilan; `seq` idempotent.
+- [x] 2.5 `internal/pii` — `Mask(phone)`, `MaskName`, `ScrubToolResult` — 100% test.
+- [x] 2.6 `Health.status=degraded` outbox > 1000 yoki dead > 0 bo'lsa.
 
 ### 2.B Fason va bilimlar
 
-- [ ] 2.7 `curtains/fason.go` — `Fason` → `[]calcPart` (share × L/H, koeffitsient, rol), `LookupFason(room, style)`;
+- [x] 2.7 `curtains/fason.go` — `Fason` → `[]calcPart` (share × L/H, koeffitsient, rol), `LookupFason(room, style)`;
       `tools/fason_lookup.go`. *Qabul:* `fason_test.go` — ulushlar yig'indisi, qatlam/bo'lak ajratish, mos fason yo'q.
-- [ ] 2.8 `curtains/knowledge.go` — `Match(state)`, `priority` tartib, `PromptBlock(limit)`; `tools/knowledge_lookup.go`
+- [x] 2.8 `curtains/knowledge.go` — `Match(state)`, `priority` tartib, `PromptBlock(limit)`; `tools/knowledge_lookup.go`
       (faqat `inline_max` dan oshsa ro'yxatga qo'shiladi — `main.go` shart bilan). *Qabul:* `knowledge_test.go`.
-- [ ] 2.9 Prompt'ga `<knowledge>` bloki + injection sarlavhasi; `description`/`recommendation` sanitizatsiya (500 belgi, HTML).
+- [x] 2.9 Prompt'ga `<knowledge>` bloki + injection sarlavhasi; `description`/`recommendation` sanitizatsiya (500 belgi, HTML).
 
 ### 2.C Variantlar (build_options)
 
@@ -266,7 +266,7 @@
 - [ ] 3.2 `voice/whisper.go` (OpenAI Whisper API, `uz`/`ru`, auto), `voice/gemini_stt.go` (zaxira).
       *Qabul:* HTTP mock bilan test; kalit ENV.
 - [ ] 3.3 `voice/elevenlabs.go` (stream chunk), `voice/google_tts.go` (zaxira, uz ovozi). *Qabul:* mock test.
-- [ ] 3.4 `voice/normalize.go` — raqam→so'z (uz lotin/kirill, ru), `m²`, `K=2.5`, telefon o'qilmaydi. 100% test, 40+ holat.
+- [x] 3.4 `voice/normalize.go` — raqam→so'z (uz lotin/kirill, ru), `m²`, `K=2.5`, telefon o'qilmaydi. 100% test, 40+ holat.
 - [ ] 3.5 `voice/sentence.go` — jumla chegarasi detektori (`. ! ?` + bo'sh joy, 120 belgi, qisqartmalar `sm.`, `mln.`). Test.
 - [ ] 3.6 `transport/grpc/voice.go` — `VoiceChat` bidirectional: chunk bufer → `is_final` → STT → `transcript` event →
       `Chat.Stream` → `text` event'lar + jumla-jumla TTS goroutine → `audio` event; barge-in (`cancel()` yangi chunk'da);
