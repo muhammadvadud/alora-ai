@@ -6,7 +6,7 @@
 > Har bir ish tugagach shu fayl **o'sha ishning commit'i ichida** yangilanadi.
 > Har task uchun "Qabul" — nima o'tsa bajarilgan hisoblanadi (rules.md §17.5 DoD).
 
-**Umumiy holat:** 1 / 112 bajarildi (4 tasi Go tomonida mapping kutmoqda, 2 tasi backend kelishuvida) · testlar: — · lint: —
+**Umumiy holat:** 12 / 112 bajarildi (0.1–0.3, 0.6, 0.7, 0.14, 0.20, 0.21, 1.1, 1.3, 1.5; hisob Django'da — ADR-009)
 
 **Bosqich xaritasi:** 0 Poydevor (1 hafta) → 1 MVP (3–4 hafta) → 2 To'liq sotuv sikli (3 hafta) → 3 Ovoz (2–3 hafta) → 4 Sayqal (davomiy)
 
@@ -16,27 +16,27 @@
 
 ### 0.A Repo va shablon
 
-- [ ] 0.1 `UzStack/agent` shablonini `alora-agent` sifatida ko'chirish; `go.mod` moduli
+- [x] 0.1 `UzStack/agent` shablonini `alora-agent` sifatida ko'chirish; `go.mod` moduli
       `github.com/muhammadvadud/alora-agent`; barcha importlar yangilanadi.
       *Qabul:* `go build ./...` toza.
-- [ ] 0.2 Keraksizni o'chirish: `internal/rocketpark`, `internal/weather`, `internal/transport/telegram`,
+- [x] 0.2 Keraksizni (telegram ham, foydalanuvchi qarori) o'chirish: `internal/rocketpark`, `internal/weather`, `internal/transport/telegram`,
       `k8s/rocketpark-bot.yaml`, `tools/rocketpark.go`, `tools/weather.go`, mos testlar; `go mod tidy`.
       *Qabul:* `go build && go test ./...` toza, `main.go` da faqat `Calculator`, `Clock` qoladi.
-- [ ] 0.3 `AGENTS.md` ni Alora'ga moslash (rules.md §0 va §2 ga havola, shablon "oltin qoidalar" saqlanadi);
+- [x] 0.3 `AGENTS.md` ni Alora'ga moslash (rules.md §0 va §2 ga havola, shablon "oltin qoidalar" saqlanadi);
       `README.md` (ishga tushirish, ENV, make buyruqlari); `LICENSE`, `.editorconfig`, `.gitignore`
       (`bin/`, `tmp/`, `.env`, `coverage.out`).
-- [ ] 0.4 `Makefile`: `build test vet lint fmt tidy proto check-fixtures sync-fixtures bench docker run-cli run-grpc`.
-- [ ] 0.5 `.golangci.yml` — rules.md §3.1 linterlari + `depguard` qoidalari (§2 bog'liqlik yo'nalishi:
+- [x] 0.4 `Makefile`: `build test vet lint fmt tidy proto check-fixtures sync-fixtures bench docker run-cli run-grpc`.
+- [x] 0.5 `.golangci.yml` — rules.md §3.1 linterlari + `depguard` qoidalari (§2 bog'liqlik yo'nalishi:
       `curtains` da `eino/grpc/gen` taqiq, `tools` da `gen` taqiq).
       *Qabul:* `golangci-lint run` toza, ataylab noto'g'ri import qo'shilganda fail bo'ladi (test).
-- [ ] 0.6 Pre-commit: `gofmt`, `goimports`, `golangci-lint --fast`, `gitleaks`.
-- [ ] 0.7 `.env.example` (`DEEPSEEK_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `ELEVENLABS_API_KEY`,
+- [x] 0.6 Pre-commit: `gofmt`, `goimports`, `golangci-lint --fast`, `gitleaks`.
+- [x] 0.7 `.env.example` (`DEEPSEEK_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `ELEVENLABS_API_KEY`,
       `GOOGLE_API_KEY`, `AGENT_SERVICE_TOKEN`, `DATABASE_URL`, `ALORA_BACKEND_ADDR`) — qiymatsiz.
 
 ### 0.B Proto va generatsiya
 
-- [ ] 0.8 `buf.yaml`, `buf.gen.yaml` (`protoc-gen-go`, `protoc-gen-go-grpc`, versiya pin); `gen/alorav1/`.
-- [ ] 0.9 `scripts/import_proto.sh` — backend `protos/alora.proto` → `proto/alora.proto` (diff ko'rsatadi,
+- [x] 0.8 `buf.yaml`, `buf.gen.yaml` (`protoc-gen-go`, `protoc-gen-go-grpc`, versiya pin); `gen/alorav1/`.
+- [x] 0.9 `scripts/import_proto.sh` — backend `protos/alora.proto` → `proto/alora.proto` (diff ko'rsatadi,
       backend `scripts/export_proto.sh` bilan juft). *Qabul:* `make proto` → `gen/` yangilanadi, build toza.
 - [~] 0.10 **Backend bilan (P6):** `go_package` = `github.com/muhammadvadud/alora-agent/gen/alorav1;alorav1`.
       Backend tomoni: `feat/proto-agent-contract-ext` branch'ida bajarildi (kontrakt 1.1). Go: `import_proto` + `buf generate` (0.9 bilan).
@@ -48,24 +48,24 @@
       `kind="stage"` → `Conversation.stage` (Celery); `context` = `role`, `customer_mode`, `conversation_id`;
       `Usage.cost_*` faqat Django (Go `0`); `action="FULL_RESYNC"` (katta harf, entity `catalog`, stream yopiladi).
       **Diqqat:** `x-service-token`/`x-request-id` Django hali yubormaydi (backend 6.18) — Go auth `grpc.auth_required=false` bilan boshlanadi.
-- [ ] 0.15 CI'da `buf lint` + `buf breaking --against 'https://github.com/muhammadvadud/alora-backend.git#branch=main,subdir=protos'`.
+- [x] 0.15 CI'da `buf lint` + `buf breaking --against 'https://github.com/muhammadvadud/alora-backend.git#branch=main,subdir=protos'`.
 
 ### 0.C Etalon va CI
 
-- [ ] 0.16 `scripts/sync_fixtures.sh` — backend `tests/fixtures/calc_cases.json` → `tests/fixtures/`;
+- [x] 0.16 `scripts/sync_fixtures.sh` — backend `tests/fixtures/calc_cases.json` → `tests/fixtures/`;
       `make check-fixtures` sha256 solishtiradi. *Qabul:* fixture farq qilsa CI qizil.
-- [ ] 0.17 GitHub Actions: `buf lint → build → vet → golangci-lint → test -race -cover → coverage gate
+- [x] 0.17 GitHub Actions: `buf lint → build → vet → golangci-lint → test -race -cover → coverage gate
       (curtains ≥ 90 / tools ≥ 85 / umumiy ≥ 75) → govulncheck → check-fixtures → docker build`.
-- [ ] 0.18 `docker/Dockerfile` (multi-stage, distroless, non-root, `HEALTHCHECK /readyz`);
+- [x] 0.18 `docker/Dockerfile` (multi-stage, distroless, non-root, `HEALTHCHECK /readyz`);
       `docker-compose.yml` — `agent` servisi backend compose tarmog'i `alora_net` ga ulanadi
       (`postgres`, `django:9091` ko'rinadi). *Qabul:* `docker compose up agent` → `/healthz` 200.
 - [ ] 0.19 `internal/observability`: `slog` JSON (`request_id`, `session_id`, `user_id` maydonlari),
       Prometheus registry, `/metrics`, `/healthz`, `/readyz` (`transport/http` faqat shu).
       *Qabul:* `curl :8081/metrics` da `alora_*` metrikalar ko'rinadi.
-- [ ] 0.20 `internal/config` kengaytmasi (TZ §9): `grpc`, `backend`, `catalog`, `stt`, `tts`, `knowledge`, `db`,
+- [x] 0.20 `internal/config` kengaytmasi (TZ §9): `grpc`, `backend`, `catalog`, `stt`, `tts`, `knowledge`, `db`,
       `fallback` bo'limlari; `ALORA_` ENV prefiks; `Validate()`; `providerKeyEnv` ga `elevenlabs`, `google`.
       *Qabul:* `config_test.go` — noto'g'ri `stale_after`, bo'sh `backend.addr` (grpc mode) → xato.
-- [ ] 0.21 `clock` interfeysi (`internal/curtains/clock.go` yoki `internal/common`), testlarda `FakeClock`.
+- [x] 0.21 `clock` interfeysi (`internal/curtains/clock.go` yoki `internal/common`), testlarda `FakeClock`.
 
 ---
 
@@ -73,7 +73,7 @@
 
 ### 1.A Domen turlari va katalog cache
 
-- [ ] 1.1 `curtains/types.go` — `Product`, `Variant` (`PriceUnit` typed), `Category`, `CalcRule`, `Service`,
+- [x] 1.1 `curtains/types.go` — `Product`, `Variant` (`PriceUnit` typed), `Category`, `CalcRule`, `Service`,
       `DiscountTier`, `DiscountPolicy`, `OrderDefaults`, `Fason{Parts, Accessories}`, `KnowledgeRule`, `PromptVersion`;
       barcha pul/o'lcham `decimal.Decimal`; `PartRole`, `Segment`, `Room`, `Style`, `Pattern`, `Transparency` const'lari
       (`product_search` enum'lari bilan bir xil).
@@ -81,30 +81,25 @@
       `ApplyDelta(d)` (idempotent, version ketma-ketlik tekshiruvi → `ErrVersionGap`), `View().Stale`,
       `Version()`, `SyncedAt()`. *Qabul:* `catalog_test.go` — snapshot sahifalab yig'iladi; delta create/update/delete;
       takroriy version e'tiborsiz; gap → xato; stale `FakeClock` bilan; `-race` bilan parallel o'qish/yozish.
-- [ ] 1.3 `curtains/fixture.go` (`//go:build test` emas — `internal/curtains/testutil`) — `NewCatalogFromFixture(calc_cases.json)`:
+- [x] 1.3 `curtains/curtainstest/fixture.go` (`//go:build test` emas — `internal/curtains/testutil`) — `NewCatalogFromFixture(calc_cases.json)`:
       `catalog_seed` + `pricing_seed` dan `View`. *Qabul:* fixture'dagi barcha variant ID lar topiladi.
 - [ ] 1.4 `catalog_bench_test.go` — 10k mahsulot × 3 variant generatsiya; xotira ≤ 200 MB, `View()` ≤ 1 µs.
 
-### 1.B Hisob (eng muhim blok)
+### 1.B Hisob — Django CalcPreview orqali (ADR-009)
 
-- [ ] 1.5 `curtains/calc_types.go` — `CalcInput{Measurements[]{Length, Height, Parts[], Accessories[]}, Services[], Delivery bool,
-      ManualDiscountPct, Role}`, `CalcResult` — Django `calculate_preview` JSON kalitlari bilan **bir xil**
-      (`MarshalJSON` sonlarni string qiladi).
-- [ ] 1.6 `curtains/validate.go` — rules.md §4.2.3 chegaralari; `ValidationError{Field, Msg}` o'zbekcha.
-      *Qabul:* `validate_test.go` — har chegara uchun +/− holat (L=0.4, L=15.1, 11 bo'lak, K=0.9, Σwidth>L, qatlam istisnosi).
-- [ ] 1.7 `curtains/calc.go` — `calculator.py` nusxasi: `partWidth/Height/Coef`, `visibleArea`, `rawArea`, `roundToStep`
-      (RoundHalfUp), `quantizeMoney`, `variantLineTotal`, `serviceQuantity` (hook ceil), `matchTier`,
-      `resolveDiscountPolicy`, `buildMeasurement`, `buildServiceLines`, `Calculate(view, input)`.
-      Kalit topilmasa → `ValidationError{"rules", ...}`.
-- [ ] 1.8 **`calc_test.go` — 20 ta etalon** `calc_cases.json` dan o'qib, `expected` bilan string tengligi.
-      *Qabul:* 20/20 o'tadi, **±0 farq**; test fixture'ni faylga bog'laydi (hardcode yo'q).
-- [ ] 1.9 `calc.go` ga `explanation` + `warnings` generatori: `waste_percent > waste_warn_percent` → ogohlantirish;
-      koeffitsient −0.5 tejami (qayta hisob, faqat matn); arzonroq analog (bir `product`, boshqa `variant` yoki bir kategoriya,
-      ≤ 80% narx) — hammasi katalogdan. *Qabul:* `calc_explain_test.go` — 3 ta chiqindi ssenariysi (TZ §12 talabi), analog topiladi/topilmaydi.
-- [ ] 1.10 `cut` maydoni (ADR-002): `Hp > W` bo'lsa `panels`, `seams`, `roll_waste_pct` — **faqat ma'lumot**, `total` o'zgarmaydi.
-      *Qabul:* etalon testlar hamon 20/20; `cut` alohida testda.
-- [ ] 1.11 Ko'p matoli etalonlar: fixture'da kamida 6 ta 3–10 bo'lakli holat borligini tekshiruvchi test
-      (`TestFixture_HasMultiPartCases`); yo'q bo'lsa backend bilan fixture kengaytiriladi ([!]).
+- [x] 1.5 `curtains/calc_types.go` — `CalcInput`/`CalcResult` DTO, Django payload/preview JSON bilan bir xil kalitlar (decimal string).
+- [ ] 1.6 `curtains/validate.go` — rules §4.2.3 chegaralari (Σwidth qoidasi yo'q, ADR-010); `ValidationError`.
+      *Qabul:* `validate_test.go` — har chegara +/− (L=0.4, 15.1; H; 11 bo'lak; K=0.9/4.1; qty=0; nofaol variant).
+- [!] 1.7 **Backend bilan:** proto `service Pricing { rpc CalcPreview(CalcPreviewRequest) returns (CalcPreviewResponse) }`
+      (`payload_json`, `user_role` → `result_json`, `error`, `error_fields_json`); Django servicer `calculate_preview` ni chaqiradi
+      (backend tasks 6.19). Go: `import_proto` + `buf generate`.
+- [ ] 1.8 `curtains/calc.go` — `Calculator` interfeysi; `backend/pricing.go` — gRPC klient (timeout 3s, `UNAVAILABLE` da 1 retry,
+      `ValidationError` mapping). **`calc_test.go` — 20 etalon:** fake Pricing server `expected` qaytaradi; request `payload_json`
+      Django `input` bilan bir xil (JSON tenglik), javob `CalcResult` ↔ `expected` Decimal tengligi. *Qabul:* 20/20.
+- [ ] 1.9 `curtains/explain.go` — `explanation`/`warnings`: chiqindi (Django `warnings` + `waste_percent`), koeffitsient −0.5 tejami
+      (ikkinchi CalcPreview, parallel), arzonroq analog (katalog, ≤ 80% narx/m²). *Qabul:* fake server bilan 3 ssenariy.
+- [ ] 1.10 Live test (`//go:build live`): real Django (`docker compose`) bilan 20/20 CalcPreview.
+- [ ] 1.11 Etalonda ≥ 6 ta ko'p matoli holat borligini tekshiruvchi test (`TestFixture_HasMultiPartCases`) — hozir 4 ta (2, 3, 3, 10 bo'lak) → backend bilan 2 ta qo'shiladi [!].
 
 ### 1.C Qidiruv
 
@@ -117,12 +112,10 @@
 
 ### 1.D Narx (price_quote)
 
-- [ ] 1.15 `curtains/quote.go` — `Quote(view, calcResult, opts{NeedCornice, NeedInstall, NeedDelivery, DiscountPct, Role})`:
-      xizmat qatorlari (`sewing`, `tape`, `hook`, `install`, `cornice`?, `delivery`), tier, manual chegara (rolga qarab →
-      `ValidationError`), `stack_with_tier`, `round_total_to`, `prepayment`, `balance`. **Karniz** — `ServicePrice` da
-      `cornice` kaliti bo'lsa `per_meter × Σlength`, bo'lmasa `warnings` ("karniz narxi sozlanmagan").
-      *Qabul:* `quote_test.go` — tier chegaralari (4.99/5/10/20 mln), employee 5% vs manager 15%, rad etish matni,
-      default avans/yetkazish, `stack_with_tier` ikkala rejim.
+- [ ] 1.15 `curtains/quote.go` — `price_quote` = CalcPreview (`services`, `delivery`, `discount_percent`, `role`) + Go'da faqat:
+      `prepayment`/`balance` (`OrderDefaults.prepayment_percent` yoki kiritilgan), qo'lda chegirma rol chegarasidan oshsa
+      **oldindan** `{"error":"chegirma chegarasi 5% — 12% berib bo'lmaydi"}` (Django jim kesadi — AI aniq aytishi kerak),
+      karniz `cornice` xizmati katalogda bo'lmasa `warnings`. *Qabul:* fake server bilan test — chegara xabari, avans/qoldiq.
 - [ ] 1.16 `LastCalc`/`LastQuote` `SessionState` da saqlanadi (1.25 ga bog'liq) — `price_quote` `LastCalc` siz xato.
 
 ### 1.E Tool adapterlari
