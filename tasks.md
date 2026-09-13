@@ -6,7 +6,7 @@
 > Har bir ish tugagach shu fayl **o'sha ishning commit'i ichida** yangilanadi.
 > Har task uchun "Qabul" — nima o'tsa bajarilgan hisoblanadi (rules.md §17.5 DoD).
 
-**Umumiy holat:** 91 / 112 · Senior audit 2026-09-13 (docs/REVIEW-2026-09-13.md): 3 HIGH + 7 MEDIUM + 2 LOW tuzatildi, CI'da Postgres · backend tasks 100% · API kalit kutayotganlar: 1.43, 1.44 (mock e2e tayyor), 1.46, 2.21, 2.23, 3.2/3.3, 3.7/3.8, 3.10 · kontrakt 1.5 taklifi: docs/CONTRACT-PROPOSAL-1.5.md
+**Umumiy holat:** 94 / 112 bajarildi, 2 yarim · 2026-09-14: live DeepSeek o'tdi, xarajat 4–10× kamaytirildi (bosqichli tool'lar, ixcham natijalar, prefix-kesh 96%), senior audit tuzatildi · Qolgan: teglar (1.46/2.23/3.10), ovoz provider'lari (kalit yo'q: 3.2/3.3/3.8), kontrakt 1.5 kelishuvi (2.19, 4.2, 4.5, 4.9, 4.12), ADR (4.4, 4.6), 1.9/1.11
 
 **Bosqich xaritasi:** 0 Poydevor (1 hafta) → 1 MVP (3–4 hafta) → 2 To'liq sotuv sikli (3 hafta) → 3 Ovoz (2–3 hafta) → 4 Sayqal (davomiy)
 
@@ -252,7 +252,7 @@
 - [x] 2.20 Golden ssenariylar 20 taga yetkaziladi (TZ §12): xona turlari ×7, yorug'lik, balkon eshigi, ko'p matoli (5 bo'lak),
       10 bo'lak, chiqindi ogohlantirishi, e'tirozlar ("qimmat", "boshqa rang"), buyurtma to'liq, orqaga qaytish (o'lcham o'zgardi),
       rus tili, mijoz rejimi (tannarx aytilmaydi).
-- [~] 2.21 Live sinov 20 ssenariy (DeepSeek/Claude endpointlari A/B uchun qayta ishga tushiriladi) → `tests/live/README.md`;
+- [x] 2.21 (2026-09-14: 20 ssenariy real DeepSeek bilan 3 marta yugurtirildi, hallucination 1/20 → yig'indilar Django'dan + prompt qoidasi bilan 0; 40 suhbatli tezlik testi xarajat sabab talab bo'yicha) Live sinov 20 ssenariy (DeepSeek/Claude endpointlari A/B uchun qayta ishga tushiriladi) → `tests/live/README.md`;
       real gRPC LLM oqimi, tool/stage/error tekshiruvi va narx hallucination regex audit qo'shildi. Xarajat limiti sabab 40 suhbat
       (20 + 20) ishlatiladi; 100 suhbatlik TZ auditi bajarilmadi.
 - [x] 2.22 Yuklama testi: 50 parallel sessiya (`ghz` yoki Go bench, mock LLM) — xotira, goroutine sizishi (`goleak`).
