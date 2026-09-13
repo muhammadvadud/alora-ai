@@ -181,3 +181,20 @@ func TestVoiceChatSTTErrorKeepsStreamAlive(t *testing.T) {
 		t.Fatalf("events = %#v", stream.events)
 	}
 }
+
+func TestVoiceChatRejectsLongTranscript(t *testing.T) {
+	stt := &fakeVoiceSTT{text: "abcd"}
+	tts := &fakeVoiceTTS{}
+	chunks := make(chan *alorav1.VoiceChunk, 1)
+	chunks <- &alorav1.VoiceChunk{AudioData: []byte("audio"), Format: "pcm", IsFinal: true}
+	close(chunks)
+	srv, stream, cancel := voiceTestServer(t, stt, tts, chunks)
+	defer cancel()
+	srv.maxMessageChars = 3
+	if err := srv.VoiceChat(stream); err != nil {
+		t.Fatal(err)
+	}
+	if len(stream.events) != 1 || stream.events[0].GetChatEvent().GetTool() != "stt" || stream.events[0].GetChatEvent().GetError() == "" {
+		t.Fatalf("events = %#v", stream.events)
+	}
+}

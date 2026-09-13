@@ -25,3 +25,14 @@ func TestToProtoFiltersThinking(t *testing.T) {
 		t.Fatalf("thinking event mapped: %#v", got)
 	}
 }
+
+func TestToProtoSanitizesProviderError(t *testing.T) {
+	got := toProto(agent.Event{Kind: agent.KindError, Err: "https://secret.example/key=abc"})
+	if got.GetError() != "javob berishda xato yuz berdi (LLM)" {
+		t.Fatalf("error = %q", got.GetError())
+	}
+	tool := toProto(agent.Event{Kind: agent.KindError, Tool: "product_search", Err: "katalog xatosi"})
+	if tool.GetError() != "katalog xatosi" {
+		t.Fatalf("tool error = %q", tool.GetError())
+	}
+}

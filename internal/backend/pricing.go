@@ -41,8 +41,12 @@ func (p *PricingClient) Calculate(ctx context.Context, in curtains.CalcInput) (c
 	}
 	callCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+	tenantID := p.tenantID
+	if user, ok := curtains.UserFromContext(ctx); ok && user.TenantID != "" {
+		tenantID = user.TenantID
+	}
 	request := &alorav1.CalcPreviewRequest{
-		PayloadJson: string(payload), UserRole: string(in.Role), TenantId: p.tenantID,
+		PayloadJson: string(payload), UserRole: string(in.Role), TenantId: tenantID,
 		SessionId: session.IDFromContext(ctx),
 	}
 	var response *alorav1.CalcPreviewResponse

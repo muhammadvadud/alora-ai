@@ -36,7 +36,14 @@ func (h *priceQuoteHandler) do(ctx context.Context, a priceQuoteArgs) (priceQuot
 		return priceQuoteResult{Error: "avval curtain_calculate chaqir — hisoblanadigan parda yo'q"}, nil
 	}
 
-	role := userRole(ctx)
+	// Fail-closed: rol noma'lum yoki bo'sh bo'lsa chegirma yo'q — employee kabi
+	// qabul qilinsa ham baribir, lekin taxmin qilish o'rniga aniq aytiladi.
+	// (userRole emas — u noma'lumni employee'ga tushiradi, bu yerda Valid kerak.)
+	u, ok := curtains.UserFromContext(ctx)
+	if !ok || !u.Role.Valid() {
+		return priceQuoteResult{Error: errUnknownRole}, nil
+	}
+	role := u.Role
 	discount := dec(a.DiscountPct)
 	if policy, ok := v.DiscountPolicy(); ok && a.DiscountPct > 0 {
 		max := policy.ManualMaxPercentManager

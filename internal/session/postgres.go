@@ -23,6 +23,18 @@ type PostgresOptions struct{ AutoMigrate bool }
 
 type pgStore struct{ pool *pgxpool.Pool }
 
+func (s *pgStore) Owner(ctx context.Context, id string) (string, error) {
+	var userID string
+	err := s.pool.QueryRow(ctx, `SELECT user_id FROM agent.sessions WHERE session_id=$1`, id).Scan(&userID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("sessiya egasini o'qish: %w", err)
+	}
+	return userID, nil
+}
+
 func NewPostgres(ctx context.Context, dsn string, options ...PostgresOptions) (Store, error) {
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {

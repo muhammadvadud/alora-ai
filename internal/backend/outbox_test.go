@@ -32,6 +32,19 @@ func TestOutboxStoreRetriesAndDeadAfterTenFailures(t *testing.T) {
 	}
 }
 
+func TestRetryDelay(t *testing.T) {
+	for _, tc := range []struct {
+		attempts int
+		want     time.Duration
+	}{
+		{1, time.Second}, {2, 5 * time.Second}, {3, 30 * time.Second}, {4, 2 * time.Minute}, {5, 10 * time.Minute}, {20, 10 * time.Minute},
+	} {
+		if got := retryDelay(tc.attempts); got != tc.want {
+			t.Errorf("attempts=%d: got %v want %v", tc.attempts, got, tc.want)
+		}
+	}
+}
+
 type fakeBackendClient struct {
 	fail        bool
 	usage, logs int

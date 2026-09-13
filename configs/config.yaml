@@ -9,6 +9,7 @@ mode: grpc # grpc | cli | http  (main -mode flag bilan ustidan yoziladi)
 
 llm:
   provider: deepseek # deepseek | openai | claude | ollama
+  # provider: mock — dev/test uchun API kalitsiz deterministik provider (config.Load qo'llovi kerak).
   # `deepseek-chat` — eskirgan alias (aslida deepseek-v4-flash ga ishora qiladi) va
   # yopilishi kutilyapti, shu sabab aniq nom yozamiz. Mavjud: deepseek-v4-pro | deepseek-v4-flash
   model: deepseek-v4-pro
@@ -45,6 +46,8 @@ grpc:
   service_token_env: AGENT_SERVICE_TOKEN
   auth_required: true
   max_sessions: 100
+  rate_limit_per_minute: 20
+  max_message_chars: 4000
   keepalive: 30s
   tls:
     enabled: false # true bo'lsa mTLS; yo'llar quyidagi ENV nomlaridan olinadi

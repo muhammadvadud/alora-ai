@@ -12,9 +12,13 @@ func toProto(ev agent.Event) *alorav1.ChatEvent {
 	if ev.Kind == agent.KindThinking {
 		return nil
 	}
+	errText := ev.Err
+	if ev.Kind == agent.KindError && ev.Tool == "" {
+		errText = "javob berishda xato yuz berdi (LLM)"
+	}
 	out := &alorav1.ChatEvent{
 		Kind: string(ev.Kind), Content: ev.Content, Tool: ev.Tool,
-		Args: ev.Args, Result: ev.Result, Error: ev.Err,
+		Args: ev.Args, Result: ev.Result, Error: errText,
 	}
 	for _, product := range ev.Products {
 		out.Products = append(out.Products, &alorav1.ProductRef{

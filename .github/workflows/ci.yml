@@ -7,6 +7,21 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    # Postgres servisi — session/outbox/archive kodi CI'da haqiqiy DB bilan sinaladi
+    # (DATABASE_URL bo'lmasa bu testlar Skip bo'lib, 22% coverage bilan o'tib ketardi).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: alora
+          POSTGRES_PASSWORD: alora
+          POSTGRES_DB: alora_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U alora" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://alora:alora@localhost:5432/alora_test
     steps:
       - name: Checkout agent
         uses: actions/checkout@v4

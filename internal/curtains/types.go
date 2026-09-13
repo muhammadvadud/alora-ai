@@ -183,3 +183,22 @@ const (
 	RoleManager  UserRole = "manager"
 	RoleAdmin    UserRole = "admin"
 )
+
+// Valid — chegirma berishga ruxsatli rol (employee|manager). RoleAdmin yoki
+// noma'lum qiymat fail-closed hisoblanadi: ai hech qachon tasksiz yuqori
+// chegirma bermasligi uchun (rules §5.6) — bosh rol manager limitiga tushmaydi.
+func (r UserRole) Valid() bool {
+	switch r {
+	case RoleEmployee, RoleManager:
+		return true
+	}
+	return false
+}
+
+// ParseRole — Django'dan kelgan rol qiymatini tekshirilgan konstanta qiladi.
+// Aniq kichik harf talab qilinadi: "MANAGER" yoki "admin" qabul qilinmaydi —
+// ularni Valid() ko'rmaydi va price_quote rad qiladi.
+func ParseRole(s string) (UserRole, bool) {
+	r := UserRole(s)
+	return r, r.Valid()
+}

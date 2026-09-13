@@ -98,6 +98,15 @@ func run() error {
 	catalog := curtains.NewCatalog(curtains.RealClock{}, cfg.Catalog.StaleAfter)
 	var calc curtains.Calculator
 	if cfg.Mode == "grpc" {
+		if cfg.LLM.Provider == "mock" {
+			slog.Warn("mock provider grpc rejimida faqat dev/e2e uchun; prod'da taqiqlangan")
+		}
+		if cfg.GRPC.AuthRequired && !cfg.GRPC.TLS.Enabled {
+			slog.Warn("token TLS'siz uzatilmoqda — faqat ichki tarmoq")
+		}
+		if !cfg.Backend.TLS.Enabled {
+			slog.Warn("backend token TLS'siz uzatilmoqda — faqat ichki tarmoq")
+		}
 		token := os.Getenv(cfg.GRPC.ServiceTokenEnv)
 		backendCreds, credErr := backend.ClientCredentials(cfg.Backend.TLS)
 		if credErr != nil {
@@ -196,7 +205,7 @@ func run() error {
 	case "grpc":
 		service := grpctransport.New(chat, grpctransport.Options{
 			ServiceToken: os.Getenv(cfg.GRPC.ServiceTokenEnv), AuthRequired: cfg.GRPC.AuthRequired,
-			MaxSessions: cfg.GRPC.MaxSessions, Ready: syncer, Metrics: metrics, Reporter: reporter,
+			MaxSessions: cfg.GRPC.MaxSessions, MaxMessageChars: cfg.GRPC.MaxMessageChars, RateLimitPerMinute: cfg.GRPC.RateLimitPerMinute, Store: store, Ready: syncer, Metrics: metrics, Reporter: reporter,
 			STT: stt, TTS: tts, TTSVoice: cfg.TTS.Voice, STTLang: cfg.STT.Language,
 			Health: func() (string, string) {
 				if reportOutbox != nil {
@@ -324,7 +333,7 @@ func serveGRPC(ctx context.Context, cfg *config.Config, srv *grpctransport.Serve
 	go func() {
 		errs <- grpctransport.ServeTLS(runCtx, cfg.GRPC.Addr, srv, grpctransport.ServeConfig{
 			ServiceToken: os.Getenv(cfg.GRPC.ServiceTokenEnv), AuthRequired: cfg.GRPC.AuthRequired,
-			MaxSessions: cfg.GRPC.MaxSessions, Metrics: metrics,
+			MaxSessions: cfg.GRPC.MaxSessions, MaxMessageChars: cfg.GRPC.MaxMessageChars, RateLimitPerMinute: cfg.GRPC.RateLimitPerMinute, Metrics: metrics,
 		}, creds)
 	}()
 	first := <-errs

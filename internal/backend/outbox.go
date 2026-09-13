@@ -131,12 +131,14 @@ func (o *Outbox) now() time.Time {
 }
 
 func retryDelay(attempts int) time.Duration {
-	for _, delay := range []time.Duration{time.Second, 5 * time.Second, 30 * time.Second, 2 * time.Minute, 10 * time.Minute} {
-		if attempts < 5 {
-			return delay
-		}
+	delays := []time.Duration{time.Second, 5 * time.Second, 30 * time.Second, 2 * time.Minute, 10 * time.Minute}
+	if attempts <= 0 {
+		return delays[0]
 	}
-	return 10 * time.Minute
+	if attempts >= len(delays) {
+		return delays[len(delays)-1]
+	}
+	return delays[attempts-1]
 }
 
 func marshalPayload(v any) ([]byte, error) { return json.Marshal(v) }

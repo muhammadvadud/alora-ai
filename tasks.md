@@ -6,7 +6,7 @@
 > Har bir ish tugagach shu fayl **o'sha ishning commit'i ichida** yangilanadi.
 > Har task uchun "Qabul" — nima o'tsa bajarilgan hisoblanadi (rules.md §17.5 DoD).
 
-**Umumiy holat:** 91 / 112 bajarildi · Bosqich 4: mTLS, arxiv/cleanup, k8s, Grafana tayyor · API kalit kutayotganlar: 1.43, 1.44 SSE, 1.46, 2.21, 2.23, 3.2/3.3, 3.7/3.8, 3.10 · kontrakt kelishuvi: 1.11, 2.19, 4.2, 4.5, 4.9, 4.12 · ADR kerak: 4.4, 4.6
+**Umumiy holat:** 91 / 112 · Senior audit 2026-09-13 (docs/REVIEW-2026-09-13.md): 3 HIGH + 7 MEDIUM + 2 LOW tuzatildi, CI'da Postgres · backend tasks 100% · API kalit kutayotganlar: 1.43, 1.44 (mock e2e tayyor), 1.46, 2.21, 2.23, 3.2/3.3, 3.7/3.8, 3.10 · kontrakt 1.5 taklifi: docs/CONTRACT-PROPOSAL-1.5.md
 
 **Bosqich xaritasi:** 0 Poydevor (1 hafta) → 1 MVP (3–4 hafta) → 2 To'liq sotuv sikli (3 hafta) → 3 Ovoz (2–3 hafta) → 4 Sayqal (davomiy)
 
@@ -194,7 +194,7 @@
 - [x] 1.42 `hallucination_test.go` (rules.md §14.5). *Qabul:* CI'da `-run Halluc` alohida job.
 - [ ] 1.43 Live sinov (`//go:build live`, DeepSeek): 5 ssenariy, TTFT/tool soni `docs/LIVE-RUNS.md` ga.
       *Qabul:* TTFT p95 ≤ 1.5 s, 2-tool javob ≤ 6 s (bo'lmasa `max_tokens`/prompt hajmi sozlanadi, natija yoziladi).
-- [~] 1.44 Backend bilan integratsiya sinovi (gRPC qismi tayyor: `tests/live` — real Django run_grpc bilan snapshot + 20 etalon CalcPreview o'tdi; SSE/LLM qismi DEEPSEEK_API_KEY kutmoqda): `docker compose` (backend + agent) → Django `POST /api/v1/chat/.../messages/` SSE →
+- [~] 1.44 Backend bilan integratsiya sinovi (mock provider bilan Django SSE oxirigacha o'tdi; real LLM kalit kutmoqda): `docker compose` (backend + agent) → Django `POST /api/v1/chat/.../messages/` SSE →
       Go → javob. *Qabul:* mobil/`curl -N` da `content` oqimi va `products` keladi; Django `UsageRecord` yozilgan.
 - [x] 1.45 `docs/ARCHITECTURE.md` (paket xaritasi, oqim diagrammasi), `docs/RUNBOOK.md` (stale, outbox dead, Watch uzilishi nima qilish).
 - [ ] 1.46 Teg `v0.1.0`.

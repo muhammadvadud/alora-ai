@@ -34,33 +34,39 @@ type Reporter interface {
 }
 
 type Options struct {
-	ServiceToken string
-	AuthRequired bool
-	MaxSessions  int
-	Version      string
-	Ready        observability.Readiness
-	Metrics      *observability.Metrics
-	Health       func() (status string, lastErr string)
-	Reporter     Reporter
-	STT          voicepkg.STT
-	TTS          voicepkg.TTS
-	TTSVoice     string
-	STTLang      string
+	ServiceToken       string
+	AuthRequired       bool
+	MaxSessions        int
+	MaxMessageChars    int
+	RateLimitPerMinute int
+	Store              session.Store
+	Version            string
+	Ready              observability.Readiness
+	Metrics            *observability.Metrics
+	Health             func() (status string, lastErr string)
+	Reporter           Reporter
+	STT                voicepkg.STT
+	TTS                voicepkg.TTS
+	TTSVoice           string
+	STTLang            string
 }
 
 type Server struct {
 	alorav1.UnimplementedAgentServer
-	chat     Streamer
-	ready    observability.Readiness
-	health   func() (string, string)
-	reporter Reporter
-	metrics  *observability.Metrics
-	stt      voicepkg.STT
-	tts      voicepkg.TTS
-	ttsVoice string
-	sttLang  string
-	version  string
-	active   atomic.Int64
+	chat            Streamer
+	ready           observability.Readiness
+	health          func() (string, string)
+	reporter        Reporter
+	metrics         *observability.Metrics
+	stt             voicepkg.STT
+	tts             voicepkg.TTS
+	ttsVoice        string
+	sttLang         string
+	version         string
+	maxSessions     int64
+	maxMessageChars int
+	store           session.Store
+	active          atomic.Int64
 }
 
 func New(chat Streamer, opts Options) *Server {
@@ -70,15 +76,51 @@ func New(chat Streamer, opts Options) *Server {
 	if opts.Health == nil {
 		opts.Health = func() (string, string) { return "ok", "" }
 	}
+	maxSessions := opts.MaxSessions
+	if maxSessions <= 0 {
+		maxSessions = 100
+	}
+	maxMessageChars := opts.MaxMessageChars
+	if maxMessageChars <= 0 {
+		maxMessageChars = 4000
+	}
 	return &Server{chat: chat, ready: opts.Ready, health: opts.Health, version: opts.Version, reporter: opts.Reporter, metrics: opts.Metrics,
+		maxSessions: int64(maxSessions), maxMessageChars: maxMessageChars, store: opts.Store,
 		stt: opts.STT, tts: opts.TTS, ttsVoice: opts.TTSVoice, sttLang: opts.STTLang}
+}
+
+func (s *Server) acquireSession() bool {
+	for {
+		active := s.active.Load()
+		if active >= s.maxSessions {
+			return false
+		}
+		if s.active.CompareAndSwap(active, active+1) {
+			return true
+		}
+	}
+}
+
+func validateMessage(message string, maxChars int) error {
+	if len([]rune(message)) == 0 {
+		return status.Error(codes.InvalidArgument, "xabar bo'sh bo'lishi mumkin emas")
+	}
+	if len([]rune(message)) > maxChars {
+		return status.Error(codes.InvalidArgument, "xabar juda uzun")
+	}
+	return nil
 }
 
 func (s *Server) Chat(req *alorav1.ChatRequest, stream grpcgo.ServerStreamingServer[alorav1.ChatEvent]) error {
 	if s.chat == nil {
 		return status.Error(codes.FailedPrecondition, "agent tayyor emas")
 	}
-	s.active.Add(1)
+	if err := validateMessage(req.GetMessage(), s.maxMessageChars); err != nil {
+		return err
+	}
+	if !s.acquireSession() {
+		return status.Error(codes.ResourceExhausted, "agent band (sessiya chegarasi)")
+	}
 	defer s.active.Add(-1)
 
 	ctx := session.WithID(stream.Context(), req.GetSessionId())
@@ -101,6 +143,9 @@ func (s *Server) Chat(req *alorav1.ChatRequest, stream grpcgo.ServerStreamingSer
 		}
 		if ev.Kind == agent.KindContent {
 			assistantContent += ev.Content
+		}
+		if ev.Kind == agent.KindError && ev.Tool == "" {
+			slog.ErrorContext(ctx, "LLM javob xatosi", "error", ev.Err)
 		}
 		if ev.Kind == agent.KindToolResult && s.reporter != nil {
 			if err := s.reporter.LogMessage(ctx, backend.MessageLog{SessionID: req.GetSessionId(), ConversationID: info.ConversationID, Role: "tool", Content: ev.Result, ToolResult: ev.Result}); err != nil {
@@ -155,7 +200,20 @@ func (s *Server) ResetSession(ctx context.Context, req *alorav1.ResetRequest) (*
 	if s.chat == nil {
 		return nil, status.Error(codes.FailedPrecondition, "agent tayyor emas")
 	}
-	if err := s.chat.Reset(session.WithID(ctx, req.GetSessionId()), req.GetSessionId()); err != nil {
+	if req.GetUserId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id bo'sh bo'lishi mumkin emas")
+	}
+	resetCtx := session.WithID(ctx, req.GetSessionId())
+	if s.store != nil {
+		owner, err := s.store.Owner(resetCtx, req.GetSessionId())
+		if err != nil {
+			return nil, status.Error(codes.Internal, "sessiya egasini tekshirib bo'lmadi")
+		}
+		if owner != "" && owner != req.GetUserId() {
+			return nil, status.Error(codes.PermissionDenied, "sessiya sizga tegishli emas")
+		}
+	}
+	if err := s.chat.Reset(resetCtx, req.GetSessionId()); err != nil {
 		return nil, status.Error(codes.Internal, "sessiyani tozalab bo'lmadi")
 	}
 	return &alorav1.ResetResponse{Success: true}, nil
@@ -181,12 +239,14 @@ type readyOK struct{}
 func (readyOK) Ready() (bool, string) { return true, "" }
 
 type ServeConfig struct {
-	ServiceToken string
-	AuthRequired bool
-	MaxSessions  int
-	Version      string
-	Ready        observability.Readiness
-	Metrics      *observability.Metrics
+	ServiceToken       string
+	AuthRequired       bool
+	MaxSessions        int
+	MaxMessageChars    int
+	RateLimitPerMinute int
+	Version            string
+	Ready              observability.Readiness
+	Metrics            *observability.Metrics
 }
 
 func Serve(ctx context.Context, addr string, srv *Server, cfg ServeConfig) error {
@@ -194,16 +254,17 @@ func Serve(ctx context.Context, addr string, srv *Server, cfg ServeConfig) error
 	if maxSessions <= 0 {
 		maxSessions = 100
 	}
+	limiter := newRateLimiter(cfg.RateLimitPerMinute)
 	server := grpcgo.NewServer(
 		grpcgo.KeepaliveParams(keepalive.ServerParameters{Time: 30 * time.Second}),
 		grpcgo.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{MinTime: 10 * time.Second, PermitWithoutStream: true}),
 		grpcgo.MaxRecvMsgSize(4<<20), grpcgo.MaxSendMsgSize(4<<20),
 		grpcgo.MaxConcurrentStreams(uint32(maxSessions)),
 		grpcgo.ChainUnaryInterceptor(unaryInterceptors(interceptorOptions{
-			token: cfg.ServiceToken, authRequired: cfg.AuthRequired, metrics: cfg.Metrics, limiter: newRateLimiter(),
+			token: cfg.ServiceToken, authRequired: cfg.AuthRequired, metrics: cfg.Metrics, limiter: limiter,
 		})...),
 		grpcgo.ChainStreamInterceptor(streamInterceptors(interceptorOptions{
-			token: cfg.ServiceToken, authRequired: cfg.AuthRequired, metrics: cfg.Metrics, limiter: newRateLimiter(),
+			token: cfg.ServiceToken, authRequired: cfg.AuthRequired, metrics: cfg.Metrics, limiter: limiter,
 		})...),
 	)
 	alorav1.RegisterAgentServer(server, srv)
