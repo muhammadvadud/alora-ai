@@ -11,6 +11,7 @@ import (
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/joho/godotenv"
+	"github.com/muhammadvadud/alora-agent/gen/alorav1"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 
@@ -97,6 +98,27 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	var reporter grpctransport.Reporter
+	var reportOutbox *backend.Outbox
+	if cfg.Mode == "grpc" {
+		var outboxStore session.OutboxStore
+		if cfg.DB.URL == "" {
+			slog.Warn("backend outbox: in-memory navbat (DATABASE_URL berilmagan)")
+			outboxStore = session.NewMemoryOutbox()
+		} else {
+			outboxStore, err = session.NewPostgresOutbox(ctx, cfg.DB.URL)
+			if err != nil {
+				return fmt.Errorf("postgres outbox: %w", err)
+			}
+		}
+		reportOutbox = backend.NewOutbox(outboxStore, alorav1.NewBackendClient(backendConn), backend.OutboxOptions{Metrics: metrics, Clock: curtains.RealClock{}, Logger: slog.Default()})
+		reporter = reportOutbox
+		go func() {
+			if runErr := reportOutbox.Run(ctx); runErr != nil && ctx.Err() == nil {
+				slog.Error("outbox worker to'xtadi", "error", runErr)
+			}
+		}()
+	}
 	for _, candidate := range tools.Alora(tools.Deps{Catalog: catalog, Calc: calc, State: store, Clock: curtains.RealClock{}}) {
 		if candidate != nil {
 			toolList = append(toolList, candidate)
@@ -124,8 +146,17 @@ func run() error {
 	case "grpc":
 		service := grpctransport.New(chat, grpctransport.Options{
 			ServiceToken: os.Getenv(cfg.GRPC.ServiceTokenEnv), AuthRequired: cfg.GRPC.AuthRequired,
-			MaxSessions: cfg.GRPC.MaxSessions, Ready: syncer, Metrics: metrics,
+			MaxSessions: cfg.GRPC.MaxSessions, Ready: syncer, Metrics: metrics, Reporter: reporter,
 			Health: func() (string, string) {
+				if reportOutbox != nil {
+					pending, dead, pendingErr := reportOutbox.Pending(ctx)
+					if pendingErr != nil {
+						return "degraded", "outbox holatini o'qib bo'lmadi"
+					}
+					if pending > 1000 || dead > 0 {
+						return "degraded", "outbox navbati to'lib qolgan"
+					}
+				}
 				if catalog.View().Stale {
 					return "degraded", "katalog eskirgan"
 				}
