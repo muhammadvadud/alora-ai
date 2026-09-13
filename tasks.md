@@ -6,7 +6,7 @@
 > Har bir ish tugagach shu fayl **o'sha ishning commit'i ichida** yangilanadi.
 > Har task uchun "Qabul" — nima o'tsa bajarilgan hisoblanadi (rules.md §17.5 DoD).
 
-**Umumiy holat:** 86 / 112 bajarildi · LLM fallback, kontrakt 1.1–1.4 live tekshirilgan, docs yangilangan · API kalit kutayotganlar: 1.43, 1.44 SSE, 2.21, 3.2/3.3, 3.7/3.8 live
+**Umumiy holat:** 91 / 112 bajarildi · Bosqich 4: mTLS, arxiv/cleanup, k8s, Grafana tayyor · API kalit kutayotganlar: 1.43, 1.44 SSE, 1.46, 2.21, 2.23, 3.2/3.3, 3.7/3.8, 3.10 · kontrakt kelishuvi: 1.11, 2.19, 4.2, 4.5, 4.9, 4.12 · ADR kerak: 4.4, 4.6
 
 **Bosqich xaritasi:** 0 Poydevor (1 hafta) → 1 MVP (3–4 hafta) → 2 To'liq sotuv sikli (3 hafta) → 3 Ovoz (2–3 hafta) → 4 Sayqal (davomiy)
 
@@ -285,15 +285,15 @@
 - [x] 4.1 Fallback provider (`fallback_provider: claude`) — 2 ketma-ket xato → o'sha navbat qayta; `usage.provider` to'g'ri;
       `alora_llm_fallback_total`. *Qabul:* mock provider xato → fallback ishladi testi.
 - [ ] 4.2 Prompt A/B: `context["prompt_version"]` bilan Django tanlagan versiyani ishlatish (bir nechta versiya cache'da).
-- [ ] 4.3 mTLS (`grpc.tls` bo'limi, sertifikat ENV yo'llari), `docs/DEPLOY.md`.
+- [x] 4.3 mTLS (`grpc.tls` bo'limi, sertifikat ENV yo'llari), `docs/DEPLOY.md`.
 - [ ] 4.4 Semantik qidiruv: pgvector + embedding (`product_search` skoriga `+2` semantik), faqat 10k+ da yoki sifat talab qilsa (ADR kerak).
 - [ ] 4.5 Rasm bo'yicha tavsiya: `ChatRequest.context["image_url"]` → vision model → rang/uslub → `set_context` (proto/kontrakt [!]).
 - [ ] 4.6 Katalog indekslari (agar `search_bench` 5 ms dan oshsa) — ADR.
-- [ ] 4.7 Kubernetes manifestlar (`k8s/agent.yaml`: Deployment, Service ClusterIP, HPA 2–5, PDB), Grafana dashboard JSON (`docs/grafana/`).
-- [ ] 4.8 Tarix arxivlash (`archived_messages`), 90 kunlik tozalash cron (`session.Cleanup`).
+- [x] 4.7 Kubernetes manifestlar (`k8s/agent.yaml`: Deployment, Service ClusterIP, HPA 2–5, PDB), Grafana dashboard JSON (`docs/grafana/`).
+- [x] 4.8 Tarix arxivlash (`archived_messages`), 90 kunlik tozalash cron (`session.Cleanup`).
 - [ ] 4.9 `ResetSession` bilan birga `ArchiveSession` (manager suhbatni yopganda) — kontrakt [!].
-- [ ] 4.10 PDF taklif — Django tomonida; Go faqat `LastQuote` ni `order_draft(quote)` bilan beradi (o'zgarish yo'q, tekshiruv).
-- [ ] 4.11 Oflayn/keshlangan katalog — mobil tomonda; Go'da o'zgarish yo'q (tekshiruv).
+- [x] 4.10 (tekshirildi 2026-09-13: `order_draft(action=quote)` LastQuote/LastCalc + display qaytaradi — PDF Django'da) PDF taklif — Django tomonida; Go faqat `LastQuote` ni `order_draft(quote)` bilan beradi (o'zgarish yo'q, tekshiruv).
+- [x] 4.11 (tekshirildi 2026-09-13: Go'da o'zgarish yo'q; katalog snapshot faqat Django→Go) Oflayn/keshlangan katalog — mobil tomonda; Go'da o'zgarish yo'q (tekshiruv).
 - [ ] 4.12 `ombor qoldig'i` (v2): `stock_check` tool, skorga `+2`, ogohlantirish — faqat buyurtmachi tasdiqlasa.
 
 ---

@@ -1,0 +1,66 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: alora-agent-rules
+spec:
+  groups:
+  - name: alora.rules
+    rules:
+    - alert: AloraCatalogStale
+      expr: alora_catalog_stale > 0 or alora_catalog_age_seconds > 600
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: Katalog stale holatga o'tdi (10 daqiqadan beri yangilanmadi).
+        runbook_url: docs/RUNBOOK.md#1-operatsion-holatlar-va-harakatlar
+    - alert: AloraOutboxDead
+      expr: increase(alora_outbox_dead_total[5m]) > 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: Outbox xabarlari dead holatga o'tmoqda.
+        runbook_url: docs/RUNBOOK.md#1-operatsion-holatlar-va-harakatlar
+    - alert: AloraHighTTFT
+      expr: histogram_quantile(0.95, sum(rate(alora_ttft_seconds_bucket[5m])) by (le))
+        > 2
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: TTFT p95 vaqti 2 sekunddan oshib ketdi.
+        runbook_url: docs/RUNBOOK.md#1-operatsion-holatlar-va-harakatlar
+    - alert: AloraLLMErrorRate
+      expr: sum(rate(alora_llm_errors_total[5m])) / sum(rate(alora_chat_requests_total[5m]))
+        > 0.05
+      for: 5m
+      labels:
+        severity: high
+      annotations:
+        summary: LLM xatolar ulushi 5% dan oshdi.
+        runbook_url: docs/RUNBOOK.md#1-operatsion-holatlar-va-harakatlar
+    - alert: AloraCatalogWatchDisconnected
+      expr: alora_catalog_watch_connected == 0
+      for: 1m
+      labels:
+        severity: high
+      annotations:
+        summary: Katalog watch oqimi uzildi.
+        runbook_url: docs/RUNBOOK.md#1-operatsion-holatlar-va-harakatlar
+    - alert: AloraLLMFallbackIncreasing
+      expr: increase(alora_llm_fallback_total[5m]) > 0
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: LLM fallback ishga tushmoqda.
+        runbook_url: docs/RUNBOOK.md#1-operatsion-holatlar-va-harakatlar
+    - alert: AloraSTTErrorRate
+      expr: sum(rate(alora_chat_requests_total{status="stt_error"}[5m])) > 0
+      for: 5m
+      labels:
+        severity: high
+      annotations:
+        summary: Ovozli STT so'rovlarida xatolar ko'paydi.
+        runbook_url: docs/RUNBOOK.md#1-operatsion-holatlar-va-harakatlar

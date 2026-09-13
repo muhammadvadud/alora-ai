@@ -7,7 +7,9 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/components/tool"
@@ -15,6 +17,7 @@ import (
 	"github.com/muhammadvadud/alora-agent/gen/alorav1"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/muhammadvadud/alora-agent/internal/agent"
 	"github.com/muhammadvadud/alora-agent/internal/backend"
@@ -96,7 +99,11 @@ func run() error {
 	var calc curtains.Calculator
 	if cfg.Mode == "grpc" {
 		token := os.Getenv(cfg.GRPC.ServiceTokenEnv)
-		backendConn, err = backend.Dial(ctx, cfg.Backend.Addr, token)
+		backendCreds, credErr := backend.ClientCredentials(cfg.Backend.TLS)
+		if credErr != nil {
+			return credErr
+		}
+		backendConn, err = backend.DialTLS(ctx, cfg.Backend.Addr, token, backendCreds)
 		if err != nil {
 			return fmt.Errorf("backend ulanishi: %w", err)
 		}
@@ -117,6 +124,10 @@ func run() error {
 	store, err := newStore(ctx, cfg.DB.URL, cfg.DB.AutoMigrate)
 	if err != nil {
 		return err
+	}
+	if archiver, ok := store.(session.Archiver); ok {
+		store = session.WithArchiveOnReset(store, archiver)
+		startArchiveCleanup(ctx, archiver)
 	}
 	var reporter grpctransport.Reporter
 	var reportOutbox *backend.Outbox
@@ -203,7 +214,14 @@ func run() error {
 				return "ok", ""
 			},
 		})
-		return serveGRPC(ctx, cfg, service, metrics, metricsReg, syncer)
+		serverCreds, credErr := grpctransport.ServerCredentials(cfg.GRPC.TLS)
+		if credErr != nil {
+			return credErr
+		}
+		if !cfg.GRPC.TLS.Enabled {
+			serverCreds = nil
+		}
+		return serveGRPC(ctx, cfg, service, metrics, metricsReg, syncer, serverCreds)
 	case "http":
 		// HTTP transport faqat /healthz, /readyz, /metrics (rules.md §0.7).
 		// Katalog/outbox sinxroni (HealthState) gRPC rejimida ulanadi; http rejimida
@@ -298,16 +316,16 @@ func fallbackAPIKey(provider string) string {
 	return os.Getenv(env)
 }
 
-func serveGRPC(ctx context.Context, cfg *config.Config, srv *grpctransport.Server, metrics *observability.Metrics, reg *prometheus.Registry, ready observability.Readiness) error {
+func serveGRPC(ctx context.Context, cfg *config.Config, srv *grpctransport.Server, metrics *observability.Metrics, reg *prometheus.Registry, ready observability.Readiness, creds credentials.TransportCredentials) error {
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	errs := make(chan error, 2)
 	go func() { errs <- httptransport.Serve(runCtx, cfg.HTTP.Addr, reg, ready) }()
 	go func() {
-		errs <- grpctransport.Serve(runCtx, cfg.GRPC.Addr, srv, grpctransport.ServeConfig{
+		errs <- grpctransport.ServeTLS(runCtx, cfg.GRPC.Addr, srv, grpctransport.ServeConfig{
 			ServiceToken: os.Getenv(cfg.GRPC.ServiceTokenEnv), AuthRequired: cfg.GRPC.AuthRequired,
 			MaxSessions: cfg.GRPC.MaxSessions, Metrics: metrics,
-		})
+		}, creds)
 	}()
 	first := <-errs
 	cancel()
@@ -316,6 +334,41 @@ func serveGRPC(ctx context.Context, cfg *config.Config, srv *grpctransport.Serve
 		return first
 	}
 	return second
+}
+
+func startArchiveCleanup(ctx context.Context, archiver session.Archiver) {
+	interval := 24 * time.Hour
+	if raw := os.Getenv("ALORA_SESSION_CLEANUP_INTERVAL"); raw != "" {
+		if parsed, err := time.ParseDuration(raw); err == nil {
+			interval = parsed
+		}
+	}
+	if interval <= 0 {
+		return
+	}
+	ttl := 90 * 24 * time.Hour
+	if raw := os.Getenv("ALORA_SESSION_TTL_DAYS"); raw != "" {
+		if days, err := strconv.Atoi(raw); err == nil && days >= 0 {
+			ttl = time.Duration(days) * 24 * time.Hour
+		}
+	}
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				archived, deleted, err := archiver.Cleanup(ctx, ttl)
+				if err != nil {
+					slog.Error("sessiya arxivi tozalanmadi", "error", err)
+					continue
+				}
+				slog.Info("sessiya arxivi tozalandi", "archived", archived, "deleted", deleted)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 }
 
 func configPath() string {

@@ -46,6 +46,11 @@ grpc:
   auth_required: true
   max_sessions: 100
   keepalive: 30s
+  tls:
+    enabled: false # true bo'lsa mTLS; yo'llar quyidagi ENV nomlaridan olinadi
+    cert_file_env: ALORA_GRPC_TLS_CERT_FILE
+    key_file_env: ALORA_GRPC_TLS_KEY_FILE
+    ca_file_env: ALORA_GRPC_TLS_CA_FILE
 
 # HTTP — faqat /healthz, /readyz, /metrics (biznes endpoint yo'q, alohida port).
 http:
@@ -56,6 +61,11 @@ backend:
   addr: "django:9091" # docker tarmog'ida; dev'da ALORA_BACKEND_ADDR=localhost:9091
   timeout: 5s
   retry: 3
+  tls:
+    enabled: false # true bo'lsa Django bilan mTLS
+    cert_file_env: ALORA_BACKEND_TLS_CERT_FILE
+    key_file_env: ALORA_BACKEND_TLS_KEY_FILE
+    ca_file_env: ALORA_BACKEND_TLS_CA_FILE
 
 # Katalog cache sinxroni (rules.md §4.1). Django hali ulanmaganda falsafiy default —
 # quyidagilar faqat fallback sozlamalar.
