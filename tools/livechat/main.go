@@ -1,6 +1,8 @@
 // livechat — qo'lda live sinov vositasi: gRPC agent bilan bir nechta xabar almashadi va
 // event tartibi, TTFT, token sarfini ko'rsatadi. Ishga tushirish:
-//   go run ./tools/livechat "xabar 1" "xabar 2"
+//
+//	go run ./tools/livechat "xabar 1" "xabar 2"
+//
 // (agent :9095 da, token devtoken — dev sozlamasi).
 package main
 
