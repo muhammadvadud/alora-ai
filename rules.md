@@ -238,8 +238,9 @@ prompt ──► curtains (state, knowledge)
 
 1. Filtrlash → skorlash → tartiblash → `limit`. Skor jadvali TZ §3.1 (**omborda bor +2 — v1 da
    yo'q**, o'chirilgan). Teng ballda `segment`, keyin narx o'sish tartibi, keyin `name` — deterministik.
-2. `kind=accessory` → `price_unit ∈ {per_piece, per_meter}` **va** kategoriya slug `accessories`
-   ostida. `kind=fabric` → `per_sqm`. Katalogda `kind` maydoni yo'q — shu qoida bilan aniqlanadi.
+2. `kind=accessory` → `price_unit ∈ {per_piece, per_meter}`; `kind=fabric` → `per_sqm`. Birlik hal qiladi —
+   kategoriya (`accessories` slug) ixtiyoriy, chunki manager uni har doim to'ldirmasligi mumkin.
+   Katalogda `kind` maydoni yo'q — shu qoida bilan aniqlanadi.
 3. Rang mosligi: `color_name` substring + `color_hex` yaqinligi (CIE76 ΔE < 25 → +1). Sinonim
    lug'ati (`bej/beige/бежевый`) `search_colors.go` da const — bu **biznes-qiymat emas**, til yordamchisi.
 4. Natija ≤ 10 ta, har biri `ProductCard` (TZ §3.1) + `why` (qaysi mezon ball berdi — kodda
