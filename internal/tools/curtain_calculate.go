@@ -44,12 +44,13 @@ func (h *curtainCalcHandler) do(ctx context.Context, a curtainCalcArgs) (curtain
 
 	t, lines, services := compactCalc(v, res)
 	out := curtainCalcResult{
-		Totals:   t,
-		Lines:    lines,
-		Services: services,
-		Display:  displayTotals(res),
-		Warnings: append([]string{}, res.Warnings...),
-		Stale:    stale,
+		Totals:      t,
+		Lines:       lines,
+		Services:    services,
+		Display:     displayTotals(res),
+		Warnings:    append([]string{}, res.Warnings...),
+		Explanation: curtains.Explain(res),
+		Stale:       stale,
 	}
 	if stale {
 		out.Warnings = append(out.Warnings, warnStale)

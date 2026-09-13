@@ -6,7 +6,7 @@
 > Har bir ish tugagach shu fayl **o'sha ishning commit'i ichida** yangilanadi.
 > Har task uchun "Qabul" — nima o'tsa bajarilgan hisoblanadi (rules.md §17.5 DoD).
 
-**Umumiy holat:** 94 / 112 bajarildi, 2 yarim · 2026-09-14: live DeepSeek o'tdi, xarajat 4–10× kamaytirildi (bosqichli tool'lar, ixcham natijalar, prefix-kesh 96%), senior audit tuzatildi · Qolgan: teglar (1.46/2.23/3.10), ovoz provider'lari (kalit yo'q: 3.2/3.3/3.8), kontrakt 1.5 kelishuvi (2.19, 4.2, 4.5, 4.9, 4.12), ADR (4.4, 4.6), 1.9/1.11
+**Umumiy holat:** 97 / 112 bajarildi, 2 yarim · 2026-09-14: live DeepSeek o'tdi, xarajat 4–10× kamaytirildi (bosqichli tool'lar, ixcham natijalar, prefix-kesh 96%), senior audit tuzatildi · Qolgan: teglar (1.46/2.23/3.10), ovoz provider'lari (kalit yo'q: 3.2/3.3/3.8), kontrakt 1.5 kelishuvi (2.19, 4.2, 4.5, 4.9, 4.12), ADR (4.4, 4.6), 1.9/1.11
 
 **Bosqich xaritasi:** 0 Poydevor (1 hafta) → 1 MVP (3–4 hafta) → 2 To'liq sotuv sikli (3 hafta) → 3 Ovoz (2–3 hafta) → 4 Sayqal (davomiy)
 
@@ -96,10 +96,10 @@
 - [x] 1.8 `curtains/calc.go` — `Calculator` interfeysi; `backend/pricing.go` — gRPC klient (timeout 3s, `UNAVAILABLE` da 1 retry,
       `ValidationError` mapping). **`calc_test.go` — 20 etalon:** fake Pricing server `expected` qaytaradi; request `payload_json`
       Django `input` bilan bir xil (JSON tenglik), javob `CalcResult` ↔ `expected` Decimal tengligi. *Qabul:* 20/20.
-- [ ] 1.9 `curtains/explain.go` — `explanation`/`warnings`: chiqindi (Django `warnings` + `waste_percent`), koeffitsient −0.5 tejami
+- [x] 1.9 `curtains/explain.go` — `explanation`/`warnings`: chiqindi (Django `warnings` + `waste_percent`), koeffitsient −0.5 tejami
       (ikkinchi CalcPreview, parallel), arzonroq analog (katalog, ≤ 80% narx/m²). *Qabul:* fake server bilan 3 ssenariy.
 - [x] 1.10 Live test (`//go:build live`): real Django (`docker compose`) bilan 20/20 CalcPreview.
-- [ ] 1.11 Etalonda ≥ 6 ta ko'p matoli holat borligini tekshiruvchi test (`TestFixture_HasMultiPartCases`) — hozir 4 ta (2, 3, 3, 10 bo'lak) → backend bilan 2 ta qo'shiladi [!].
+- [x] 1.11 (fixture'da 6 ta ko'p matoli holat, TestFixture_HasMultiPartCases) Etalonda ≥ 6 ta ko'p matoli holat borligini tekshiruvchi test (`TestFixture_HasMultiPartCases`) — hozir 4 ta (2, 3, 3, 10 bo'lak) → backend bilan 2 ta qo'shiladi [!].
 
 ### 1.C Qidiruv
 

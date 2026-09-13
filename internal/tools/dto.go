@@ -109,13 +109,14 @@ type calcServiceLine struct {
 }
 
 type curtainCalcResult struct {
-	Totals   *calcTotals       `json:"totals,omitempty"`
-	Lines    []calcLine        `json:"lines,omitempty"`
-	Services []calcServiceLine `json:"services,omitempty"`
-	Display  any               `json:"display,omitempty"` // o'qiladigan summalar: {"subtotal":"5 382 000 so'm",...}
-	Warnings []string          `json:"warnings,omitempty"`
-	Stale    bool              `json:"stale,omitempty"`
-	Error    string            `json:"error,omitempty"`
+	Totals      *calcTotals       `json:"totals,omitempty"`
+	Lines       []calcLine        `json:"lines,omitempty"`
+	Services    []calcServiceLine `json:"services,omitempty"`
+	Display     any               `json:"display,omitempty"` // o'qiladigan summalar: {"subtotal":"5 382 000 so'm",...}
+	Warnings    []string          `json:"warnings,omitempty"`
+	Explanation []string          `json:"explanation,omitempty"` // curtains.Explain — izoh/tejash tavsiyalari (1.9)
+	Stale       bool              `json:"stale,omitempty"`
+	Error       string            `json:"error,omitempty"`
 }
 
 // ---- build_options ----
@@ -158,13 +159,14 @@ type priceQuoteArgs struct {
 }
 
 type priceQuoteResult struct {
-	Totals   *calcTotals       `json:"totals,omitempty"`
-	Lines    []calcLine        `json:"lines,omitempty"`
-	Services []calcServiceLine `json:"services,omitempty"`
-	Display  any               `json:"display,omitempty"` // o'qiladigan summalar, shu jumladan prepayment/balance
-	Warnings []string          `json:"warnings,omitempty"`
-	Stale    bool              `json:"stale,omitempty"`
-	Error    string            `json:"error,omitempty"`
+	Totals      *calcTotals       `json:"totals,omitempty"`
+	Lines       []calcLine        `json:"lines,omitempty"`
+	Services    []calcServiceLine `json:"services,omitempty"`
+	Display     any               `json:"display,omitempty"` // o'qiladigan summalar, shu jumladan prepayment/balance
+	Warnings    []string          `json:"warnings,omitempty"`
+	Explanation []string          `json:"explanation,omitempty"` // curtains.Explain — izoh/tejash tavsiyalari (1.9)
+	Stale       bool              `json:"stale,omitempty"`
+	Error       string            `json:"error,omitempty"`
 }
 
 // ---- set_context ----
