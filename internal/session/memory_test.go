@@ -7,7 +7,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 	"github.com/shopspring/decimal"
 
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
 
 func TestMemoryStore(t *testing.T) {

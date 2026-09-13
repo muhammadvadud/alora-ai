@@ -17,7 +17,7 @@
 ### 0.A Repo va shablon
 
 - [x] 0.1 `UzStack/agent` shablonini `alora-agent` sifatida ko'chirish; `go.mod` moduli
-      `github.com/muhammadvadud/alora-agent`; barcha importlar yangilanadi.
+      `github.com/muhammadvadud/alora-ai`; barcha importlar yangilanadi.
       *Qabul:* `go build ./...` toza.
 - [x] 0.2 Keraksizni (telegram ham, foydalanuvchi qarori) o'chirish: `internal/rocketpark`, `internal/weather`, `internal/transport/telegram`,
       `k8s/rocketpark-bot.yaml`, `tools/rocketpark.go`, `tools/weather.go`, mos testlar; `go mod tidy`.
@@ -38,7 +38,7 @@
 - [x] 0.8 `buf.yaml`, `buf.gen.yaml` (`protoc-gen-go`, `protoc-gen-go-grpc`, versiya pin); `gen/alorav1/`.
 - [x] 0.9 `scripts/import_proto.sh` — backend `protos/alora.proto` → `proto/alora.proto` (diff ko'rsatadi,
       backend `scripts/export_proto.sh` bilan juft). *Qabul:* `make proto` → `gen/` yangilanadi, build toza.
-- [x] 0.10 **Backend bilan (P6):** `go_package` = `github.com/muhammadvadud/alora-agent/gen/alorav1;alorav1`.
+- [x] 0.10 **Backend bilan (P6):** `go_package` = `github.com/muhammadvadud/alora-ai/gen/alorav1;alorav1`.
       Backend tomoni: `feat/proto-agent-contract-ext` branch'ida bajarildi (kontrakt 1.1). Go: `import_proto` + `buf generate` (0.9 bilan).
 - [x] 0.11 **Backend bilan (P1):** `CatalogSnapshot` 8–11 (`service_prices`, `discount_tiers`, `discount_policy`,
       `order_defaults`) + delta entity'lari — backend'da bajarildi (kontrakt 1.1, decimal matn). Go: mapping (2.17).
@@ -192,7 +192,7 @@
       mehmonxona hi-tech to'liq oqim (need→calc→quote), noto'g'ri o'lcham (L=50), katalogda yo'q mahsulot, stale katalog,
       chegirma chegarasi. *Qabul:* `go test ./tests/golden/...` o'tadi; `forbid_content_regex` narx uchun ishlaydi.
 - [x] 1.42 `hallucination_test.go` (rules.md §14.5). *Qabul:* CI'da `-run Halluc` alohida job.
-- [ ] 1.43 Live sinov (`//go:build live`, DeepSeek): 5 ssenariy, TTFT/tool soni `docs/LIVE-RUNS.md` ga.
+- [x] 1.43 (2026-09-14: deepseek-v4-pro, 3 xabar, set_context→product_search→curtain_calculate→price_quote, TTFT 2.3–4.2 s, narxlar tool'dan) Live sinov (`//go:build live`, DeepSeek): 5 ssenariy, TTFT/tool soni `docs/LIVE-RUNS.md` ga.
       *Qabul:* TTFT p95 ≤ 1.5 s, 2-tool javob ≤ 6 s (bo'lmasa `max_tokens`/prompt hajmi sozlanadi, natija yoziladi).
 - [~] 1.44 Backend bilan integratsiya sinovi (mock provider bilan Django SSE oxirigacha o'tdi; real LLM kalit kutmoqda): `docker compose` (backend + agent) → Django `POST /api/v1/chat/.../messages/` SSE →
       Go → javob. *Qabul:* mobil/`curl -N` da `content` oqimi va `products` keladi; Django `UsageRecord` yozilgan.

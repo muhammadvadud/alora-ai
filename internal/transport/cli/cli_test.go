@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/muhammadvadud/alora-agent/internal/agent"
+	"github.com/muhammadvadud/alora-ai/internal/agent"
 )
 
 func TestRenderThinkingChunksWithSingleLabel(t *testing.T) {

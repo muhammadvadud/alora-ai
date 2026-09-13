@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/muhammadvadud/alora-agent/gen/alorav1"
-	"github.com/muhammadvadud/alora-agent/internal/agent"
+	"github.com/muhammadvadud/alora-ai/gen/alorav1"
+	"github.com/muhammadvadud/alora-ai/internal/agent"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 

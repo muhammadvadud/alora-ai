@@ -9,7 +9,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
 
 // Archiver sessiya tarixini o'chirishdan oldin qayta tiklanadigan arxivga ko'chiradi.

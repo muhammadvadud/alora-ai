@@ -3259,9 +3259,9 @@ const file_proto_alora_proto_rawDesc = "" +
 	"\n" +
 	"LogMessage\x12\x1b.alora.v1.MessageLogRequest\x1a\r.alora.v1.Ack2U\n" +
 	"\aPricing\x12J\n" +
-	"\vCalcPreview\x12\x1c.alora.v1.CalcPreviewRequest\x1a\x1d.alora.v1.CalcPreviewResponseBF\n" +
+	"\vCalcPreview\x12\x1c.alora.v1.CalcPreviewRequest\x1a\x1d.alora.v1.CalcPreviewResponseBC\n" +
 	"\n" +
-	"alora.grpcZ8github.com/muhammadvadud/alora-agent/gen/alorav1;alorav1b\x06proto3"
+	"alora.grpcZ5github.com/muhammadvadud/alora-ai/gen/alorav1;alorav1b\x06proto3"
 
 var (
 	file_proto_alora_proto_rawDescOnce sync.Once

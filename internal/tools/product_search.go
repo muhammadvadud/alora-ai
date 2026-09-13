@@ -7,8 +7,8 @@ import (
 	"github.com/cloudwego/eino/components/tool/utils"
 	"github.com/shopspring/decimal"
 
-	"github.com/muhammadvadud/alora-agent/internal/agent"
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/agent"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
 
 // ProductSearch — mijoz talabiga mos mato/aksessuarni LOKAL katalogdan topadi (rules §4.3).

@@ -7,8 +7,8 @@ import (
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
 
-	"github.com/muhammadvadud/alora-agent/internal/agent"
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/agent"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
 
 // BuildOptions bir chaqiruvda uchta to'liq paketni tayyorlaydi. Har bir narx

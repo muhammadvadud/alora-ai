@@ -8,7 +8,7 @@ import (
 
 	"github.com/cloudwego/eino/schema"
 
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
 
 // memoryStore Store'ning jarayon-ichi (in-memory) implementatsiyasi.

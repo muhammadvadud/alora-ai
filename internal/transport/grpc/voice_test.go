@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/muhammadvadud/alora-agent/gen/alorav1"
-	"github.com/muhammadvadud/alora-agent/internal/agent"
-	"github.com/muhammadvadud/alora-agent/internal/voice"
+	"github.com/muhammadvadud/alora-ai/gen/alorav1"
+	"github.com/muhammadvadud/alora-ai/internal/agent"
+	"github.com/muhammadvadud/alora-ai/internal/voice"
 	"google.golang.org/grpc/metadata"
 )
 

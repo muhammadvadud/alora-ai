@@ -10,7 +10,7 @@ import (
 
 	"github.com/cloudwego/eino/components/tool"
 
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
 
 // StateStore — sessiya holatini o'qish/yozish (iste'molchi tomonda e'lon qilingan, rules §3.11).

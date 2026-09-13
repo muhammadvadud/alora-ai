@@ -3,8 +3,8 @@ package grpc
 import (
 	"encoding/json"
 
-	"github.com/muhammadvadud/alora-agent/gen/alorav1"
-	"github.com/muhammadvadud/alora-agent/internal/agent"
+	"github.com/muhammadvadud/alora-ai/gen/alorav1"
+	"github.com/muhammadvadud/alora-ai/internal/agent"
 )
 
 // toProto — pb mapping'ining yagona joyi; transport agent Event kontraktini o'zgartirmaydi.

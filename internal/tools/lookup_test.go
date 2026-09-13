@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
 
 // lookupCatalog — fason_lookup va knowledge_lookup uchun o'z katalogi

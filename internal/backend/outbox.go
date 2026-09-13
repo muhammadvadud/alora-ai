@@ -7,10 +7,10 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/muhammadvadud/alora-agent/gen/alorav1"
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
-	"github.com/muhammadvadud/alora-agent/internal/observability"
-	"github.com/muhammadvadud/alora-agent/internal/session"
+	"github.com/muhammadvadud/alora-ai/gen/alorav1"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/observability"
+	"github.com/muhammadvadud/alora-ai/internal/session"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 

@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
-	"github.com/muhammadvadud/alora-agent/internal/prompt"
-	"github.com/muhammadvadud/alora-agent/internal/session"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/prompt"
+	"github.com/muhammadvadud/alora-ai/internal/session"
 )
 
 // stateHook faqat event uchun o'qiydi: state'ni tool'lar o'zi yozadi, shuning

@@ -15,7 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/muhammadvadud/alora-agent/internal/observability"
+	"github.com/muhammadvadud/alora-ai/internal/observability"
 )
 
 // Serve HTTP serverini ishga tushiradi va ctx bekor bo'lganda 5 soniya ichida

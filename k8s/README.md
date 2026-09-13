@@ -29,12 +29,12 @@ kubectl get hpa,pdb -n alora
 
 ## TAG almashtirish
 
-Image: `ghcr.io/muhammadvadud/alora-agent:${TAG}` — CI/kustomize almashtiradi.
+Image: `ghcr.io/muhammadvadud/alora-ai:${TAG}` — CI/kustomize almashtiradi.
 
 ```bash
 # CI (kustomize):
 kubectl set image deploy/alora-agent \
-  alora-agent=ghcr.io/muhammadvadud/alora-agent:v0.1.0 -n alora
+  alora-agent=ghcr.io/muhammadvadud/alora-ai:v0.1.0 -n alora
 
 # qo'lda (sed + apply):
 sed "s|\${TAG}|v0.1.0|" k8s/agent.yaml | kubectl apply -f -

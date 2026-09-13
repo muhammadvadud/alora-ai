@@ -6,7 +6,7 @@ import (
 
 	"github.com/cloudwego/eino/schema"
 
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
 
 // Store sessiya bo'yicha suhbat tarixini saqlaydi.

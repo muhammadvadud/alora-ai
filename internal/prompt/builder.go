@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
 
 // Builder system prompt yig'uvchi.

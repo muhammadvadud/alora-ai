@@ -10,7 +10,7 @@ import (
 	"github.com/cloudwego/eino/components/tool/utils"
 	"github.com/shopspring/decimal"
 
-	"github.com/muhammadvadud/alora-agent/internal/curtains"
+	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
 
 // CurtainCalculate — kompozitsion material hisobi. Formula Django'da (ADR-009):

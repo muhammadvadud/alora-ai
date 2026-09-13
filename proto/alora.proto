@@ -8,7 +8,7 @@ syntax = "proto3";
 package alora.v1;
 
 option java_package = "alora.grpc";
-option go_package   = "github.com/muhammadvadud/alora-agent/gen/alorav1;alorav1";
+option go_package   = "github.com/muhammadvadud/alora-ai/gen/alorav1;alorav1";
 
 // ──────────────────────────────────────────────
 // Bo'sh xabarlar

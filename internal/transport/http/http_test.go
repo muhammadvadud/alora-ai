@@ -11,7 +11,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/muhammadvadud/alora-agent/internal/observability"
+	"github.com/muhammadvadud/alora-ai/internal/observability"
 )
 
 // fakeReadiness — /readyz testi uchun boshqariladigan tayyorlik.

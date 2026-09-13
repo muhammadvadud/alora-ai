@@ -165,7 +165,7 @@ spec:
       containers:
         - name: alora-agent
           # ${TAG} — kustomize/CI almashtiradi (masalan v0.1.0). Qo'lda: sed/argocd.
-          image: ghcr.io/muhammadvadud/alora-agent:${TAG}
+          image: ghcr.io/muhammadvadud/alora-ai:${TAG}
           imagePullPolicy: IfNotPresent
           args:
             - --config

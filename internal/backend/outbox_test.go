@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/muhammadvadud/alora-agent/gen/alorav1"
-	"github.com/muhammadvadud/alora-agent/internal/agent"
-	"github.com/muhammadvadud/alora-agent/internal/session"
+	"github.com/muhammadvadud/alora-ai/gen/alorav1"
+	"github.com/muhammadvadud/alora-ai/internal/agent"
+	"github.com/muhammadvadud/alora-ai/internal/session"
 	"google.golang.org/grpc"
 )
 
