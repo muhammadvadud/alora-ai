@@ -62,6 +62,23 @@ type SessionState struct {
 	UpdatedAt       time.Time       `json:"updated_at,omitempty"`
 }
 
+// OrderDraft — Django'ga yuboriladigan buyurtma qoralamasi (rules §5.8). Faqat
+// mijoz ma'lumotlari va itemlar; session/user/tenant ctx'dan to'ldiriladi (backend).
+type OrderDraft struct {
+	CustomerName  string
+	CustomerPhone string
+	Address       string
+	ItemsJSON     string
+	Note          string
+}
+
+// OrderDraftResult — SaveOrderDraft javobi. Telefon/ism YO'Q (rules §1.6, §16.3) —
+// sotuvchiga faqat qisqa referens qaytadi.
+type OrderDraftResult struct {
+	OrderID     string
+	OrderNumber string
+}
+
 // NewSessionState boshlang'ich holatni qaytaradi (need).
 func NewSessionState() SessionState {
 	return SessionState{

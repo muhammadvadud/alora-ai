@@ -91,6 +91,45 @@ type curtainCalcResult struct {
 	Error       string   `json:"error,omitempty"`
 }
 
+// ---- build_options ----
+
+type buildOptionsArgs struct {
+	BudgetMax    float64 `json:"budget_max,omitempty" jsonschema:"description=uchta paket uchun maksimal budjet so'mda"`
+	Room         string  `json:"room,omitempty" jsonschema:"description=xona turi"`
+	Style        string  `json:"style,omitempty" jsonschema:"description=uslub"`
+	Pattern      string  `json:"pattern,omitempty" jsonschema:"description=bezak turi"`
+	Transparency string  `json:"transparency,omitempty" jsonschema:"description=shaffoflik"`
+	Color        string  `json:"color,omitempty" jsonschema:"description=istalgan rang"`
+}
+
+type buildOptionResult struct {
+	Tier        string              `json:"tier"`
+	Why         string              `json:"why,omitempty"`
+	Parts       []curtainOptionPart `json:"parts,omitempty"`
+	Accessories []calcAccessory     `json:"accessories,omitempty"`
+	Services    []string            `json:"services,omitempty"`
+	Calc        any                 `json:"calc,omitempty"`
+	Display     any                 `json:"display,omitempty"`
+	Total       string              `json:"total,omitempty"`
+	Error       string              `json:"error,omitempty"`
+}
+
+type curtainOptionPart struct {
+	Role      string `json:"role"`
+	VariantID string `json:"variant_id"`
+	WidthM    string `json:"width_m"`
+	HeightM   string `json:"height_m"`
+	Coef      string `json:"coef"`
+}
+
+type buildOptionsResult struct {
+	Options    []buildOptionResult `json:"options,omitempty"`
+	Comparison []string            `json:"comparison,omitempty"`
+	Warnings   []string            `json:"warnings,omitempty"`
+	Stale      bool                `json:"stale,omitempty"`
+	Error      string              `json:"error,omitempty"`
+}
+
 // ---- price_quote ----
 
 type priceQuoteArgs struct {
@@ -191,4 +230,31 @@ type knowledgeLookupResult struct {
 	Warnings []string            `json:"warnings,omitempty"`
 	Stale    bool                `json:"stale,omitempty"`
 	Error    string              `json:"error,omitempty"`
+}
+
+// ---- order_draft ----
+
+type orderDraftArgs struct {
+	Action        string  `json:"action"                  jsonschema:"description=amal: quote — joriy taklif, draft — mijoz ma'lumotlarini to'ldirish bosqichi, confirm — buyurtma qoralamasini saqlash,enum=quote,enum=draft,enum=confirm"`
+	CustomerName  string  `json:"customer_name,omitempty" jsonschema:"description=mijoz ismi — SOTUVCHI kiritadi, mijozdan so'ralmaydi"`
+	CustomerPhone string  `json:"customer_phone,omitempty" jsonschema:"description=mijoz telefoni, masalan +998901234567 — SOTUVCHI kiritadi"`
+	Address       string  `json:"address,omitempty"       jsonschema:"description=yetkazib berish manzili — SOTUVCHI kiritadi"`
+	Note          string  `json:"note,omitempty"          jsonschema:"description=buyurtmaga qo'shimcha eslatma"`
+	DeadlineDays  int     `json:"deadline_days,omitempty" jsonschema:"description=bajarish muddati kunlarda; bo'sh bo'lsa do'kon standarti"`
+	PrepaymentPct float64 `json:"prepayment_pct,omitempty" jsonschema:"description=avans foizi; bo'sh bo'lsa do'kon standarti"`
+}
+
+type orderDraftResult struct {
+	Quote        any      `json:"quote,omitempty"`         // Django taklifi (LastQuote) — action=quote
+	Display      any      `json:"display,omitempty"`       // o'qiladigan summalar: {"subtotal":"...","total":"..."}
+	Missing      []string `json:"missing,omitempty"`       // yetishmayotgan mijoz maydonlari — action=draft
+	Hint         string   `json:"hint,omitempty"`          // AI'ga nega missing borligini tushuntiradi
+	Ready        bool     `json:"ready,omitempty"`         // hamma maydon to'ldi, confirm mumkin
+	Summary      any      `json:"summary,omitempty"`       // action=draft tayyor bo'lganda qisqa referens
+	OrderID      string   `json:"order_id,omitempty"`      // Django buyurtma UUID si — action=confirm
+	OrderNumber  string   `json:"order_number,omitempty"`  // ALR-2026-000123 — action=confirm
+	CustomerRef  string   `json:"customer_ref,omitempty"`  // "mijoz #1234" — ism/telefon EMAS (rules §1.6)
+	TotalDisplay string   `json:"total_display,omitempty"` // yakuniy summa — action=confirm
+	Warnings     []string `json:"warnings,omitempty"`
+	Error        string   `json:"error,omitempty"`
 }

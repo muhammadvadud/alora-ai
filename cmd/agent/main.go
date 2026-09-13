@@ -119,7 +119,23 @@ func run() error {
 			}
 		}()
 	}
-	for _, candidate := range tools.Alora(tools.Deps{Catalog: catalog, Calc: calc, State: store, Clock: curtains.RealClock{}}) {
+	deps := tools.Deps{Catalog: catalog, Calc: calc, State: store, Clock: curtains.RealClock{}}
+	if backendConn != nil {
+		// Buyurtma qoralamasi faqat gRPC rejimida (CLI'da foydalanuvchi mijoz emas).
+		// nil client interfeysdan non-nil bo'lib qolmasligi uchun shart qo'yiladi —
+		// aks holda order_draft "xizmat ulanmagan" deb ayta olmay, panic beradi.
+		deps.Orders = backend.NewOrderClient(backendConn, cfg.Backend.Timeout)
+	}
+	for _, candidate := range tools.Alora(deps) {
+		if candidate != nil {
+			toolList = append(toolList, candidate)
+		}
+	}
+	// AloraLookups (fason/knowledge) har doim qo'shiladi: knowledge_lookup ideal holatda
+	// faqat len(view.Knowledge()) > cfg.Knowledge.InlineMax bo'lganda register bo'lishi
+	// kerak edi (rules §4.6.2), lekin startup'da katalog hali sinxronlanmagan bo'lishi
+	// mumkin — dinamik shartni keyin hal qilamiz.
+	for _, candidate := range tools.AloraLookups(deps) {
 		if candidate != nil {
 			toolList = append(toolList, candidate)
 		}

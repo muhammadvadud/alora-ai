@@ -106,7 +106,7 @@ func ctxFor(role curtains.UserRole) (context.Context, *agent.ProductCollector) {
 
 func TestAlora_ConstructorsAndNames(t *testing.T) {
 	dp, _, _ := deps(t)
-	want := map[string]bool{"product_search": true, "curtain_calculate": true, "price_quote": true, "set_context": true}
+	want := map[string]bool{"product_search": true, "curtain_calculate": true, "price_quote": true, "build_options": true, "order_draft": true, "set_context": true}
 	for _, tl := range Alora(dp) {
 		info, err := tl.Info(context.Background())
 		if err != nil || !want[info.Name] {

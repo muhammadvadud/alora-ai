@@ -1,0 +1,41 @@
+name: "uchta paket va arzonroq e'tirozi"
+role: employee
+
+steps:
+  - user: "Mehmonxona uchun zamonaviy parda kerak."
+    llm:
+      - tools:
+          - name: set_context
+            args:
+              room: living
+              style: hi_tech
+              pattern: plain
+      - text: "O'lchamlarni aniqlaymiz."
+    expect_tools: ["set_context"]
+
+  - user: "Karniz 4 metr, balandlik 2.6 metr."
+    llm:
+      - tools:
+          - name: curtain_calculate
+            args:
+              cornice_length_m: 4
+              height_m: 2.6
+              parts:
+                - variant_id: v-hitech-grafit
+                  role: portyera
+                  coefficient: 2.5
+      - text: "O'lchov saqlandi."
+    expect_tools: ["curtain_calculate"]
+    expect_stage: calc
+
+  - user: "Arzonroq, o'rtacha va premium variantlarni ko'rsating."
+    llm:
+      - tools:
+          - name: build_options
+            args: {}
+      - text: "Uchta paket tayyor."
+    expect_tools: ["build_options"]
+    expect_stage: variants
+    expect_products: true
+    forbid_price_outside_tools: true
+    forbid_content_regex: ["\\d[\\d\\s]{5,}\\s*so'm"]

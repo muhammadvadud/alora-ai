@@ -6,7 +6,7 @@
 > Har bir ish tugagach shu fayl **o'sha ishning commit'i ichida** yangilanadi.
 > Har task uchun "Qabul" — nima o'tsa bajarilgan hisoblanadi (rules.md §17.5 DoD).
 
-**Umumiy holat:** 71 / 112 bajarildi · Bosqich 1 deyarli (1.43/1.44 LLM kalitini kutmoqda) · 2.A outbox, 2.7–2.9, 3.4 tayyor · go test -race yashil, golangci-lint 0 issues
+**Umumiy holat:** 79 / 112 bajarildi · 2.A–2.D tayyor (build_options, order_draft), 3.1/3.4/3.5 · go test -race yashil, golangci-lint 0
 
 **Bosqich xaritasi:** 0 Poydevor (1 hafta) → 1 MVP (3–4 hafta) → 2 To'liq sotuv sikli (3 hafta) → 3 Ovoz (2–3 hafta) → 4 Sayqal (davomiy)
 
@@ -223,23 +223,23 @@
 
 ### 2.C Variantlar (build_options)
 
-- [ ] 2.10 `curtains/variants.go` — 3 paket (`economy/standard/premium`), `coef_*` kalitlari (fallback `coef_default`),
+- [x] 2.10 `curtains/variants.go` — 3 paket (`economy/standard/premium`), `coef_*` kalitlari (fallback `coef_default`),
       qatlam tarkibi, invariant `economy ≤ standard ≤ premium` (qayta urinish ≤ 3), bo'sh segment → `null` + warning,
       qisqa taqqoslash matni (kodda, LLM emas: "Premium o'rtachadan 2.1 mln qimmat: astar + lambrekan + yangi karniz").
       *Qabul:* `variants_test.go` — tartib invarianti 50 random katalogda (property test), bo'sh segment.
-- [ ] 2.11 `tools/build_options.go` — adapter; `KindProducts` ga 3 paket mahsulotlari; state `Stage=variants`, `ChosenVariants`.
-- [ ] 2.12 Golden: "3 variant → 'arzonroq' e'tirozi → o'rtacha paketda K 2.5→2.0" ssenariysi.
+- [x] 2.11 `tools/build_options.go` — adapter; `KindProducts` ga 3 paket mahsulotlari; state `Stage=variants`, `ChosenVariants`.
+- [x] 2.12 Golden: "3 variant → 'arzonroq' e'tirozi → o'rtacha paketda K 2.5→2.0" ssenariysi.
 
 ### 2.D Buyurtma qoralamasi
 
-- [ ] 2.13 `tools/order_draft.go` — `action=quote|draft|confirm`; `missing[]`; `confirm` → `backend.SaveOrderDraft` sinxron 5s,
+- [x] 2.13 `tools/order_draft.go` — `action=quote|draft|confirm`; `missing[]`; `confirm` → `backend.SaveOrderDraft` sinxron 5s,
       `items_json` = `LastQuote` (Django `OrderMeasurement/Part/Accessory` shakli — backend serializer bilan kelishiladi [!]);
       `customer_ref` bilan PII maskalash; natija `order_id`, `order_number`. *Qabul:* test — missing ketma-ketligi, Django xatosi,
-      PII model kontekstiga tushmagani (`LogMessage` payload'ida telefon yo'q).
-- [!] 2.14 **Backend bilan:** `OrderDraftRequest.items_json` sxemasi (`calc_cases.json` `input` formati bilan bir xil deb taklif) —
-      `GO-CONTRACT.md` ga yoziladi.
+      PII model kontekstiga tushmagani (confirm natijasida telefon/ism yo'q, faqat `customer_ref`).
+- [x] 2.14 **Backend bilan:** `OrderDraftRequest.items_json` sxemasi (`calc_cases.json` `input` formati bilan bir xil deb taklif) —
+      Go tomoni: `items_json` = `CalcInput.MarshalJSON()` (Django payload sxemasi, `GO-CONTRACT.md` ga yoziladi).
 - [x] 2.15 `set_context` tool (ADR-003) — `tools/set_context.go`, `dto`; `NextQuestion` qaytaradi. *Qabul:* test + golden'da ishlatiladi.
-- [ ] 2.16 `main.go` ro'yxat: + `BuildOptions`, `OrderDraft`, `FasonLookup`, `KnowledgeLookup?`, `SetContext`.
+- [x] 2.16 `main.go` ro'yxat: + `BuildOptions`, `OrderDraft`, `FasonLookup`, `KnowledgeLookup?`, `SetContext`.
 
 ### 2.E Sinxron kengaytmalar (proto P1–P3 kelgach)
 
@@ -262,12 +262,12 @@
 
 ## Bosqich 3 — Ovoz (STT/TTS, VoiceChat, barge-in)
 
-- [ ] 3.1 `voice/voice.go` — `STT`, `TTS` interfeyslari, `Usage`, registry (`init()/register`), config'dan `New`.
+- [x] 3.1 `voice/voice.go` — `STT`, `TTS` interfeyslari, `Usage`, registry (`init()/register`), config'dan `New`.
 - [ ] 3.2 `voice/whisper.go` (OpenAI Whisper API, `uz`/`ru`, auto), `voice/gemini_stt.go` (zaxira).
       *Qabul:* HTTP mock bilan test; kalit ENV.
 - [ ] 3.3 `voice/elevenlabs.go` (stream chunk), `voice/google_tts.go` (zaxira, uz ovozi). *Qabul:* mock test.
 - [x] 3.4 `voice/normalize.go` — raqam→so'z (uz lotin/kirill, ru), `m²`, `K=2.5`, telefon o'qilmaydi. 100% test, 40+ holat.
-- [ ] 3.5 `voice/sentence.go` — jumla chegarasi detektori (`. ! ?` + bo'sh joy, 120 belgi, qisqartmalar `sm.`, `mln.`). Test.
+- [x] 3.5 `voice/sentence.go` — jumla chegarasi detektori (`. ! ?` + bo'sh joy, 120 belgi, qisqartmalar `sm.`, `mln.`). Test.
 - [ ] 3.6 `transport/grpc/voice.go` — `VoiceChat` bidirectional: chunk bufer → `is_final` → STT → `transcript` event →
       `Chat.Stream` → `text` event'lar + jumla-jumla TTS goroutine → `audio` event; barge-in (`cancel()` yangi chunk'da);
       `stt_seconds/tts_chars` `done.usage` ga; STT xatosi → `error kind=stt`, sessiya tirik.
