@@ -2831,6 +2831,139 @@ func (x *Ack) GetMessage() string {
 	return ""
 }
 
+type CalcPreviewRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// calc_cases.json dagi input sxemasi.
+	PayloadJson string `protobuf:"bytes,1,opt,name=payload_json,json=payloadJson,proto3" json:"payload_json,omitempty"`
+	// employee | manager | admin — qo'lda chegirma chegarasi uchun.
+	UserRole      string `protobuf:"bytes,2,opt,name=user_role,json=userRole,proto3" json:"user_role,omitempty"`
+	TenantId      string `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	SessionId     string `protobuf:"bytes,4,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CalcPreviewRequest) Reset() {
+	*x = CalcPreviewRequest{}
+	mi := &file_proto_alora_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CalcPreviewRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CalcPreviewRequest) ProtoMessage() {}
+
+func (x *CalcPreviewRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_alora_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CalcPreviewRequest.ProtoReflect.Descriptor instead.
+func (*CalcPreviewRequest) Descriptor() ([]byte, []int) {
+	return file_proto_alora_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *CalcPreviewRequest) GetPayloadJson() string {
+	if x != nil {
+		return x.PayloadJson
+	}
+	return ""
+}
+
+func (x *CalcPreviewRequest) GetUserRole() string {
+	if x != nil {
+		return x.UserRole
+	}
+	return ""
+}
+
+func (x *CalcPreviewRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *CalcPreviewRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+type CalcPreviewResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// calc_cases.json dagi expected sxemasi.
+	ResultJson string `protobuf:"bytes,1,opt,name=result_json,json=resultJson,proto3" json:"result_json,omitempty"`
+	// Umumiy xato matni; muvaffaqiyatda bo'sh.
+	Error string `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	// Maydon xatolari JSON ko'rinishida.
+	ErrorFieldsJson string `protobuf:"bytes,3,opt,name=error_fields_json,json=errorFieldsJson,proto3" json:"error_fields_json,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CalcPreviewResponse) Reset() {
+	*x = CalcPreviewResponse{}
+	mi := &file_proto_alora_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CalcPreviewResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CalcPreviewResponse) ProtoMessage() {}
+
+func (x *CalcPreviewResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_alora_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CalcPreviewResponse.ProtoReflect.Descriptor instead.
+func (*CalcPreviewResponse) Descriptor() ([]byte, []int) {
+	return file_proto_alora_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *CalcPreviewResponse) GetResultJson() string {
+	if x != nil {
+		return x.ResultJson
+	}
+	return ""
+}
+
+func (x *CalcPreviewResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *CalcPreviewResponse) GetErrorFieldsJson() string {
+	if x != nil {
+		return x.ErrorFieldsJson
+	}
+	return ""
+}
+
 var File_proto_alora_proto protoreflect.FileDescriptor
 
 const file_proto_alora_proto_rawDesc = "" +
@@ -3100,7 +3233,18 @@ const file_proto_alora_proto_rawDesc = "" +
 	"tokens_out\x18\t \x01(\x05R\ttokensOut\"9\n" +
 	"\x03Ack\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage2\xf0\x01\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\x90\x01\n" +
+	"\x12CalcPreviewRequest\x12!\n" +
+	"\fpayload_json\x18\x01 \x01(\tR\vpayloadJson\x12\x1b\n" +
+	"\tuser_role\x18\x02 \x01(\tR\buserRole\x12\x1b\n" +
+	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x04 \x01(\tR\tsessionId\"x\n" +
+	"\x13CalcPreviewResponse\x12\x1f\n" +
+	"\vresult_json\x18\x01 \x01(\tR\n" +
+	"resultJson\x12\x14\n" +
+	"\x05error\x18\x02 \x01(\tR\x05error\x12*\n" +
+	"\x11error_fields_json\x18\x03 \x01(\tR\x0ferrorFieldsJson2\xf0\x01\n" +
 	"\x05Agent\x124\n" +
 	"\x04Chat\x12\x15.alora.v1.ChatRequest\x1a\x13.alora.v1.ChatEvent0\x01\x12;\n" +
 	"\tVoiceChat\x12\x14.alora.v1.VoiceChunk\x1a\x14.alora.v1.VoiceEvent(\x010\x01\x12?\n" +
@@ -3113,7 +3257,9 @@ const file_proto_alora_proto_rawDesc = "" +
 	"\vReportUsage\x12\x16.alora.v1.UsageRequest\x1a\r.alora.v1.Ack\x12K\n" +
 	"\x0eSaveOrderDraft\x12\x1b.alora.v1.OrderDraftRequest\x1a\x1c.alora.v1.OrderDraftResponse\x128\n" +
 	"\n" +
-	"LogMessage\x12\x1b.alora.v1.MessageLogRequest\x1a\r.alora.v1.AckBF\n" +
+	"LogMessage\x12\x1b.alora.v1.MessageLogRequest\x1a\r.alora.v1.Ack2U\n" +
+	"\aPricing\x12J\n" +
+	"\vCalcPreview\x12\x1c.alora.v1.CalcPreviewRequest\x1a\x1d.alora.v1.CalcPreviewResponseBF\n" +
 	"\n" +
 	"alora.grpcZ8github.com/muhammadvadud/alora-agent/gen/alorav1;alorav1b\x06proto3"
 
@@ -3129,7 +3275,7 @@ func file_proto_alora_proto_rawDescGZIP() []byte {
 	return file_proto_alora_proto_rawDescData
 }
 
-var file_proto_alora_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_proto_alora_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
 var file_proto_alora_proto_goTypes = []any{
 	(*Empty)(nil),                 // 0: alora.v1.Empty
 	(*ChatRequest)(nil),           // 1: alora.v1.ChatRequest
@@ -3163,10 +3309,12 @@ var file_proto_alora_proto_goTypes = []any{
 	(*OrderDraftResponse)(nil),    // 29: alora.v1.OrderDraftResponse
 	(*MessageLogRequest)(nil),     // 30: alora.v1.MessageLogRequest
 	(*Ack)(nil),                   // 31: alora.v1.Ack
-	nil,                           // 32: alora.v1.ChatRequest.ContextEntry
+	(*CalcPreviewRequest)(nil),    // 32: alora.v1.CalcPreviewRequest
+	(*CalcPreviewResponse)(nil),   // 33: alora.v1.CalcPreviewResponse
+	nil,                           // 34: alora.v1.ChatRequest.ContextEntry
 }
 var file_proto_alora_proto_depIdxs = []int32{
-	32, // 0: alora.v1.ChatRequest.context:type_name -> alora.v1.ChatRequest.ContextEntry
+	34, // 0: alora.v1.ChatRequest.context:type_name -> alora.v1.ChatRequest.ContextEntry
 	3,  // 1: alora.v1.ChatEvent.usage:type_name -> alora.v1.Usage
 	4,  // 2: alora.v1.ChatEvent.products:type_name -> alora.v1.ProductRef
 	2,  // 3: alora.v1.VoiceEvent.chat_event:type_name -> alora.v1.ChatEvent
@@ -3193,17 +3341,19 @@ var file_proto_alora_proto_depIdxs = []int32{
 	27, // 24: alora.v1.Backend.ReportUsage:input_type -> alora.v1.UsageRequest
 	28, // 25: alora.v1.Backend.SaveOrderDraft:input_type -> alora.v1.OrderDraftRequest
 	30, // 26: alora.v1.Backend.LogMessage:input_type -> alora.v1.MessageLogRequest
-	2,  // 27: alora.v1.Agent.Chat:output_type -> alora.v1.ChatEvent
-	6,  // 28: alora.v1.Agent.VoiceChat:output_type -> alora.v1.VoiceEvent
-	8,  // 29: alora.v1.Agent.ResetSession:output_type -> alora.v1.ResetResponse
-	9,  // 30: alora.v1.Agent.Health:output_type -> alora.v1.HealthResponse
-	11, // 31: alora.v1.Catalog.Snapshot:output_type -> alora.v1.CatalogSnapshot
-	26, // 32: alora.v1.Catalog.Watch:output_type -> alora.v1.CatalogDelta
-	31, // 33: alora.v1.Backend.ReportUsage:output_type -> alora.v1.Ack
-	29, // 34: alora.v1.Backend.SaveOrderDraft:output_type -> alora.v1.OrderDraftResponse
-	31, // 35: alora.v1.Backend.LogMessage:output_type -> alora.v1.Ack
-	27, // [27:36] is the sub-list for method output_type
-	18, // [18:27] is the sub-list for method input_type
+	32, // 27: alora.v1.Pricing.CalcPreview:input_type -> alora.v1.CalcPreviewRequest
+	2,  // 28: alora.v1.Agent.Chat:output_type -> alora.v1.ChatEvent
+	6,  // 29: alora.v1.Agent.VoiceChat:output_type -> alora.v1.VoiceEvent
+	8,  // 30: alora.v1.Agent.ResetSession:output_type -> alora.v1.ResetResponse
+	9,  // 31: alora.v1.Agent.Health:output_type -> alora.v1.HealthResponse
+	11, // 32: alora.v1.Catalog.Snapshot:output_type -> alora.v1.CatalogSnapshot
+	26, // 33: alora.v1.Catalog.Watch:output_type -> alora.v1.CatalogDelta
+	31, // 34: alora.v1.Backend.ReportUsage:output_type -> alora.v1.Ack
+	29, // 35: alora.v1.Backend.SaveOrderDraft:output_type -> alora.v1.OrderDraftResponse
+	31, // 36: alora.v1.Backend.LogMessage:output_type -> alora.v1.Ack
+	33, // 37: alora.v1.Pricing.CalcPreview:output_type -> alora.v1.CalcPreviewResponse
+	28, // [28:38] is the sub-list for method output_type
+	18, // [18:28] is the sub-list for method input_type
 	18, // [18:18] is the sub-list for extension type_name
 	18, // [18:18] is the sub-list for extension extendee
 	0,  // [0:18] is the sub-list for field type_name
@@ -3220,9 +3370,9 @@ func file_proto_alora_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_alora_proto_rawDesc), len(file_proto_alora_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   33,
+			NumMessages:   35,
 			NumExtensions: 0,
-			NumServices:   3,
+			NumServices:   4,
 		},
 		GoTypes:           file_proto_alora_proto_goTypes,
 		DependencyIndexes: file_proto_alora_proto_depIdxs,
