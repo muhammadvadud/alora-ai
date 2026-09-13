@@ -1,0 +1,68 @@
+name: "buyurtma — to'liq: hisob, taklif, draft, confirm"
+role: employee
+
+steps:
+  - user: "Karniz 4 m, balandlik 2.6 m. Velvet Milano grafitni hisoblang."
+    llm:
+      - tools:
+          - name: curtain_calculate
+            args:
+              cornice_length_m: 4
+              height_m: 2.6
+              room_name: "Mehmonxona"
+              parts:
+                - variant_id: v-hitech-grafit
+                  role: portyera
+                  coefficient: 2.5
+      - text: "Mato 4 680 000 so'm."
+    expect_tools: ["curtain_calculate"]
+    expect_stage: calc
+    expect_products: false
+
+  - user: "Tikuv, tasma, ilgich va yetkazib berishni qo'shib avansini ayt."
+    llm:
+      - tools:
+          - name: price_quote
+            args:
+              need_delivery: true
+      - text: "Jami 5 070 000 so'm, avans 2 535 000 so'm."
+    expect_tools: ["price_quote"]
+    expect_stage: calc
+    expect_products: false
+    forbid_price_outside_tools: true
+
+  - user: "Buyurtma qoralamasini tayyorla."
+    llm:
+      - tools:
+          - name: order_draft
+            args:
+              action: draft
+      - text: "Mijoz ma'lumotlari yetishmayapti: ism, telefon va manzilni so'rayman."
+    expect_tools: ["order_draft"]
+    expect_stage: calc
+    expect_products: false
+    expect_result_contains:
+      - '"customer_name"'
+      - '"customer_phone"'
+      - '"address"'
+
+  - user: "Ismi Aziza, telefon +998901234567, manzil: Toshkent sh., Amir Temur 12."
+    llm:
+      - tools:
+          - name: order_draft
+            args:
+              action: confirm
+              customer_name: "Aziza"
+              customer_phone: "+998901234567"
+              address: "Toshkent sh., Amir Temur 12"
+      - text: >
+          Buyurtma qoralamasi saqlandi: ALR-2026-0007,
+          mijoz #4567, jami 5 070 000 so'm.
+    expect_tools: ["order_draft"]
+    expect_stage: order
+    expect_products: false
+    expect_result_contains:
+      - '"order_id":"ord-7"'
+      - '"order_number":"ALR-2026-0007"'
+      - '"customer_ref":"mijoz #4567"'
+    forbid_price_outside_tools: true

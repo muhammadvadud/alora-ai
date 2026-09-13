@@ -1,0 +1,23 @@
+name: "balkon eshigi — konstruksiya bilimi"
+role: employee
+
+steps:
+  - user: "Yotoqxonada balkon eshigi va 2 ta rom bor. Nimaga e'tibor berish kerak?"
+    llm:
+      - tools:
+          - name: set_context
+            args:
+              room: bedroom
+              construction: "balkon eshigi, 2 ta rom, karniz bor"
+          - name: knowledge_lookup
+            args:
+              topic: construction
+              query: balkon
+      - text: >
+          Balkon eshigi bo'lsa o'lchovni alohida olamiz: romlar soni
+          va qanot yo'nalishi hisobga olinadi.
+    expect_tools: ["set_context", "knowledge_lookup"]
+    expect_stage: need
+    expect_products: false
+    forbid_price_outside_tools: true
+    forbid_content_regex: ["\\d[\\d\\s]{5,}\\s*so'm"]

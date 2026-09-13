@@ -1,0 +1,51 @@
+name: "e'tiroz — qimmat, chegirma va arzonroq hisob"
+role: employee
+
+steps:
+  - user: "Karniz 4 m, balandlik 2.6 m. Velvet Milano grafitni hisoblang."
+    llm:
+      - tools:
+          - name: curtain_calculate
+            args:
+              cornice_length_m: 4
+              height_m: 2.6
+              room_name: "Yashash xonasi"
+              parts:
+                - variant_id: v-hitech-grafit
+                  role: portyera
+                  coefficient: 2.5
+      - text: "Mato 4 680 000 so'm bo'ldi."
+    expect_tools: ["curtain_calculate"]
+    expect_stage: calc
+    expect_products: false
+
+  - user: "Qimmat bo'ldi. 5% chegirma bilan avansini ayt."
+    llm:
+      - tools:
+          - name: price_quote
+            args:
+              discount_pct: 5
+              need_delivery: true
+      - text: "Jami 4 836 000 so'm, avans 2 418 000 so'm."
+    expect_tools: ["price_quote"]
+    expect_stage: calc
+    expect_products: false
+    forbid_price_outside_tools: true
+
+  - user: "Shunga qaramasdan qimmat. Yig'ish koeffitsientini pasaytirib qayta hisoblang."
+    llm:
+      - tools:
+          - name: curtain_calculate
+            args:
+              cornice_length_m: 4
+              height_m: 2.6
+              room_name: "Yashash xonasi"
+              parts:
+                - variant_id: v-hitech-grafit
+                  role: portyera
+                  coefficient: 2.0
+      - text: "Koeffitsient 2.0 bilan mato 3 744 000 so'm."
+    expect_tools: ["curtain_calculate"]
+    expect_stage: calc
+    expect_products: false
+    forbid_price_outside_tools: true

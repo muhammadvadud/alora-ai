@@ -1,0 +1,38 @@
+name: "bir pardada 10 bo'lak — maksimal"
+role: employee
+
+steps:
+  - user: "Maksimal 10 qatlamni hisoblab bering: karniz 4 m, balandlik 2.6 m."
+    llm:
+      - tools:
+          - name: curtain_calculate
+            args:
+              cornice_length_m: 4
+              height_m: 2.6
+              room_name: "Katta xona"
+              parts:
+                - variant_id: v-hitech-grafit
+                  role: portyera
+                - variant_id: v-hitech-bej
+                  role: portyera
+                - variant_id: v-tul-dantel-oy
+                  role: tul
+                - variant_id: v-kant-atlas-oltin
+                  role: kant
+                - variant_id: v-classic-ivory
+                  role: lambrekan
+                - variant_id: v-astar-soft-oq
+                  role: astar
+                - variant_id: v-velvet-bordo
+                  role: portyera
+                - variant_id: v-blackout-duo-grafit
+                  role: dekor
+                - variant_id: v-carmel-kitchen
+                  role: portyera
+                - variant_id: v-office-minimal
+                  role: astar
+      - text: "10 bo'lak bajarildi: jami mato 28 860 000 so'm."
+    expect_tools: ["curtain_calculate"]
+    expect_stage: calc
+    expect_products: false
+    forbid_price_outside_tools: true

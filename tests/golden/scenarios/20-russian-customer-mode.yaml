@@ -1,0 +1,20 @@
+name: "rus tili + mijoz rejimi — tannarx aytilmaydi"
+role: employee
+customer_mode: true
+locale: ru
+
+steps:
+  - user: "Сколько будут стоить шторы для спальни?"
+    llm:
+      - text: >
+          Подберём шторы для спальни после расчёта — скажите,
+          какая длина карниза и высота окна?
+    expect_tools: []
+    expect_no_tools: true
+    expect_stage: need
+    expect_products: false
+    expect_content_contains:
+      - "шторы"
+    expect_content_not_contains:
+      - "tannarx"
+    forbid_content_regex: ["\\d[\\d\\s]{5,}\\s*so'm"]

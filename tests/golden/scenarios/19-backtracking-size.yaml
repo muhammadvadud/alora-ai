@@ -1,0 +1,41 @@
+name: "orqaga qaytish — o'lcham o'zgardi"
+role: employee
+
+steps:
+  - user: "Karniz 4 m, balandlik 2.6 m. Velvet Milano grafitni hisoblang."
+    llm:
+      - tools:
+          - name: curtain_calculate
+            args:
+              cornice_length_m: 4
+              height_m: 2.6
+              room_name: "Yotoqxona"
+              parts:
+                - variant_id: v-hitech-grafit
+                  role: portyera
+                  coefficient: 2.5
+      - text: "Mato 4 680 000 so'm."
+    expect_tools: ["curtain_calculate"]
+    expect_stage: calc
+    expect_products: false
+
+  - user: "Karniz 3.5 metrga qisqardi, balandligi ham 2.5 bo'ldi. Qayta hisoblang."
+    llm:
+      - tools:
+          - name: set_context
+            args:
+              construction: "karniz 3.5 m ga qisqardi, balandlik 2.5 m"
+          - name: curtain_calculate
+            args:
+              cornice_length_m: 3.5
+              height_m: 2.5
+              room_name: "Yotoqxona"
+              parts:
+                - variant_id: v-hitech-grafit
+                  role: portyera
+                  coefficient: 2.5
+      - text: "Yangi o'lcham bilan mato 3 937 500 so'm."
+    expect_tools: ["set_context", "curtain_calculate"]
+    expect_stage: calc
+    expect_products: false
+    forbid_price_outside_tools: true

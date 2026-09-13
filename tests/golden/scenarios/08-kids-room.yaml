@@ -1,0 +1,29 @@
+name: "bolalar xonasi — gulli, yuviladigan mato"
+role: employee
+
+steps:
+  - user: "Bolalar xonasiga gulli, yuviladigan parda kerak, sariq rang bo'lsa."
+    llm:
+      - tools:
+          - name: set_context
+            args:
+              room: kids
+              style: modern
+              pattern: floral
+              colors: "sariq"
+          - name: product_search
+            args:
+              room: kids
+              style: modern
+              pattern: floral
+              color: sariq
+          - name: knowledge_lookup
+            args:
+              topic: room
+              query: yuviladigan
+      - text: "Kids Rainbow bolalar xonasi uchun mos — gulli va oson yuviladi."
+    expect_tools: ["set_context", "product_search", "knowledge_lookup"]
+    expect_stage: recommend
+    expect_products: true
+    forbid_price_outside_tools: true
+    forbid_content_regex: ["\\d[\\d\\s]{5,}\\s*so'm"]
