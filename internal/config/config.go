@@ -103,6 +103,7 @@ type GRPCConfig struct {
 	AuthRequired    bool          `mapstructure:"auth_required"`
 	MaxSessions     int           `mapstructure:"max_sessions"`
 	Keepalive       time.Duration `mapstructure:"keepalive"`
+	TLS             TLSConfig     `mapstructure:"tls"`
 }
 
 // HTTPConfig — faqat /healthz, /readyz, /metrics (rules.md §0.7); biznes endpoint yo'q.
@@ -115,6 +116,15 @@ type BackendConfig struct {
 	Addr    string        `mapstructure:"addr"`
 	Timeout time.Duration `mapstructure:"timeout"`
 	Retry   int           `mapstructure:"retry"`
+	TLS     TLSConfig     `mapstructure:"tls"`
+}
+
+// TLSConfig faqat sertifikat ENV nomlarini saqlaydi; maxfiy qiymatlar config'da bo'lmaydi.
+type TLSConfig struct {
+	Enabled     bool   `mapstructure:"enabled"`
+	CertFileEnv string `mapstructure:"cert_file_env"`
+	KeyFileEnv  string `mapstructure:"key_file_env"`
+	CAFileEnv   string `mapstructure:"ca_file_env"`
 }
 
 // CatalogConfig — katalog cache sinxroni (rules.md §4.1).
@@ -187,10 +197,18 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("grpc.auth_required", true)
 	v.SetDefault("grpc.max_sessions", 100)
 	v.SetDefault("grpc.keepalive", "30s")
+	v.SetDefault("grpc.tls.enabled", false)
+	v.SetDefault("grpc.tls.cert_file_env", "ALORA_GRPC_TLS_CERT_FILE")
+	v.SetDefault("grpc.tls.key_file_env", "ALORA_GRPC_TLS_KEY_FILE")
+	v.SetDefault("grpc.tls.ca_file_env", "ALORA_GRPC_TLS_CA_FILE")
 	v.SetDefault("http.addr", ":8081")
 	v.SetDefault("backend.addr", "django:9091")
 	v.SetDefault("backend.timeout", "5s")
 	v.SetDefault("backend.retry", 3)
+	v.SetDefault("backend.tls.enabled", false)
+	v.SetDefault("backend.tls.cert_file_env", "ALORA_BACKEND_TLS_CERT_FILE")
+	v.SetDefault("backend.tls.key_file_env", "ALORA_BACKEND_TLS_KEY_FILE")
+	v.SetDefault("backend.tls.ca_file_env", "ALORA_BACKEND_TLS_CA_FILE")
 	v.SetDefault("catalog.snapshot_on_start", true)
 	v.SetDefault("catalog.stale_after", "10m")
 	v.SetDefault("catalog.page_size", 500)

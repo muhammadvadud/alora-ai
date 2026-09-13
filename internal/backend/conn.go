@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
@@ -56,11 +57,15 @@ func metadataContext(ctx context.Context, token string) context.Context {
 // Dial ochiq ichki tarmoqdagi Django gRPC ulanishini yaratadi. mTLS keyingi
 // bosqichga qoldirilgani uchun hozir insecure transport ishlatiladi (rules §8.2).
 func Dial(ctx context.Context, addr, serviceToken string) (*grpc.ClientConn, error) {
+	return DialTLS(ctx, addr, serviceToken, insecure.NewCredentials())
+}
+
+func DialTLS(ctx context.Context, addr, serviceToken string, creds credentials.TransportCredentials) (*grpc.ClientConn, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 	return grpc.NewClient(addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithTransportCredentials(creds),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time:                30 * time.Second,
 			PermitWithoutStream: true,
