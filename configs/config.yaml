@@ -1,0 +1,57 @@
+# API kalit bu yerda EMAS — provider'ga qarab ENV'dan olinadi:
+#   deepseek -> DEEPSEEK_API_KEY,  openai -> OPENAI_API_KEY,  claude -> ANTHROPIC_API_KEY
+#   ollama   -> kalit talab qilmaydi (lokal)
+# Har qiymatni MUHIT orqali ustidan yozish mumkin: LLM_MODEL, MODE, LOG_LEVEL, SERVER_ADDR ...
+
+mode: http # cli | http | telegram  (main -mode flag bilan ustidan yoziladi)
+
+llm:
+  provider: deepseek # deepseek | openai | claude | ollama
+  # `deepseek-chat` — eskirgan alias (aslida deepseek-v4-flash ga ishora qiladi) va
+  # yopilishi kutilyapti, shu sabab aniq nom yozamiz. Mavjud: deepseek-v4-pro | deepseek-v4-flash
+  model: deepseek-v4-pro
+  base_url: https://api.deepseek.com/v1
+  max_tokens: 2048
+  temperature: 0.7
+  timeout: 60s
+  # Model "o'ylashi" (reasoning): adaptive | enabled | disabled. Bo'sh — provider standarti.
+  # O'ylash matni stream'da alohida `thinking` event bo'lib chiqadi (javobga qo'shilmaydi).
+  # ENV: LLM_THINKING
+  thinking: adaptive
+  # O'ylash chuqurligi: low | medium | high | xhigh | max. Bo'sh — provider standarti.
+  # thinking: disabled bo'lsa ta'sir qilmaydi. ENV: LLM_REASONING_EFFORT
+  reasoning_effort: ""
+
+agent:
+  max_step: 20
+  # Modelga yuboriladigan eski xabarlar chegarasi. Har navbat 4+ xabar qo'shadi
+  # (savol + tool chaqiruvi + tool natijasi + javob), ya'ni 40 ≈ 8-10 navbat.
+  # Suhbat oqimi uzun bo'lsa oshiring. Kesim doim savol chegarasidan boshlanadi.
+  # ENV: AGENT_MAX_HISTORY
+  max_history: 200
+  # Javobni jonli (bo'lak-bo'lak) yuborish. false — javob yaxlit, bir marta keladi.
+  # ENV bilan ustidan yozish: AGENT_STREAM=false
+  stream: true
+  system_prompt: |
+    Sen Rocket Park uchun zakaz qabul qiluvchi AI yordamchisan.
+    Faqat mavjud paketlar va narxlar bilan ishlagin, yangi menyu o'ylab topma.
+    Mijozdan kerakli ma'lumotlarni bosqichma-bosqich yig':
+    paket nomi, bolalar soni, sana, vaqt, buyurtmachi ismi, telefon va izoh.
+    Paket nomi noaniq bo'lsa katalog tool'idan foydalan.
+    Bolalar soni paket sig'imidan oshsa, mosroq variantni taklif qil.
+    Zakaz to'liq bo'lsa tool orqali tasdiqlashni yakunla va admin chatga yuborilishi uchun tayyorla.
+    Javoblarni foydalanuvchi tilida, aniq va qisqa ber.
+
+server:
+  addr: ":8080"
+
+# Telegram transporti.
+telegram:
+  token: "" # token faqat ENV'dan: TELEGRAM_BOT_TOKEN (kodga/yaml'ga yozmang)
+  # Stream paytida xabarni yangilash oralig'i (Telegram rate-limit). ENV: TELEGRAM_EDIT_INTERVAL
+  edit_interval: 800ms
+
+db:
+  url: "" # suhbat tarixi PostgreSQL URL — faqat ENV'dan: DATABASE_URL (bo'sh bo'lsa in-memory)
+
+log_level: info # debug | info | warn | error
