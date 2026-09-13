@@ -5,3 +5,6 @@ coverage.out
 *.test
 .idea/
 .vscode/
+
+# LLM trace — dev debug, LLM matni repo/logga tushmaydi (rules §13)
+*.jsonl

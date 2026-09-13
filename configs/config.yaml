@@ -29,7 +29,7 @@ llm:
   # LLM'ga ketgan so'rov va javob yoziladigan JSONL fayl (debug trace).
   # Bo'sh (default) — trace o'chiq. Kalit/Authorization hech qachon yozilmaydi.
   # ENV: ALORA_LLM_TRACE_FILE
-  trace_file: ""
+  trace_file: "" # faqat dev: ALORA_LLM_TRACE_ALLOW=1 talab qilinadi (rules §13.5 — LLM matni loglanmaydi)
 
 agent:
   max_step: 6

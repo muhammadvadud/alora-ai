@@ -33,7 +33,7 @@ Ishga tushirish jarayoni:
 4. **Real provider bilan**: `.env` ichida `DEEPSEEK_API_KEY` kabi kalitlarni kiriting.
 5. CLI rejimida sinab ko'rish uchun: `make run-cli`
 6. gRPC serverni ishga tushirish uchun: `make run-grpc` (yoki Docker orqali: `docker compose up agent -d`)
-7. Qo'lda (manual) live sinov o'tkazish uchun `tools/livechat` dan foydalaning.
+7. Qo'lda (manual) live sinov o'tkazish uchun `cmd/livechat` dan foydalaning.
 
 ## ENV Kalitlar Jadvali
 

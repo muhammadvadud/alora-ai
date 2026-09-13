@@ -67,7 +67,7 @@ Agentni real provayder (LLM) bilan lokal muhitda ko'tarish:
 1. Asosiy config fayldan nusxa oling va zarur LLM kalitlarini qo'ying. Portlarni 9095 (gRPC) va 8082 (HTTP) qilib sozlang.
 2. Django gRPC backend portini ko'rsating (masalan 9091).
 3. Serverni ko'taring.
-4. `tools/livechat` orqali gRPC so'rov yuborib agent bilan suhbatlashing.
+4. `cmd/livechat` orqali gRPC so'rov yuborib agent bilan suhbatlashing.
 
 **Nimaga e'tibor berish kerak?**
 * **Tool tartibi:** LLM modelining to'g'ri tool'larni ketma-ket chaqirishi.

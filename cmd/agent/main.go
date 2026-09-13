@@ -91,7 +91,14 @@ func run() error {
 	// llm.trace_file to'ldiriladi. O'ram WithTools chaqiruvida o'zini saqlaydi
 	// (rules §6) — tool'lar bog'langach trace yo'qolmaydi. Fayl ochilmasa
 	// startup darhol xato qaytaradi.
+	// rules §13.5: LLM matni loglanmaydi — trace faqat dev'da, aniq ruxsat bilan
+	// (ALORA_LLM_TRACE_ALLOW=1). Ruxsatsiz sozlama jimgina e'tiborsiz qolmaydi —
+	// ishga tushish to'xtaydi, chunki prod'da mijoz suhbati faylga tushib qolishi mumkin.
 	if cfg.LLM.TraceFile != "" {
+		if os.Getenv("ALORA_LLM_TRACE_ALLOW") != "1" {
+			return fmt.Errorf("llm.trace_file faqat dev uchun: ALORA_LLM_TRACE_ALLOW=1 bering yoki sozlamani bo'shating (rules §13.5)")
+		}
+		slog.Warn("LLM so'rov/javob matni faylga yozilmoqda — faqat dev (rules §13.5)", "file", cfg.LLM.TraceFile)
 		chatModel, err = llm.WithTrace(chatModel, cfg.LLM.TraceFile)
 		if err != nil {
 			return err
