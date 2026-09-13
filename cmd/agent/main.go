@@ -87,6 +87,17 @@ func run() error {
 		}
 	}
 
+	// Debug trace: buyurtmachi LLM'ga ketgan so'rov/javobni ko'rishni xohlasa
+	// llm.trace_file to'ldiriladi. O'ram WithTools chaqiruvida o'zini saqlaydi
+	// (rules §6) — tool'lar bog'langach trace yo'qolmaydi. Fayl ochilmasa
+	// startup darhol xato qaytaradi.
+	if cfg.LLM.TraceFile != "" {
+		chatModel, err = llm.WithTrace(chatModel, cfg.LLM.TraceFile)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Tool'lar shu yerda (composition root) ochiq register qilinadi — kim nima
 	// qila oladi, bir joyda ko'rinadi. Handler/DTO/konstruktor: internal/tools.
 	// Alora domen tool'lari (product_search, curtain_calculate, ...) tasks.md 1.E da qo'shiladi.

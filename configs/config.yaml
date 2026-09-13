@@ -26,6 +26,10 @@ llm:
   # Asosiy provider ketma-ket 2 marta xato/timeout bersa, o'sha navbat shu provider
   # bilan qayta so'raladi (rules.md §6.5).
   fallback_provider: claude
+  # LLM'ga ketgan so'rov va javob yoziladigan JSONL fayl (debug trace).
+  # Bo'sh (default) — trace o'chiq. Kalit/Authorization hech qachon yozilmaydi.
+  # ENV: ALORA_LLM_TRACE_FILE
+  trace_file: ""
 
 agent:
   max_step: 20
