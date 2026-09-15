@@ -12,14 +12,14 @@ llm:
   # provider: mock — dev/test uchun API kalitsiz deterministik provider (config.Load qo'llovi kerak).
   # `deepseek-chat` — eskirgan alias (aslida deepseek-v4-flash ga ishora qiladi) va
   # yopilishi kutilyapti, shu sabab aniq nom yozamiz. Mavjud: deepseek-v4-pro | deepseek-v4-flash
-  model: deepseek-v4-pro
+  model: deepseek-flash # 2026-09-15 live: 20/20 ssenariy, hallucination 0, p50 1.26 s (pro: 17/20, 1.93 s), narx ~6× arzon; pro — zaxira
   base_url: https://api.deepseek.com/v1
-  max_tokens: 2048
+  max_tokens: 4096 # 2048 da thinking javobni yeb qo'ydi (live: completion=2048, content bo'sh)
   temperature: 0.2 # tool marshrutlash barqarorligi: 0.5 da live sinovda bir xil xabarga har xil tool zanjiri chiqdi
   timeout: 60s
   # Model "o'ylashi" (reasoning): adaptive | enabled | disabled. Bo'sh — provider standarti.
   # O'ylash matni stream'da alohida `thinking` event bo'lib chiqadi (javobga qo'shilmaydi).
-  thinking: adaptive
+  thinking: disabled # sotuv chatida thinking TTFT 45–50 s va bo'sh javob berdi; tool marshrutlash uchun kerak emas
   # O'ylash chuqurligi: low | medium | high | xhigh | max. Bo'sh — provider standarti.
   # thinking: disabled bo'lsa ta'sir qilmaydi.
   reasoning_effort: ""
