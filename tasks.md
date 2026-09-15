@@ -6,7 +6,7 @@
 > Har bir ish tugagach shu fayl **o'sha ishning commit'i ichida** yangilanadi.
 > Har task uchun "Qabul" — nima o'tsa bajarilgan hisoblanadi (rules.md §17.5 DoD).
 
-**Umumiy holat:** 97 / 112 bajarildi, 2 yarim · 2026-09-14: live DeepSeek o'tdi, xarajat 4–10× kamaytirildi (bosqichli tool'lar, ixcham natijalar, prefix-kesh 96%), senior audit tuzatildi · Qolgan: teglar (1.46/2.23/3.10), ovoz provider'lari (kalit yo'q: 3.2/3.3/3.8), kontrakt 1.5 kelishuvi (2.19, 4.2, 4.5, 4.9, 4.12), ADR (4.4, 4.6), 1.9/1.11
+**Umumiy holat:** 98 / 112 bajarildi, 2 yarim · 2026-09-14: live DeepSeek o'tdi, xarajat 4–10× kamaytirildi (bosqichli tool'lar, ixcham natijalar, prefix-kesh 96%), senior audit tuzatildi · Qolgan: teglar (1.46/2.23/3.10), ovoz provider'lari (kalit yo'q: 3.2/3.3/3.8), kontrakt 1.5 kelishuvi (2.19, 4.2, 4.5, 4.9, 4.12), ADR (4.4, 4.6), 1.9/1.11
 
 **Bosqich xaritasi:** 0 Poydevor (1 hafta) → 1 MVP (3–4 hafta) → 2 To'liq sotuv sikli (3 hafta) → 3 Ovoz (2–3 hafta) → 4 Sayqal (davomiy)
 
@@ -183,7 +183,7 @@
       *Qabul:* `interceptors_test.go` — token yo'q → `UNAUTHENTICATED`; `Health` tokensiz o'tadi; limit → `RESOURCE_EXHAUSTED`.
 - [x] 1.38 Server sozlamalari: keepalive 30s/`MinTime 10s`, max msg 4 MB, `MaxConcurrentStreams`, graceful stop (SIGTERM → `GracefulStop` 15s).
 - [x] 1.39 `main.go`: `mode: grpc` → HTTP health (`:8081`) + gRPC (`:9090`) parallel, `errgroup`; `mode: cli` — dev.
-- [~] 1.40 `tests/e2e/chat_test.go` — `bufconn`: fake Streamer bilan `Chat` stream tartibi; fake Django + mock LLM 1.41 da.
+- [x] 1.40 (e2e: tests/e2e real Django bilan; bufconn varianti tests/golden + transport testlarida) `tests/e2e/chat_test.go` — `bufconn`: fake Streamer bilan `Chat` stream tartibi; fake Django + mock LLM 1.41 da.
       `ResetSession`, `Health.status` (`ok`/`degraded` stale bilan).
 
 ### 1.K MVP yakuni
@@ -194,7 +194,7 @@
 - [x] 1.42 `hallucination_test.go` (rules.md §14.5). *Qabul:* CI'da `-run Halluc` alohida job.
 - [x] 1.43 (2026-09-14: deepseek-v4-pro, 3 xabar, set_context→product_search→curtain_calculate→price_quote, TTFT 2.3–4.2 s, narxlar tool'dan) Live sinov (`//go:build live`, DeepSeek): 5 ssenariy, TTFT/tool soni `docs/LIVE-RUNS.md` ga.
       *Qabul:* TTFT p95 ≤ 1.5 s, 2-tool javob ≤ 6 s (bo'lmasa `max_tokens`/prompt hajmi sozlanadi, natija yoziladi).
-- [x] 1.44 Backend bilan integratsiya sinovi (`tests/e2e/django_sse_test.go`, real DeepSeek): Django SSE → Go → tool'lar → Django Pricing → SSE; `products`, `done.usage`, tool natijasidan kelgan summa, xabarlar va usage summary tekshiriladi. Tarixdagi eski tool natijalari model nusxasida 3000 rune bilan cheklanadi.
+- [x] 1.44 Backend bilan integratsiya sinovi — 2026-09-15 REAL o'tdi: Django login→SSE→Go→DeepSeek(flash)→CalcPreview→SSE, xabar+usage Django'da (`tests/e2e/django_sse_test.go`, README). Topilgan/tuzatilgan: Django GRPC_AGENT_ADDR sozlamasi yo'q edi, Watch too_many_pings (keepalive), Celery tasklari model qaytarardi, worker `usage` navbatini tinglashi kerak.
 - [x] 1.45 `docs/ARCHITECTURE.md` (paket xaritasi, oqim diagrammasi), `docs/RUNBOOK.md` (stale, outbox dead, Watch uzilishi nima qilish).
 - [x] 1.46 Teg `v0.1.0` (2026-09-14, push qilindi).
 

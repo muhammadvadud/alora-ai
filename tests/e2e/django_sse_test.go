@@ -52,16 +52,21 @@ func TestDjangoSSE_AgentEndToEnd(t *testing.T) {
 	if resultTotal == "" {
 		t.Fatal("curtain_calculate tool_result ichida total topilmadi")
 	}
-	if !strings.Contains(content, resultTotal) {
+	// AI summani "3 245 000 so'm" deb yozadi (display), tool esa "3245000" — raqamlar
+	// bo'shliqsiz solishtiriladi; matndagi HAR summa tool natijalari ichida bo'lishi shart.
+	if !strings.Contains(digitsOnly(content), digitsOnly(resultTotal)) {
 		t.Fatalf("content tool totalini aks ettirmadi: total=%q content=%q", resultTotal, content)
 	}
-	if regexp.MustCompile(`\d[\d\s]{5,}\s*so'm`).MatchString(content) && !strings.Contains(content, resultTotal) {
-		t.Fatalf("content'da tool natijasidan tashqari summa bor: %q", content)
+	resultDigits := digitsOnly(concatToolResults(second))
+	for _, m := range regexp.MustCompile(`\d[\d\s]{4,}\s*so'm`).FindAllString(content, -1) {
+		if !strings.Contains(resultDigits, digitsOnly(m)) {
+			t.Fatalf("content'da tool natijasidan tashqari summa bor: %q", m)
+		}
 	}
 
 	reset(t, base, token, conversationID)
 	assertPersisted(t, base, token, conversationID)
-	assertUsageSummary(t, base, token)
+	assertUsageForConversation(t, base, token, conversationID)
 }
 
 func hasKind(events []map[string]any, want string) bool {
@@ -273,34 +278,39 @@ func assertPersisted(t *testing.T, base, token, conversationID string) {
 	t.Fatal("Django Message yozuvlari 5 sekund ichida ko'rinmadi")
 }
 
-func assertUsageSummary(t *testing.T, base, token string) {
+// assertUsageForConversation — Go outbox → Django ReportUsage → Celery → UsageRecord.
+// `usage/summary` kunlik rollup'dan (cron) o'qiydi, shuning uchun darhol ko'rinmaydi;
+// `usage/conversations` esa UsageRecord'lardan to'g'ridan-to'g'ri yig'adi.
+func assertUsageForConversation(t *testing.T, base, token, conversationID string) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(8 * time.Second)
 	for time.Now().Before(deadline) {
-		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, base+"/api/v1/usage/summary/?period=day", nil)
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, base+"/api/v1/usage/conversations/?period=day", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 		req.Header.Set("Authorization", "Bearer "+token)
 		resp, err := http.DefaultClient.Do(req)
 		if err == nil {
-			var payload struct {
-				Tokens   int `json:"tokens"`
-				Messages int `json:"messages"`
+			var rows []struct {
+				ConversationID string `json:"conversation_id"`
+				Tokens         int    `json:"tokens"`
 			}
-			decodeErr := json.NewDecoder(resp.Body).Decode(&payload)
-			status := resp.StatusCode
+			decodeErr := json.NewDecoder(resp.Body).Decode(&rows)
 			resp.Body.Close()
-			if status == http.StatusOK && decodeErr == nil && (payload.Tokens > 0 || payload.Messages > 0) {
-				return
-			}
-			if status != http.StatusOK && status != http.StatusNotFound {
-				t.Fatalf("UsageRecord tekshiruvi status=%d", status)
+			if resp.StatusCode == http.StatusOK && decodeErr == nil {
+				for _, r := range rows {
+					if r.ConversationID == conversationID && r.Tokens > 0 {
+						return
+					}
+				}
+			} else if resp.StatusCode != http.StatusOK {
+				t.Fatalf("UsageRecord tekshiruvi status=%d", resp.StatusCode)
 			}
 		}
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(300 * time.Millisecond)
 	}
-	t.Fatal("Django usage summary 5 sekund ichida yangi usage yozuvini ko'rsatmadi")
+	t.Fatal("Django usage/conversations 8 sekund ichida shu suhbat uchun usage ko'rsatmadi")
 }
 
 func envOrSkip(t *testing.T, key, fallback string) string {
@@ -313,4 +323,24 @@ func envOrSkip(t *testing.T, key, fallback string) string {
 	}
 	t.Skipf("%s berilmagan", key)
 	return ""
+}
+
+func digitsOnly(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+func concatToolResults(events []map[string]any) string {
+	var out string
+	for _, event := range events {
+		if event["kind"] == "tool_result" {
+			out += fmt.Sprint(event["result"])
+		}
+	}
+	return out
 }
