@@ -15,11 +15,8 @@ import (
 func ProductSearch(d Deps) tool.BaseTool {
 	h := &productSearchHandler{d: d}
 	return must(utils.InferTool("product_search",
-		"Mijoz talabiga mos mato yoki bezak/furnituralarni do'kon katalogidan topadi. "+
-			"Bir nechta qatlam (portyera+tul+lambrekan+astar+kant) kerak bo'lsa layers=[...] bilan BIR marta chaqir — "+
-			"har qatlam uchun by_layer da variantlar keladi; qatlam bo'yicha alohida qidirma. "+
-			"Natija bo'sh bo'lsa filtrlarni yumshatib 1 marta qayta qidir, aks holda qayta chaqirma; "+
-			"natijadagi variant_id ni curtain_calculate ga uzat.",
+		"Katalogdan mato/aksessuar topadi. Ko'p qatlam kerak bo'lsa layers=[...] bilan BIR marta chaqir (by_layer). "+
+			"Nom aytilsa query. Bo'sh natijada filtrlarni yumshatib 1 marta qayta qidir; aks holda qayta chaqirma. variant_id → curtain_calculate.",
 		h.do))
 }
 

@@ -15,24 +15,24 @@ type calcArgs struct {
 // ---- current_time ----
 
 type timeArgs struct {
-	Timezone string `json:"timezone" jsonschema:"description=IANA vaqt mintaqasi, masalan Asia/Tashkent"`
+	Timezone string `json:"timezone" jsonschema:"description=IANA vaqt mintaqasi — masalan Asia/Tashkent"`
 }
 
 // ---- product_search ----
 
 type productSearchArgs struct {
-	Query        string   `json:"query,omitempty"         jsonschema:"description=mahsulot nomi yoki SKU bo'yicha qidiruv (masalan Velvet Chek) — mijoz nom aytsa shuni ishlat"`
+	Query        string   `json:"query,omitempty"         jsonschema:"description=nom/SKU bo'yicha (mijoz nom aytsa)"`
 	Room         string   `json:"room,omitempty"          jsonschema:"description=xona turi,enum=living,enum=bedroom,enum=wedding,enum=kids,enum=kitchen,enum=office,enum=hall"`
 	Style        string   `json:"style,omitempty"         jsonschema:"description=uslub,enum=classic,enum=modern,enum=hi_tech,enum=minimal,enum=oriental,enum=provence"`
 	Pattern      string   `json:"pattern,omitempty"       jsonschema:"description=bezak,enum=plain,enum=floral,enum=geometric,enum=striped,enum=jacquard"`
 	Transparency string   `json:"transparency,omitempty"  jsonschema:"description=shaffoflik,enum=transparent,enum=semi,enum=blackout"`
 	Layer        string   `json:"layer,omitempty"         jsonschema:"description=qatlam,enum=tul,enum=portyera,enum=lambrekan,enum=astar,enum=kant,enum=rim,enum=rulon"`
-	Layers       []string `json:"layers,omitempty"        jsonschema:"description=bir nechta qatlam kerak bo'lsa (portyera+tul+lambrekan+astar+kant) — BIR chaqiruvda har qatlam uchun eng mos 3 ta variant qaytadi; alohida qidirma"`
-	Color        string   `json:"color,omitempty"         jsonschema:"description=istalgan rang, masalan bej yoki grafit"`
+	Layers       []string `json:"layers,omitempty"        jsonschema:"description=ko'p qatlam: bir chaqiruvda har qatlam uchun 3 variant"`
+	Color        string   `json:"color,omitempty"         jsonschema:"description=istalgan rang — masalan bej yoki grafit"`
 	Kind         string   `json:"kind,omitempty"          jsonschema:"description=nima qidirilyapti: mato yoki bezak/furnitura,enum=fabric,enum=accessory"`
 	Segment      string   `json:"segment,omitempty"       jsonschema:"description=narx segmenti,enum=economy,enum=standard,enum=premium"`
-	MaxPrice     float64  `json:"max_price,omitempty"     jsonschema:"description=birlik uchun maksimal narx so'mda (m2, dona yoki metr)"`
-	Limit        int      `json:"limit,omitempty"         jsonschema:"description=nechta natija, standart 5, eng ko'pi 10"`
+	MaxPrice     float64  `json:"max_price,omitempty"     jsonschema:"description=birlik uchun maksimal narx so'mda (m2 — dona yoki metr)"`
+	Limit        int      `json:"limit,omitempty"         jsonschema:"description=nechta natija — standart 5 — eng ko'pi 10"`
 }
 
 type productCard struct {
@@ -61,24 +61,24 @@ type productSearchResult struct {
 // ---- curtain_calculate ----
 
 type calcPart struct {
-	VariantID   string  `json:"variant_id"            jsonschema:"description=shu bo'lakdagi mato varianti ID (product_search dan)"`
+	VariantID   string  `json:"variant_id"            jsonschema:"description=variant ID"`
 	Role        string  `json:"role"                  jsonschema:"description=bo'lak roli,enum=portyera,enum=tul,enum=lambrekan,enum=kant,enum=dekor,enum=astar"`
-	WidthM      float64 `json:"width_m,omitempty"     jsonschema:"description=shu bo'lak egallaydigan karniz kengligi metrda; bo'sh bo'lsa butun karniz"`
-	HeightM     float64 `json:"height_m,omitempty"    jsonschema:"description=shu bo'lakning balandligi metrda; bo'sh bo'lsa umumiy balandlik"`
-	Coefficient float64 `json:"coefficient,omitempty" jsonschema:"description=burma koeffitsienti 1.5 2.0 2.5 3.0; bo'sh bo'lsa standart"`
+	WidthM      float64 `json:"width_m,omitempty"     jsonschema:"description=kenglik metr (bo'sh = butun karniz)"`
+	HeightM     float64 `json:"height_m,omitempty"    jsonschema:"description=balandlik metr (bo'sh = umumiy)"`
+	Coefficient float64 `json:"coefficient,omitempty" jsonschema:"description=burma koeffitsienti (bo'sh = standart)"`
 }
 
 type calcAccessory struct {
-	VariantID string  `json:"variant_id" jsonschema:"description=bezak yoki furnitura varianti ID: gul, broshka, podxvat, kisti, bahroma, halqa"`
+	VariantID string  `json:"variant_id" jsonschema:"description=aksessuar variant ID"`
 	Qty       float64 `json:"qty"        jsonschema:"description=miqdori: dona yoki metr"`
 }
 
 type curtainCalcArgs struct {
 	CorniceLengthM float64         `json:"cornice_length_m"      jsonschema:"description=karniz uzunligi metrda"`
 	HeightM        float64         `json:"height_m"              jsonschema:"description=pardaning umumiy balandligi metrda"`
-	Parts          []calcPart      `json:"parts"                 jsonschema:"description=pardani tashkil qiluvchi mato bo'laklari, 1 tadan 10 tagacha"`
-	Accessories    []calcAccessory `json:"accessories,omitempty" jsonschema:"description=matodan tashqari bezaklar: dekorativ gul, podxvat, kisti, bahroma, halqa"`
-	RoomName       string          `json:"room_name,omitempty"   jsonschema:"description=xona nomi, masalan mehmonxona"`
+	Parts          []calcPart      `json:"parts"                 jsonschema:"description=pardani tashkil qiluvchi mato bo'laklari — 1 tadan 10 tagacha"`
+	Accessories    []calcAccessory `json:"accessories,omitempty" jsonschema:"description=matodan tashqari bezaklar: dekorativ gul — podxvat — kisti — bahroma — halqa"`
+	RoomName       string          `json:"room_name,omitempty"   jsonschema:"description=xona nomi — masalan mehmonxona"`
 }
 
 // ---- ixcham hisob natijasi (curtain_calculate / price_quote) ----
@@ -126,9 +126,9 @@ type curtainCalcResult struct {
 // ---- build_options ----
 
 type buildOptionsArgs struct {
-	CorniceLengthM float64 `json:"cornice_length_m,omitempty" jsonschema:"description=karniz uzunligi metrda (state'da bo'lmasa shart)"`
-	HeightM        float64 `json:"height_m,omitempty"         jsonschema:"description=parda balandligi metrda (state'da bo'lmasa shart)"`
-	BudgetMax      float64 `json:"budget_max,omitempty" jsonschema:"description=uchta paket uchun maksimal budjet so'mda"`
+	CorniceLengthM float64 `json:"cornice_length_m,omitempty" jsonschema:"description=karniz uzunligi metr"`
+	HeightM        float64 `json:"height_m,omitempty"         jsonschema:"description=balandlik metr"`
+	BudgetMax      float64 `json:"budget_max,omitempty" jsonschema:"description=maks budjet so'm"`
 	Room           string  `json:"room,omitempty" jsonschema:"description=xona turi"`
 	Style          string  `json:"style,omitempty" jsonschema:"description=uslub"`
 	Pattern        string  `json:"pattern,omitempty" jsonschema:"description=bezak turi"`
@@ -159,9 +159,9 @@ type priceQuoteArgs struct {
 	NeedCornice   bool     `json:"need_cornice,omitempty"   jsonschema:"description=yangi karniz kerakmi"`
 	NeedInstall   bool     `json:"need_install,omitempty"   jsonschema:"description=montaj kerakmi"`
 	NeedDelivery  bool     `json:"need_delivery,omitempty"  jsonschema:"description=yetkazib berish kerakmi"`
-	Services      []string `json:"services,omitempty"       jsonschema:"description=qo'shimcha xizmat kalitlari: sewing tape hook (bo'sh bo'lsa tikuv+tasma+ilgich avtomatik)"`
+	Services      []string `json:"services,omitempty"       jsonschema:"description=xizmatlar: sewing tape hook (bo'sh = standart)"`
 	DiscountPct   float64  `json:"discount_pct,omitempty"   jsonschema:"description=sotuvchi/manager qo'lda kiritgan chegirma foizi"`
-	PrepaymentPct float64  `json:"prepayment_pct,omitempty" jsonschema:"description=avans foizi; bo'sh bo'lsa do'kon standarti"`
+	PrepaymentPct float64  `json:"prepayment_pct,omitempty" jsonschema:"description=avans %"`
 }
 
 type priceQuoteResult struct {
@@ -182,11 +182,11 @@ type setContextArgs struct {
 	Style          string  `json:"style,omitempty"        jsonschema:"description=uslub,enum=classic,enum=modern,enum=hi_tech,enum=minimal,enum=oriental,enum=provence"`
 	Pattern        string  `json:"pattern,omitempty"      jsonschema:"description=bezak,enum=plain,enum=floral,enum=geometric,enum=striped,enum=jacquard"`
 	Transparency   string  `json:"transparency,omitempty" jsonschema:"description=shaffoflik,enum=transparent,enum=semi,enum=blackout"`
-	Light          string  `json:"light,omitempty"        jsonschema:"description=yorug'lik istagi va deraza tomoni, masalan 'qorong'iroq, janubga qaraydi'"`
-	Colors         string  `json:"colors,omitempty"       jsonschema:"description=xona ranglari vergul bilan: devor, mebel, pol"`
-	Construction   string  `json:"construction,omitempty" jsonschema:"description=deraza konstruksiyasi: rom soni, balkon eshigi, karniz bormi, shift balandligi"`
-	CorniceLengthM float64 `json:"cornice_length_m,omitempty" jsonschema:"description=karniz uzunligi metrda — mijoz o'lcham aytsa shu yerga yoz"`
-	HeightM        float64 `json:"height_m,omitempty"         jsonschema:"description=parda balandligi metrda — mijoz o'lcham aytsa shu yerga yoz"`
+	Light          string  `json:"light,omitempty"        jsonschema:"description=yorug'lik/deraza tomoni"`
+	Colors         string  `json:"colors,omitempty"       jsonschema:"description=xona ranglari"`
+	Construction   string  `json:"construction,omitempty" jsonschema:"description=deraza konstruksiyasi: rom/balkon eshigi/karniz"`
+	CorniceLengthM float64 `json:"cornice_length_m,omitempty" jsonschema:"description=karniz uzunligi metr"`
+	HeightM        float64 `json:"height_m,omitempty"         jsonschema:"description=balandlik metr"`
 	BudgetMin      float64 `json:"budget_min,omitempty"   jsonschema:"description=budjet pastki chegarasi so'mda"`
 	BudgetMax      float64 `json:"budget_max,omitempty"   jsonschema:"description=budjet yuqori chegarasi so'mda"`
 }
@@ -266,13 +266,13 @@ type knowledgeLookupResult struct {
 // ---- order_draft ----
 
 type orderDraftArgs struct {
-	Action        string  `json:"action"                  jsonschema:"description=amal: quote — joriy taklif, draft — mijoz ma'lumotlarini to'ldirish bosqichi, confirm — buyurtma qoralamasini saqlash,enum=quote,enum=draft,enum=confirm"`
-	CustomerName  string  `json:"customer_name,omitempty" jsonschema:"description=mijoz ismi — SOTUVCHI kiritadi, mijozdan so'ralmaydi"`
-	CustomerPhone string  `json:"customer_phone,omitempty" jsonschema:"description=mijoz telefoni, masalan +998901234567 — SOTUVCHI kiritadi"`
+	Action        string  `json:"action"                  jsonschema:"description=amal — buyurtma qoralamasini saqlash,enum=quote,enum=draft,enum=confirm"`
+	CustomerName  string  `json:"customer_name,omitempty" jsonschema:"description=mijoz ismi — SOTUVCHI kiritadi — mijozdan so'ralmaydi"`
+	CustomerPhone string  `json:"customer_phone,omitempty" jsonschema:"description=mijoz telefoni — masalan +998901234567 — SOTUVCHI kiritadi"`
 	Address       string  `json:"address,omitempty"       jsonschema:"description=yetkazib berish manzili — SOTUVCHI kiritadi"`
 	Note          string  `json:"note,omitempty"          jsonschema:"description=buyurtmaga qo'shimcha eslatma"`
 	DeadlineDays  int     `json:"deadline_days,omitempty" jsonschema:"description=bajarish muddati kunlarda; bo'sh bo'lsa do'kon standarti"`
-	PrepaymentPct float64 `json:"prepayment_pct,omitempty" jsonschema:"description=avans foizi; bo'sh bo'lsa do'kon standarti"`
+	PrepaymentPct float64 `json:"prepayment_pct,omitempty" jsonschema:"description=avans %"`
 }
 
 type orderDraftResult struct {
