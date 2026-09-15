@@ -256,7 +256,7 @@
       real gRPC LLM oqimi, tool/stage/error tekshiruvi va narx hallucination regex audit qo'shildi. Xarajat limiti sabab 40 suhbat
       (20 + 20) ishlatiladi; 100 suhbatlik TZ auditi bajarilmadi.
 - [x] 2.22 Yuklama testi: 50 parallel sessiya (`ghz` yoki Go bench, mock LLM) — xotira, goroutine sizishi (`goleak`).
-- [ ] 2.23 Teg `v0.2.0`.
+- [x] 2.23 Teg `v0.2.0` (2026-09-15).
 
 ---
 

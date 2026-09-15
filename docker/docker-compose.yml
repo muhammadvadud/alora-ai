@@ -1,0 +1,28 @@
+# Go agent — backend compose (projects/backend) bilan BIR tarmoqda ishlaydi (rules §17.7).
+# Avval backend: `cd ../backend && docker compose up -d db redis grpc django celery_worker`
+# Keyin:        `docker compose -f docker/docker-compose.yml up -d --build`
+# Kalitlar loyiha ildizidagi .env dan (DEEPSEEK_API_KEY, AGENT_SERVICE_TOKEN — backend bilan bir xil).
+services:
+  agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: ghcr.io/muhammadvadud/alora-ai:local
+    env_file:
+      - ../.env
+    environment:
+      ALORA_MODE: grpc
+      ALORA_BACKEND_ADDR: grpc:9091
+      DATABASE_URL: postgres://alora:alora_password@db:5432/alora
+      ALORA_DB_AUTO_MIGRATE: "true"
+    expose:
+      - "9090"
+    ports:
+      - "8081:8081" # /healthz /readyz /metrics
+    restart: unless-stopped
+    networks:
+      - backend_default
+
+networks:
+  backend_default:
+    external: true

@@ -5,9 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -46,7 +48,12 @@ func main() {
 func run() error {
 	configFile := flag.String("config", configPath(), "config fayl yo'li")
 	modeFlag := flag.String("mode", "", "ishga tushirish rejimi: cli | http | grpc (config'ni ustidan yozadi)")
+	healthPath := flag.String("healthcheck", "", "Docker HEALTHCHECK: shu HTTP yo'lni (/readyz) so'rab 0/1 bilan chiqadi — distroless'da curl yo'q")
 	flag.Parse()
+
+	if *healthPath != "" {
+		return healthcheck(*healthPath)
+	}
 
 	_ = godotenv.Load() // .env bo'lsa yuklaymiz (majburiy emas)
 
@@ -434,3 +441,30 @@ Paket nomi noaniq bo'lsa katalog tool'idan foydalan.
 Bolalar soni paket sig'imidan oshsa, mosroq variantni taklif qil.
 Zakaz to'liq bo'lsa tool orqali tasdiqlashni yakunla va admin chatga yuborilishi uchun tayyorla.
 Faqat bitta savol yoki bitta keyingi qadamni ber.`
+
+// healthcheck — Dockerfile HEALTHCHECK uchun: distroless'da curl yo'q, shuning uchun
+// binary o'zi lokal HTTP health portini so'raydi. 200 → 0, aks holda xato (→ 1).
+func healthcheck(path string) error {
+	addr := os.Getenv("ALORA_HTTP_ADDR")
+	if addr == "" {
+		addr = ":8081"
+	}
+	if strings.HasPrefix(addr, ":") {
+		addr = "127.0.0.1" + addr
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+addr+path, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("healthcheck %s: status %d", path, resp.StatusCode)
+	}
+	return nil
+}
