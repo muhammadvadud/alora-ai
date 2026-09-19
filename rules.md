@@ -550,7 +550,7 @@ kontekst chegarasi buzilmasin (DeepSeek 128k, lekin narx).
    belgisi + kerak bo'lsa `docs/` yangilangan + backend'ga ta'sir bo'lsa `GO-CONTRACT.md` ga izoh.
 6. Versiya: semver teg (`v0.1.0` MVP), `Health.version` ldflags orqali.
 7. Docker: multi-stage (`golang:1.26` → `gcr.io/distroless/static`), `HEALTHCHECK` `/readyz`,
-   `docker-compose.yml` backend compose bilan bir tarmoqda (`alora_net`).
+   `docker-compose.yml` (ildiz) `docker/docker-compose.yml` ni include qiladi — backend compose bilan bir tarmoqda (`backend_default`), kalitlar `.env` dan.
 
 ---
 

@@ -1,42 +1,11 @@
-services:
-  agent:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-postgres://alora:alora_password@db:5432/alora}
-      AGENT_SERVICE_TOKEN: ${AGENT_SERVICE_TOKEN:-}
-      ALORA_BACKEND_ADDR: ${ALORA_BACKEND_ADDR:-django:9091}
-    expose:
-      - "9090"
-    ports:
-      - "127.0.0.1:8081:8081"
-    networks:
-      - alora_net
-    restart: unless-stopped
-
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: agent
-      POSTGRES_PASSWORD: agent
-      POSTGRES_DB: agent
-    expose:
-      - "5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agent -d agent"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-    networks:
-      - alora_net
-
-volumes:
-  pgdata:
-
-networks:
-  # Backend stack shu nomdagi network'ga ulanganda django:9091 ko'rinadi.
-  alora_net:
-    name: alora_net
+# Alora AI agent — Docker orqali ishga tushirish.
+# Ishlaydigan konfiguratsiya `docker/docker-compose.yml` da (backend tarmog'i `backend_default`,
+# kalitlar ildizdagi `.env` dan: DEEPSEEK_API_KEY, AGENT_SERVICE_TOKEN). Bu fayl shunchaki unga
+# yo'naltiradi — `docker compose up -d` ildizdan ham ishlaydi.
+#
+# Tartib:
+#   1) cd ../backend && docker compose up -d        (db, redis, grpc, django, nginx)
+#   2) cd ../ai && docker compose up -d --build     (agent — shu fayl)
+#   Tekshirish: curl http://127.0.0.1:8081/readyz  → {"status":"ok"}
+include:
+  - docker/docker-compose.yml
