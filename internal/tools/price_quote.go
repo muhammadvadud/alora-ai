@@ -66,7 +66,7 @@ func (h *priceQuoteHandler) do(ctx context.Context, a priceQuoteArgs) (priceQuot
 		if _, ok := v.Service("cornice"); ok {
 			in.Services = append(in.Services, "cornice")
 		} else {
-			warnings = append(warnings, "karniz narxi katalogda sozlanmagan — karniz summaga kirmadi")
+			warnings = append(warnings, warnCorniceMissing)
 		}
 	}
 

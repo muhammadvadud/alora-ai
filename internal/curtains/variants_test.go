@@ -69,3 +69,48 @@ func TestPlanOptions_MissingRuleAndMeasurement(t *testing.T) {
 		}
 	}
 }
+
+// 2026-09-20 live: premium segmentda eng arzon "mato" lambrekan edi va shaffoflik
+// faqat ball bo'lgani uchun portyera/tul/astar uchalasi "Lambrekan Klassik" bo'lib
+// chiqdi. Qatlam qat'iy filtr, yetishmagan qatlam pastroq segmentdan olinadi.
+func TestPlanOptions_PremiumLayersNeverUseLambrekanAsFabric(t *testing.T) {
+	d := decimal.RequireFromString
+	c := NewCatalog(RealClock{}, time.Hour)
+	c.ApplySnapshot(Snapshot{
+		Version:    1,
+		Categories: []Category{{ID: "lam", Name: "Lambrekan", Slug: "lambrekan"}, {ID: "por", Name: "Portyera", Slug: "portyera"}, {ID: "tl", Name: "Tul", Slug: "tul"}, {ID: "as", Name: "Astar", Slug: "astar"}},
+		Products: []Product{
+			{ID: "lk", Name: "Lambrekan Klassik", Segment: SegmentPremium, Transparency: "semi", CategoryID: "lam", VariantIDs: []string{"lk-v"}},
+			{ID: "velvet", Name: "Velvet Chek", Segment: SegmentPremium, Transparency: "blackout", CategoryID: "por", VariantIDs: []string{"velvet-v"}},
+			{ID: "eco", Name: "Oddiy", Segment: SegmentEconomy, Transparency: "semi", CategoryID: "por", VariantIDs: []string{"eco-v"}},
+			{ID: "std", Name: "Linen", Segment: SegmentStandard, Transparency: "semi", CategoryID: "por", VariantIDs: []string{"std-v"}},
+			{ID: "tul", Name: "Organza", Segment: SegmentStandard, Transparency: "transparent", CategoryID: "tl", VariantIDs: []string{"tul-v"}},
+			{ID: "astar", Name: "Podklad", Segment: SegmentStandard, Transparency: "semi", CategoryID: "as", VariantIDs: []string{"astar-v"}},
+		},
+		Variants: []Variant{
+			{ID: "lk-v", ProductID: "lk", Price: d("120"), PriceUnit: PerSqm, IsActive: true},
+			{ID: "velvet-v", ProductID: "velvet", Price: d("165"), PriceUnit: PerSqm, IsActive: true},
+			{ID: "eco-v", ProductID: "eco", Price: d("18"), PriceUnit: PerSqm, IsActive: true},
+			{ID: "std-v", ProductID: "std", Price: d("70"), PriceUnit: PerSqm, IsActive: true},
+			{ID: "tul-v", ProductID: "tul", Price: d("30"), PriceUnit: PerSqm, IsActive: true},
+			{ID: "astar-v", ProductID: "astar", Price: d("25"), PriceUnit: PerSqm, IsActive: true},
+		},
+		CalcRules: []CalcRule{{Key: "coef_default", Value: d("2")}},
+	})
+	st := SessionState{CorniceLengthM: d("2.5"), HeightM: d("1.5")}
+	got := PlanOptions(c.View(), st, SearchQuery{})
+	premium := got[2]
+	if premium.Parts == nil {
+		t.Fatalf("premium paket tuzilmadi: %s", premium.Why)
+	}
+	byRole := map[PartRole]string{}
+	for _, p := range premium.Parts {
+		byRole[p.Role] = p.VariantID
+	}
+	if byRole[RolePortyera] != "velvet-v" || byRole[RoleTul] != "tul-v" || byRole[RoleAstar] != "astar-v" {
+		t.Fatalf("premium qatlamlar noto'g'ri: %v", byRole)
+	}
+	if got[1].Parts == nil || got[1].Parts[1].VariantID != "tul-v" {
+		t.Fatalf("standard tul: %+v", got[1].Parts)
+	}
+}

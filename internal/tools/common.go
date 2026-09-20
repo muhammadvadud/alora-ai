@@ -188,3 +188,6 @@ func userRole(ctx context.Context) curtains.UserRole {
 	// borsin; manager limitiga aylantirilmaydi.
 	return curtains.RoleEmployee
 }
+
+// warnCorniceMissing — "cornice" xizmati katalogda yo'q: karniz summaga kirmaydi.
+const warnCorniceMissing = "karniz narxi katalogda sozlanmagan — karniz summaga kirmadi"

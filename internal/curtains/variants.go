@@ -57,15 +57,15 @@ func PlanOptions(v *View, st SessionState, q SearchQuery) [3]OptionPlan {
 		plans[i].Services = []string{"sewing", "tape", "hook"}
 		switch plans[i].Tier {
 		case OptionEconomy:
-			cards := cheapestFabric(v, q, SegmentEconomy, "")
+			cards := cheapestFabric(v, q, SegmentEconomy)
 			if len(cards) == 0 {
 				plans[i].Why = "economy segmentida mos mato yo'q"
 				continue
 			}
 			plans[i].Parts = []PartSpec{basicPart(cards[0], RolePortyera, st, coef)}
 		case OptionStandard:
-			port := cheapestFabric(v, q, SegmentStandard, "")
-			tul := cheapestFabric(v, q, SegmentStandard, "transparent")
+			port := cheapestFabric(v, q, SegmentStandard)
+			tul := cheapestLayer(v, q, "tul", SegmentStandard, SegmentEconomy, SegmentPremium)
 			if len(port) == 0 || len(tul) == 0 {
 				plans[i].Why = "standard segmentida mos qatlam topilmadi"
 				continue
@@ -103,14 +103,20 @@ func basicPart(card ProductCard, role PartRole, st SessionState, coef decimal.De
 	return PartSpec{Role: role, VariantID: card.VariantID, WidthM: st.CorniceLengthM, HeightM: st.HeightM, Coef: coef}
 }
 
-func cheapestFabric(v *View, q SearchQuery, segment Segment, transparency string) []ProductCard {
-	q.Kind, q.Segment, q.Transparency, q.Limit = "fabric", segment, transparency, 10
-	cards := Search(v, q)
-	// Economy katalogi eski bo'lishi mumkin; faqat shu paketda segmentsiz fallback
-	// ishlatiladi, aks holda standard/premium mahsulotlari noto'g'ri paketga o'tadi.
-	if len(cards) == 0 && segment == SegmentEconomy {
-		q.Segment = ""
-		cards = Search(v, q)
+// cheapestLayer — berilgan qatlam (portyera/tul/astar) uchun segmentdagi eng
+// arzon matoni qaytaradi. Qatlam Search'da qat'iy filtr (LayerOf), shaffoflik esa
+// faqat ball — shuning uchun ilgari "transparent" so'rab lambrekan qaytardi
+// (2026-09-20 live: premium paketda portyera/tul/astar uchalasi "Lambrekan Klassik").
+// Segmentda qatlam bo'lmasa `fallback` segmentlari navbat bilan sinaladi —
+// premium tul katalogda bo'lmasligi mumkin, lekin tul tul bo'lib qolaveradi.
+func cheapestLayer(v *View, q SearchQuery, layer string, segments ...Segment) []ProductCard {
+	q.Kind, q.Layer, q.Limit = "fabric", layer, 10
+	var cards []ProductCard
+	for _, seg := range segments {
+		q.Segment = seg
+		if cards = Search(v, q); len(cards) > 0 {
+			break
+		}
 	}
 	sort.SliceStable(cards, func(i, j int) bool {
 		if !cards[i].Price.Equal(cards[j].Price) {
@@ -121,11 +127,22 @@ func cheapestFabric(v *View, q SearchQuery, segment Segment, transparency string
 	return cards
 }
 
+// cheapestFabric — asosiy (portyera) mato. Economy katalogi eski bo'lishi mumkin;
+// faqat shu paketda segmentsiz fallback ishlatiladi, aks holda standard/premium
+// mahsulotlari noto'g'ri paketga o'tadi.
+func cheapestFabric(v *View, q SearchQuery, segment Segment) []ProductCard {
+	if segment == SegmentEconomy {
+		return cheapestLayer(v, q, "portyera", SegmentEconomy, "")
+	}
+	return cheapestLayer(v, q, "portyera", segment)
+}
+
 func premiumParts(v *View, st SessionState, q SearchQuery, coef decimal.Decimal) ([]PartSpec, []AccessoryInput) {
 	fasons := LookupFason(v, st.Room, st.Style)
-	port := cheapestFabric(v, q, SegmentPremium, "")
-	tul := cheapestFabric(v, q, SegmentPremium, "transparent")
-	astar := cheapestFabric(v, q, SegmentPremium, "blackout")
+	port := cheapestFabric(v, q, SegmentPremium)
+	// Yordamchi qatlamlar premium segmentda bo'lmasa pastroq segmentdan olinadi.
+	tul := cheapestLayer(v, q, "tul", SegmentPremium, SegmentStandard, SegmentEconomy)
+	astar := cheapestLayer(v, q, "astar", SegmentPremium, SegmentStandard, SegmentEconomy)
 	if len(port) == 0 || len(tul) == 0 || len(astar) == 0 {
 		return nil, nil
 	}

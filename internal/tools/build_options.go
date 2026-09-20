@@ -2,6 +2,8 @@ package tools
 
 import (
 	"context"
+	"fmt"
+	"sort"
 	"strings"
 	"sync"
 
@@ -48,6 +50,7 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 	results := [3]*curtains.CalcResult{}
 	errs := make([]error, 3)
 	var wg sync.WaitGroup
+	var missing []string
 	for i := range plans {
 		outs[i].Tier = string(plans[i].Tier)
 		outs[i].Why = plans[i].Why
@@ -55,6 +58,9 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 			outs[i].Error = plans[i].Why
 			continue
 		}
+		// Katalogda yo'q xizmat paketga qo'shilmaydi (rules: katalogda yo'q narsa
+		// hisobga kirmaydi). Yo'qlari ogohlantirishga chiqadi, paket yiqilmaydi.
+		missing = append(missing, dropMissingServices(v, &plans[i])...)
 		outs[i].Lines = optionLines(plans[i], v)
 		in := planInput(plans[i], st, userRole(ctx))
 		wg.Add(1)
@@ -88,6 +94,7 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 		return buildOptionsResult{Options: outs, Stale: stale, Error: errCalcUnavailable}, nil
 	}
 	warnings := append([]string{}, optionWarnings(results)...)
+	warnings = append(warnings, missingServiceWarnings(missing)...)
 	if stale {
 		warnings = append(warnings, warnStale)
 	}
@@ -206,4 +213,45 @@ func stringsLower(s string) string {
 		return "o'rtachadan"
 	}
 	return "economy'dan"
+}
+
+// dropMissingServices — plan xizmatlaridan katalogda (ServicePrice) yo'qlarini
+// olib tashlaydi va ularning kalitlarini qaytaradi. Karniz ham xizmat ("cornice").
+func dropMissingServices(v *curtains.View, p *curtains.OptionPlan) []string {
+	var missing []string
+	kept := p.Services[:0]
+	for _, key := range p.Services {
+		if _, ok := v.Service(key); ok {
+			kept = append(kept, key)
+		} else {
+			missing = append(missing, key)
+		}
+	}
+	p.Services = kept
+	if p.NeedCornice {
+		if _, ok := v.Service("cornice"); !ok {
+			p.NeedCornice = false
+			missing = append(missing, "cornice")
+		}
+	}
+	return missing
+}
+
+// missingServiceWarnings — takrorsiz, deterministik tartibda ogohlantirishlar.
+func missingServiceWarnings(keys []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, k := range keys {
+		if seen[k] {
+			continue
+		}
+		seen[k] = true
+		if k == "cornice" {
+			out = append(out, warnCorniceMissing)
+			continue
+		}
+		out = append(out, fmt.Sprintf("'%s' xizmati katalogda sozlanmagan — summaga kirmadi", k))
+	}
+	sort.Strings(out)
+	return out
 }
