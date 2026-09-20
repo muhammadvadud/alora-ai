@@ -211,6 +211,7 @@ func run() error {
 		MaxHistory:         cfg.Agent.MaxHistory,
 		MaxToolResultChars: cfg.Agent.MaxToolResultChars,
 		Stream:             cfg.Agent.Stream,
+		Title:              cfg.Agent.Title,
 		StateHook:          stateHook{store: store},
 		Provider:           cfg.LLM.Provider,
 		Model:              cfg.LLM.Model,

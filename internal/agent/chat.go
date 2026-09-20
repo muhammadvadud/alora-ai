@@ -43,6 +43,7 @@ type Chat struct {
 	promptTokenBudget int                   // bitta Stream'da yig'ilgan prompt token chegarasi (0 = o'chiq)
 	onUsage           func(Usage)           // done'da yig'ilgan usage (metrika hook'i, rules §2)
 	onBudgetExceeded  func(provider string) // byudjet tugaganda (metrika hook'i)
+	title             bool                  // birinchi navbatdan keyin sarlavha yaratish (title.go)
 }
 
 // fallbackAnswer — model matnli javob bermasa (masalan maxStep tugab qolsa)
@@ -87,6 +88,9 @@ type Options struct {
 	// OnBudgetExceeded — prompt byudjeti tugaganda provider nomi bilan chaqiriladi
 	// (alora_llm_budget_exceeded_total metrikasi main.go da ulaydi).
 	OnBudgetExceeded func(provider string)
+	// Title — suhbatning birinchi navbatidan keyin AI sarlavha yaratib `title`
+	// event'ida yuboradi (title.go). Django Conversation.title ni yangilaydi.
+	Title bool
 	// Provider/Model — done.usage markerlari (main.go shu nomlarni to'ldiradi).
 	Provider         string
 	Model            string
@@ -131,7 +135,7 @@ func NewChat(ctx context.Context, chatModel model.ToolCallingChatModel, tools []
 		fallback: opts.Fallback, fallbackProvider: opts.FallbackProvider,
 		systemPromptFunc: opts.SystemPromptFunc,
 		toolSelector:     opts.ToolSelector, promptTokenBudget: opts.PromptTokenBudget,
-		onUsage: opts.OnUsage, onBudgetExceeded: opts.OnBudgetExceeded,
+		onUsage: opts.OnUsage, onBudgetExceeded: opts.OnBudgetExceeded, title: opts.Title,
 	}, nil
 }
 
@@ -195,6 +199,7 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 		)
 
 		answered := false
+		finalAnswer := ""
 		emptyRetried := false
 		activeModel := primary
 		usedFallback := false
@@ -247,6 +252,7 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 				if strings.TrimSpace(content) != "" {
 					msgs = append(msgs, schema.AssistantMessage(content, nil))
 					answered = true
+					finalAnswer = content
 					break
 				}
 				// Model na tool, na matn qaytardi (DeepSeek'da tool xatosidan keyin uchraydi):
@@ -300,6 +306,13 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 			stage, summary := c.stateHook.Stage(ctx, sessionID)
 			if stage != "" {
 				emit(ctx, out, Event{Kind: KindStage, Content: stage, Result: summary})
+			}
+		}
+		// Sarlavha — faqat birinchi navbat (tarix bo'sh edi) va haqiqiy javob bo'lsa.
+		if c.title && len(history) == 0 && answered {
+			if title, tu := c.generateTitle(ctx, c.model, input, finalAnswer); title != "" {
+				usage = addUsage(usage, tu)
+				emit(ctx, out, Event{Kind: KindTitle, Content: title})
 			}
 		}
 		provider := c.provider

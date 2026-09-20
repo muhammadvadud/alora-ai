@@ -12,6 +12,7 @@ const (
 	KindToolResult Kind = "tool_result" // tool natija qaytardi
 	KindProducts   Kind = "products"    // tool katalogdan mahsulotlar topdi — ilova kartochka chizadi
 	KindStage      Kind = "stage"       // javob tugashidan oldin joriy suhbat bosqichi
+	KindTitle      Kind = "title"       // birinchi navbatdan keyin AI qo'ygan suhbat sarlavhasi (Content)
 	KindDone       Kind = "done"        // javob tugadi (Usage bilan birga)
 	KindError      Kind = "error"       // xato yuz berdi
 )
@@ -21,7 +22,7 @@ const (
 type Event struct {
 	Kind Kind `json:"kind"`
 	// Content — KindContent uchun javob matni, KindThinking uchun o'ylash matni,
-	// KindStage uchun bosqich nomi.
+	// KindStage uchun bosqich nomi, KindTitle uchun suhbat sarlavhasi.
 	Content string `json:"content,omitempty"`
 	Tool    string `json:"tool,omitempty"`
 	Args    string `json:"args,omitempty"`

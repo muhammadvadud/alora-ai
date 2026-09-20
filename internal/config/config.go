@@ -101,6 +101,9 @@ type AgentConfig struct {
 	// Stream — javobni jonli (bo'lak-bo'lak) yuborish. false bo'lsa javob yaxlit keladi.
 	// Standart: true. ENV: ALORA_AGENT_STREAM=false
 	Stream bool `mapstructure:"stream"`
+	// Title — birinchi navbatdan keyin AI suhbat sarlavhasini yaratib `title`
+	// event'ida yuboradi. Standart: true. ENV: ALORA_AGENT_TITLE=false
+	Title bool `mapstructure:"title"`
 }
 
 type ServerConfig struct {
@@ -208,6 +211,7 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("agent.max_tool_result_chars", 3000)
 	v.SetDefault("agent.prompt_token_budget", 40000)
 	v.SetDefault("agent.stream", true)
+	v.SetDefault("agent.title", true)
 	v.SetDefault("agent.system_prompt", "")
 	v.SetDefault("server.addr", ":8080")
 	v.SetDefault("grpc.addr", ":9090")

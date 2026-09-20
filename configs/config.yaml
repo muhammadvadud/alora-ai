@@ -46,6 +46,9 @@ agent:
   # Javobni jonli (bo'lak-bo'lak) yuborish. false — javob yaxlit, bir marta keladi.
   # ENV bilan ustidan yozish: ALORA_AGENT_STREAM=false
   stream: true
+  # Birinchi navbatdan keyin AI suhbat sarlavhasini yaratadi (`title` event, ~100 token).
+  # ENV: ALORA_AGENT_TITLE=false
+  title: true
   # Prompt Django'dan sinxronlanadi; bu yerda emas — $fallback.system_prompt ga qarang.
   system_prompt: ""
 

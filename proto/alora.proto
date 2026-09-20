@@ -56,10 +56,12 @@ message ChatRequest {
 
 message ChatEvent {
   // Voqea turi: start | thinking | content | tool_call | tool_args | tool_result |
-  //             products | stage | done | error.
+  //             products | stage | title | done | error.
   //   products — `products` maydoni to'ldiriladi (ilova kartochka chizadi).
   //   stage    — `content` = suhbat bosqichi (need|recommend|measure|calc|variants|order),
   //              `result` = qisqa holat JSON; Django `Conversation.stage` ni yangilaydi.
+  //   title    — `content` = AI qo'ygan suhbat sarlavhasi (faqat birinchi navbatdan
+  //              keyin, ≤72 belgi); Django `Conversation.title` ni yangilaydi.
   string kind = 1;
   // Matn kontenti (content event'ida to'ldiriladi).
   string content = 2;
