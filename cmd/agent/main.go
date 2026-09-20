@@ -257,8 +257,11 @@ func run() error {
 					if pendingErr != nil {
 						return "degraded", "outbox holatini o'qib bo'lmadi"
 					}
-					if pending > 1000 || dead > 0 {
-						return "degraded", "outbox navbati to'lib qolgan"
+					if pending > 1000 {
+						return "degraded", fmt.Sprintf("outbox navbati to'lib qolgan (pending=%d)", pending)
+					}
+					if dead > 0 {
+						return "degraded", fmt.Sprintf("outbox'da yuborilmagan (dead) yozuvlar bor: %d", dead)
 					}
 				}
 				if catalog.View().Stale {

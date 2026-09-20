@@ -24,6 +24,8 @@ type OutboxStore interface {
 	Ack(context.Context, int64) error
 	Fail(context.Context, int64, time.Time, bool) error
 	Pending(context.Context) (pending, dead int, err error)
+	// Purge `before` dan oldin yaratilgan dead yozuvlarni o'chiradi va sonini qaytaradi.
+	Purge(ctx context.Context, before time.Time) (int64, error)
 }
 
 type memoryOutbox struct {
@@ -34,9 +36,10 @@ type memoryOutbox struct {
 
 type memoryOutboxItem struct {
 	OutboxItem
-	nextAt time.Time
-	dead   bool
-	claim  bool
+	nextAt    time.Time
+	createdAt time.Time
+	dead      bool
+	claim     bool
 }
 
 func NewMemoryOutbox() OutboxStore {
@@ -50,7 +53,7 @@ func (s *memoryOutbox) Enqueue(ctx context.Context, kind string, payload []byte)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.nextID++
-	s.items[s.nextID] = &memoryOutboxItem{OutboxItem: OutboxItem{ID: s.nextID, Kind: kind, Payload: append([]byte(nil), payload...)}}
+	s.items[s.nextID] = &memoryOutboxItem{OutboxItem: OutboxItem{ID: s.nextID, Kind: kind, Payload: append([]byte(nil), payload...)}, createdAt: time.Now()}
 	return nil
 }
 
@@ -105,6 +108,22 @@ func (s *memoryOutbox) Pending(_ context.Context) (pending, dead int, err error)
 		}
 	}
 	return pending, dead, nil
+}
+
+func (s *memoryOutbox) Purge(ctx context.Context, before time.Time) (int64, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var removed int64
+	for id, item := range s.items {
+		if item.dead && item.createdAt.Before(before) {
+			delete(s.items, id)
+			removed++
+		}
+	}
+	return removed, nil
 }
 
 // NewPostgresOutbox idempotent jadval yaratadi; shu sababli eski migratorga tegmasdan
@@ -193,4 +212,12 @@ func (s *postgresOutbox) Pending(ctx context.Context) (pending, dead int, err er
 		return 0, 0, nil
 	}
 	return
+}
+
+func (s *postgresOutbox) Purge(ctx context.Context, before time.Time) (int64, error) {
+	tag, err := s.pool.Exec(ctx, `DELETE FROM agent.outbox WHERE dead AND created_at < $1`, before)
+	if err != nil {
+		return 0, fmt.Errorf("outbox tozalash: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }

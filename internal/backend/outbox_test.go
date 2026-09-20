@@ -99,3 +99,40 @@ func TestOutboxWorkerAckAfterBackendReturns(t *testing.T) {
 type fixedClock struct{ when time.Time }
 
 func (c fixedClock) Now() time.Time { return c.when }
+
+func TestOutboxPurgeRemovesOnlyOldDeadItems(t *testing.T) {
+	store := session.NewMemoryOutbox()
+	ctx := context.Background()
+	for i := 0; i < 2; i++ {
+		if err := store.Enqueue(ctx, "unknown", []byte(`{}`)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	now := time.Now()
+	items, err := store.Claim(ctx, 50, now)
+	if err != nil || len(items) != 2 {
+		t.Fatalf("claim: items=%d err=%v", len(items), err)
+	}
+	// Birinchisi dead, ikkinchisi hali retry kutmoqda.
+	if err := store.Fail(ctx, items[0].ID, now, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Fail(ctx, items[1].ID, now.Add(time.Hour), false); err != nil {
+		t.Fatal(err)
+	}
+
+	// Retention hali o'tmagan — hech narsa o'chmaydi.
+	removed, err := store.Purge(ctx, now.Add(-time.Hour))
+	if err != nil || removed != 0 {
+		t.Fatalf("erta purge: removed=%d err=%v", removed, err)
+	}
+	// Retention o'tgan — faqat dead o'chadi, pending qoladi.
+	removed, err = store.Purge(ctx, now.Add(time.Hour))
+	if err != nil || removed != 1 {
+		t.Fatalf("purge: removed=%d err=%v", removed, err)
+	}
+	pending, dead, err := store.Pending(ctx)
+	if err != nil || pending != 1 || dead != 0 {
+		t.Fatalf("pending=%d dead=%d err=%v", pending, dead, err)
+	}
+}

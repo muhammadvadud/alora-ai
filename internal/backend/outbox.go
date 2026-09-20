@@ -16,25 +16,38 @@ import (
 
 type Clock interface{ Now() time.Time }
 
+// DefaultDeadRetention — dead yozuvlar shuncha vaqtdan keyin tozalanadi. Aks holda
+// bir martalik uzilishdan qolgan dead yozuvlar health'ni abadiy "degraded" qilib qo'yadi.
+const DefaultDeadRetention = 24 * time.Hour
+
+const purgeInterval = 10 * time.Minute
+
 type Outbox struct {
-	store   session.OutboxStore
-	client  alorav1.BackendClient
-	metrics *observability.Metrics
-	clock   Clock
-	logger  *slog.Logger
+	store         session.OutboxStore
+	client        alorav1.BackendClient
+	metrics       *observability.Metrics
+	clock         Clock
+	logger        *slog.Logger
+	deadRetention time.Duration
+	lastPurge     time.Time
 }
 
 type OutboxOptions struct {
 	Metrics *observability.Metrics
 	Clock   Clock
 	Logger  *slog.Logger
+	// DeadRetention — dead yozuvlar qancha saqlanadi (0 → DefaultDeadRetention).
+	DeadRetention time.Duration
 }
 
 func NewOutbox(store session.OutboxStore, client alorav1.BackendClient, options OutboxOptions) *Outbox {
 	if options.Clock == nil {
 		options.Clock = curtains.RealClock{}
 	}
-	return &Outbox{store: store, client: client, metrics: options.Metrics, clock: options.Clock, logger: options.Logger}
+	if options.DeadRetention <= 0 {
+		options.DeadRetention = DefaultDeadRetention
+	}
+	return &Outbox{store: store, client: client, metrics: options.Metrics, clock: options.Clock, logger: options.Logger, deadRetention: options.DeadRetention}
 }
 
 func (o *Outbox) Enqueue(ctx context.Context, kind string, payload []byte) error {
@@ -89,8 +102,27 @@ func (o *Outbox) process(ctx context.Context) error {
 			return err
 		}
 	}
+	o.purgeDead(ctx, now)
 	o.updatePending(ctx)
 	return nil
+}
+
+// purgeDead eskirgan dead yozuvlarni vaqti-vaqti bilan o'chiradi.
+func (o *Outbox) purgeDead(ctx context.Context, now time.Time) {
+	if !o.lastPurge.IsZero() && now.Sub(o.lastPurge) < purgeInterval {
+		return
+	}
+	o.lastPurge = now
+	removed, err := o.store.Purge(ctx, now.Add(-o.deadRetention))
+	if err != nil {
+		if o.logger != nil {
+			o.logger.Warn("outbox dead yozuvlarini tozalab bo'lmadi", "error", err)
+		}
+		return
+	}
+	if removed > 0 && o.logger != nil {
+		o.logger.Info("outbox eski dead yozuvlari tozalandi", "count", removed, "retention", o.deadRetention.String())
+	}
 }
 
 func (o *Outbox) send(ctx context.Context, item session.OutboxItem) error {
