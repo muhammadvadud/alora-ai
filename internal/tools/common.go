@@ -78,12 +78,20 @@ func compactCalc(v *curtains.View, r curtains.CalcResult) (*calcTotals, []calcLi
 		for _, p := range r.Measurements[i].Parts {
 			lines = append(lines, calcLine{
 				Role:      string(p.Role),
+				VariantID: p.VariantID,
 				Name:      partLabel(v, p.VariantID, p.SKU),
-				AreaM2:    p.AreaM2.String(),
+				WidthM:    p.WidthM.String(),
+				HeightM:   p.HeightM.String(),
 				Coef:      p.Coef.String(),
+				AreaM2:    compactDecimal(p.AreaM2),
+				PriceUnit: string(p.PriceUnit),
+				UnitPrice: compactDecimal(p.UnitPrice),
 				LineTotal: p.LineTotal.String(),
 			})
 		}
+	}
+	if len(lines) > 8 {
+		lines = lines[:8]
 	}
 	services := make([]calcServiceLine, 0, len(r.Services))
 	for _, s := range r.Services {
@@ -98,6 +106,13 @@ func compactCalc(v *curtains.View, r curtains.CalcResult) (*calcTotals, []calcLi
 		})
 	}
 	return t, lines, services
+}
+
+func compactDecimal(value decimal.Decimal) string {
+	if value.IsZero() {
+		return ""
+	}
+	return value.String()
 }
 
 // decStr — kontrakt 1.4.1 oraliq yig'indisi: Django ularni bermasa nil —

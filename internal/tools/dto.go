@@ -101,9 +101,14 @@ type calcTotals struct {
 
 type calcLine struct {
 	Role      string `json:"role"`
+	VariantID string `json:"variant_id,omitempty"`
 	Name      string `json:"name"` // mahsulot nomi; katalogda bo'lmasa SKU
-	AreaM2    string `json:"area_m2"`
-	Coef      string `json:"coef"`
+	WidthM    string `json:"width_m,omitempty"`
+	HeightM   string `json:"height_m,omitempty"`
+	Coef      string `json:"coef,omitempty"`
+	AreaM2    string `json:"area_m2,omitempty"`
+	PriceUnit string `json:"price_unit,omitempty"`
+	UnitPrice string `json:"unit_price,omitempty"`
 	LineTotal string `json:"line_total"`
 }
 
