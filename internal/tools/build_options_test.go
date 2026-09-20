@@ -87,6 +87,9 @@ func TestBuildOptions_ParallelAndState(t *testing.T) {
 	if res.Options[0].Total == "" || res.Options[0].Display == nil || state.state.Stage != curtains.StageVariants {
 		t.Fatalf("natija/display/state: %+v state=%+v", res.Options[0], state.state)
 	}
+	if len(res.Options[1].Variants) != 2 || res.Options[1].Variants[0].VariantID == "" || res.Options[1].Variants[1].VariantID == "" {
+		t.Fatalf("paket variant ID'lari qaytishi kerak: %+v", res.Options[1].Variants)
+	}
 }
 
 func TestBuildOptions_OneCalculationErrorKeepsOthers(t *testing.T) {

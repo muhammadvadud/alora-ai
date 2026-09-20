@@ -19,7 +19,7 @@ import (
 func BuildOptions(d Deps) tool.BaseTool {
 	h := &buildOptionsHandler{d: d}
 	return must(utils.InferTool("build_options",
-		"Yig'ilgan talab va o'lchov asosida arzon / o'rtacha / premium — 3 ta to'liq taklifni bir chaqiruvda tuzadi (mahsulot tanlash + hisob). Faqat o'lcham ma'lum bo'lgach chaqir.",
+		"Yig'ilgan talab va o'lchov asosida arzon / o'rtacha / premium — 3 ta to'liq taklifni bir chaqiruvda tuzadi (mahsulot tanlash + hisob). Faqat o'lcham ma'lum bo'lgach chaqir. Foydalanuvchi paket tanlasa, options ichidagi variants[].variant_id qiymatlarini curtain_calculate.parts[].variant_id ga aynan ko'chir; name, SKU yoki mahsulot nomini ID o'rniga yuborma.",
 		h.do))
 }
 
@@ -54,6 +54,7 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 	for i := range plans {
 		outs[i].Tier = string(plans[i].Tier)
 		outs[i].Why = plans[i].Why
+		outs[i].Variants = optionVariants(plans[i], v)
 		if plans[i].Parts == nil {
 			outs[i].Error = plans[i].Why
 			continue
@@ -101,6 +102,25 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 	st.Apply("build_options", argsMap(a), now(h.d))
 	saveState(ctx, h.d, sid, st)
 	return buildOptionsResult{Options: outs, Comparison: CompareOptions(results), Warnings: warnings, Stale: stale}, nil
+}
+
+func optionVariants(p curtains.OptionPlan, v *curtains.View) []buildOptionVariant {
+	variants := make([]buildOptionVariant, 0, len(p.Parts)+len(p.Accessories))
+	for _, part := range p.Parts {
+		variants = append(variants, buildOptionVariant{
+			Role:      string(part.Role),
+			VariantID: part.VariantID,
+			Name:      partLabel(v, part.VariantID, ""),
+		})
+	}
+	for _, accessory := range p.Accessories {
+		variants = append(variants, buildOptionVariant{
+			Role:      "bezak",
+			VariantID: accessory.VariantID,
+			Name:      partLabel(v, accessory.VariantID, ""),
+		})
+	}
+	return variants
 }
 
 func first(value, fallback string) string {
