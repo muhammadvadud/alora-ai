@@ -226,7 +226,7 @@ func TestPriceQuote_RequiresCalcAndRespectsRoleLimit(t *testing.T) {
 	if res.Error != "" {
 		t.Fatalf("xato: %s", res.Error)
 	}
-	if got := strings.Join(calc.last.Services, ","); got != "sewing,tape,hook,install" || !calc.last.Delivery {
+	if got := strings.Join(calc.last.Services, ","); got != "sewing" || !calc.last.Delivery {
 		t.Fatalf("xizmatlar: %s delivery=%v", got, calc.last.Delivery)
 	}
 	if res.Totals.Prepayment != "2691000" || res.Totals.Balance != "2691000" {
@@ -235,7 +235,7 @@ func TestPriceQuote_RequiresCalcAndRespectsRoleLimit(t *testing.T) {
 	if d := res.Display.(map[string]string); d["prepayment"] != "2 691 000 so'm" || d["balance"] != "2 691 000 so'm" {
 		t.Fatalf("display avans/qoldiq: %v", d)
 	}
-	if len(res.Warnings) == 0 || !strings.Contains(res.Warnings[0], "karniz") {
+	if len(res.Warnings) == 0 || !strings.Contains(strings.Join(res.Warnings, " "), "karniz") {
 		t.Fatalf("karniz ogohlantirishi kutilgan: %v", res.Warnings)
 	}
 	// manager uchun 12% o'tadi

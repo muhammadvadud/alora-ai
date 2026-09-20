@@ -109,6 +109,7 @@ type calcLine struct {
 
 type calcServiceLine struct {
 	Key       string `json:"key"`
+	Name      string `json:"name,omitempty"`
 	LineTotal string `json:"line_total"`
 }
 

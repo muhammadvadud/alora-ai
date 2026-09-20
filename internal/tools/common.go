@@ -87,7 +87,15 @@ func compactCalc(v *curtains.View, r curtains.CalcResult) (*calcTotals, []calcLi
 	}
 	services := make([]calcServiceLine, 0, len(r.Services))
 	for _, s := range r.Services {
-		services = append(services, calcServiceLine{Key: s.Key, LineTotal: s.LineTotal.String()})
+		name := ""
+		if service, ok := v.Service(s.Key); ok {
+			name = service.Name
+		}
+		services = append(services, calcServiceLine{
+			Key:       s.Key,
+			Name:      name,
+			LineTotal: s.LineTotal.String(),
+		})
 	}
 	return t, lines, services
 }
