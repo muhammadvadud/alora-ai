@@ -42,7 +42,11 @@ func (h *orderDraftHandler) do(ctx context.Context, a orderDraftArgs) (orderDraf
 		if len(missing) > 0 {
 			return orderDraftResult{Missing: missing, Hint: "sotuvchi mijoz ma'lumotlarini kiritsin"}, nil
 		}
-		return orderDraftResult{Ready: true, Summary: orderSummary(a, quote)}, nil
+		return orderDraftResult{
+			Ready:   true,
+			Summary: orderSummary(a, quote),
+			Quote:   toAny(quote),
+		}, nil
 	case "confirm":
 		missing := missingOrderFields(a)
 		if len(missing) > 0 {
