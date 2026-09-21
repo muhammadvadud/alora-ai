@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -214,3 +215,86 @@ func userRole(ctx context.Context) curtains.UserRole {
 
 // warnCorniceMissing — "cornice" xizmati katalogda yo'q: karniz summaga kirmaydi.
 const warnCorniceMissing = "karniz narxi katalogda sozlanmagan — karniz summaga kirmadi"
+
+// buildExplanation — "Qanday hisoblandi?" uchun formula qatorlari (mobil ko'rsatadi).
+// Barcha sonlar Django CalcResult'dan (rules §0.3), Go hech narsa hisoblamaydi.
+// Bo'laklar 2 tagacha (LLM natijasi ≤ 2 KB — rules §5), yakun qatorlari har doim.
+func buildExplanation(v *curtains.View, res curtains.CalcResult) []string {
+	const maxParts = 2
+	var out []string
+	partsTotal, partsShown := 0, 0
+	for _, m := range res.Measurements {
+		partsTotal += len(m.Parts)
+	}
+	for _, m := range res.Measurements {
+		for _, p := range m.Parts {
+			if partsShown >= maxParts {
+				continue
+			}
+			partsShown++
+			unit := unitLabel(p.PriceUnit)
+			var b strings.Builder
+			fmt.Fprintf(&b, "%s %s: ", p.Role, partLabel(v, p.VariantID, p.SKU))
+			if p.WidthM.IsPositive() && p.Coef.IsPositive() {
+				fmt.Fprintf(&b, "eni %s m × K %s; ", p.WidthM.String(), p.Coef.String())
+			}
+			if p.HeightM.IsPositive() {
+				fmt.Fprintf(&b, "balandlik %s m; ", p.HeightM.String())
+			}
+			if p.WastePercent.IsPositive() {
+				fmt.Fprintf(&b, "xom maydon %s %s → %s %s (chiqindi %s%%); ",
+					p.RawAreaM2.String(), unit, p.AreaM2.String(), unit, p.WastePercent.StringFixed(1))
+			}
+			if p.AreaM2.IsPositive() && p.UnitPrice.IsPositive() {
+				fmt.Fprintf(&b, "%s %s × %s = %s", p.AreaM2.String(), unit, displayMoney(p.UnitPrice), displayMoney(p.LineTotal))
+			} else {
+				fmt.Fprintf(&b, "jami %s", displayMoney(p.LineTotal))
+			}
+			out = append(out, b.String())
+		}
+		for _, a := range m.Accessories {
+			out = append(out, fmt.Sprintf("Bezak %s: %s %s × %s = %s",
+				partLabel(v, a.VariantID, a.SKU), a.Qty.String(), unitLabel(a.PriceUnit),
+				displayMoney(a.UnitPrice), displayMoney(a.LineTotal)))
+		}
+	}
+	if partsTotal > partsShown {
+		out = append(out, fmt.Sprintf("... va yana %d ta bo'lak", partsTotal-partsShown))
+	}
+	for _, s := range res.Services {
+		if s.IsDelivery {
+			continue // quyida DeliveryAmount bilan bitta qator
+		}
+		name := s.Name
+		if name == "" {
+			name = s.Key
+			if service, ok := v.Service(s.Key); ok {
+				name = service.Name
+			}
+		}
+		out = append(out, fmt.Sprintf("%s: %s %s × %s = %s",
+			name, s.Qty.String(), unitLabel(s.PriceUnit), displayMoney(s.UnitPrice), displayMoney(s.LineTotal)))
+	}
+	if res.DeliveryAmount.IsPositive() {
+		out = append(out, "Yetkazish: "+displayMoney(res.DeliveryAmount))
+	}
+	if res.DiscountAmount.IsPositive() {
+		out = append(out, fmt.Sprintf("Chegirma %s%%: -%s", res.DiscountPercent.StringFixed(0), displayMoney(res.DiscountAmount)))
+	}
+	out = append(out, "Jami: "+displayMoney(res.Total))
+	return out
+}
+
+// unitLabel — narx birligining o'zbekcha qisqa nomi.
+func unitLabel(u curtains.PriceUnit) string {
+	switch u {
+	case curtains.PerPiece:
+		return "dona"
+	case curtains.PerMeter:
+		return "m"
+	case curtains.PerSqm:
+		return "m²"
+	default:
+		return string(u)
+	}
+}

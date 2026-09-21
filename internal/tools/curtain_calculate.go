@@ -49,7 +49,7 @@ func (h *curtainCalcHandler) do(ctx context.Context, a curtainCalcArgs) (curtain
 		Services:    services,
 		Display:     displayTotals(res),
 		Warnings:    append([]string{}, res.Warnings...),
-		Explanation: curtains.Explain(res),
+		Explanation: append(buildExplanation(v, res), curtains.Explain(res)...),
 		Stale:       stale,
 	}
 	if stale {

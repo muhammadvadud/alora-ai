@@ -105,12 +105,18 @@ func (h *priceQuoteHandler) do(ctx context.Context, a priceQuoteArgs) (priceQuot
 	}
 
 	out := priceQuoteResult{
-		Totals:   t,
-		Lines:    lines,
-		Services: services,
-		Display:  disp,
-		Warnings: append(warnings, res.Warnings...),
-		Stale:    stale,
+		Totals:      t,
+		Lines:       lines,
+		Services:    services,
+		Display:     disp,
+		Warnings:    append(warnings, res.Warnings...),
+		Explanation: curtains.Explain(res),
+		Stale:       stale,
+	}
+	// Mobil "Qanday hisoblandi?" — formula qatorlari. price_quote natijasi
+	// lines bilan 2 KB ga yaqin (rules §5), shuning uchun faqat kichik hisobda.
+	if len(lines) <= 4 {
+		out.Explanation = append(buildExplanation(v, res), out.Explanation...)
 	}
 	if stale {
 		out.Warnings = append(out.Warnings, warnStale)
