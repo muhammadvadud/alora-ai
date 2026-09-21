@@ -134,3 +134,24 @@ func TestCatalog_VariantsOfDeterministic(t *testing.T) {
 		t.Fatalf("variant tartibi: %#v", got)
 	}
 }
+
+func TestCatalog_TouchResetsStale(t *testing.T) {
+	clock := NewFakeClock(time.Date(2026, 9, 21, 10, 0, 0, 0, time.UTC))
+	c := NewCatalog(clock, 10*time.Minute)
+	c.Touch() // tayyor bo'lmagan katalogga ta'sir qilmaydi
+	if c.View().Ready() {
+		t.Fatal("Touch bo'sh katalogni tayyor qilmasligi kerak")
+	}
+	c.ApplySnapshot(Snapshot{Version: 1})
+	clock.Advance(10*time.Minute + time.Nanosecond)
+	if !c.View().Stale {
+		t.Fatal("stale bo'lishi kerak edi")
+	}
+	c.Touch()
+	if c.View().Stale {
+		t.Fatal("Touch dan keyin stale bo'lmasligi kerak")
+	}
+	if c.Version() != 1 {
+		t.Fatalf("Touch versiyani o'zgartirmasligi kerak: %d", c.Version())
+	}
+}

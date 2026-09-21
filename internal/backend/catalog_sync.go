@@ -143,6 +143,11 @@ func (s *CatalogSyncer) watch(ctx context.Context) (bool, error) {
 		if err != nil {
 			return false, err
 		}
+		if deltaPB.GetEntity() == "heartbeat" {
+			s.catalog.Touch()
+			s.setSnapshotMetrics()
+			continue
+		}
 		if deltaPB.GetEntity() == "catalog" && deltaPB.GetAction() == "FULL_RESYNC" {
 			s.setWatch(false)
 			s.log.Info("catalog_resync", "reason", "FULL_RESYNC", "version", deltaPB.GetVersion())

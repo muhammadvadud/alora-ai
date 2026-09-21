@@ -133,6 +133,20 @@ func (c *Catalog) ApplyDelta(d Delta) error {
 	return nil
 }
 
+// Touch — Watch heartbeat'i kelganda chaqiriladi: katalog o'zgarmagan, lekin aloqa
+// tirik — SyncedAt yangilanadi, aks holda tinch katalog stale_after'dan keyin
+// noto'g'ri "stale" bo'lardi (rules §4.1.5: stale = aloqa yo'qligi belgisi).
+func (c *Catalog) Touch() {
+	old := c.view.Load()
+	if !old.Ready() {
+		return
+	}
+	next := cloneView(old)
+	next.SyncedAt = c.clock.Now()
+	next.Stale = false
+	c.view.Store(next)
+}
+
 func (c *Catalog) Version() int64 { return c.view.Load().Version }
 
 func (c *Catalog) SyncedAt() time.Time { return c.view.Load().SyncedAt }
