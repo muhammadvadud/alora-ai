@@ -40,7 +40,11 @@ func (h *orderDraftHandler) do(ctx context.Context, a orderDraftArgs) (orderDraf
 	case "draft":
 		missing := missingOrderFields(a)
 		if len(missing) > 0 {
-			return orderDraftResult{Missing: missing, Hint: "sotuvchi mijoz ma'lumotlarini kiritsin"}, nil
+			return orderDraftResult{
+				Missing: missing,
+				Hint:    "sotuvchi mijoz ma'lumotlarini kiritsin",
+				Quote:   toAny(quote),
+			}, nil
 		}
 		return orderDraftResult{
 			Ready:   true,
@@ -50,7 +54,11 @@ func (h *orderDraftHandler) do(ctx context.Context, a orderDraftArgs) (orderDraf
 	case "confirm":
 		missing := missingOrderFields(a)
 		if len(missing) > 0 {
-			return orderDraftResult{Missing: missing, Hint: "sotuvchi mijoz ma'lumotlarini kiritsin"}, nil
+			return orderDraftResult{
+				Missing: missing,
+				Hint:    "sotuvchi mijoz ma'lumotlarini kiritsin",
+				Quote:   toAny(quote),
+			}, nil
 		}
 		if h.d.Orders == nil {
 			return orderDraftResult{Error: "buyurtma xizmati ulanmagan"}, nil

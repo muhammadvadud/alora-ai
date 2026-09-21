@@ -57,18 +57,27 @@ func (h *priceQuoteHandler) do(ctx context.Context, a priceQuoteArgs) (priceQuot
 	}
 
 	in := rebuildInput(st.LastCalc, role)
-	in.Services = services(a)
 	in.Delivery = a.NeedDelivery
 	in.DiscountPercent = discount
 
-	var warnings []string
+	// Xizmatlar faqat katalogdan (ServicePrice): model bergan yoki standart kalit
+	// katalogda bo'lmasa u hisobga yuborilmaydi — ogohlantirish bilan. Aks holda
+	// Django "'x' xizmati topilmadi" deb butun hisobni rad etadi.
+	requested := services(a)
 	if a.NeedCornice {
-		if _, ok := v.Service("cornice"); ok {
-			in.Services = append(in.Services, "cornice")
+		requested = append(requested, "cornice")
+	}
+	var warnings []string
+	in.Services = []string{}
+	var missing []string
+	for _, key := range requested {
+		if _, ok := v.Service(key); ok {
+			in.Services = append(in.Services, key)
 		} else {
-			warnings = append(warnings, warnCorniceMissing)
+			missing = append(missing, key)
 		}
 	}
+	warnings = append(warnings, missingServiceWarnings(missing)...)
 
 	// Avans foizi payload bilan Django'ga ketadi — summani Django hisoblaydi (rules §0.2).
 	if a.PrepaymentPct > 0 {
