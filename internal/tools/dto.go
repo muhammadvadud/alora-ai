@@ -174,7 +174,7 @@ type priceQuoteArgs struct {
 	NeedCornice   bool     `json:"need_cornice,omitempty"   jsonschema:"description=yangi karniz kerakmi"`
 	NeedInstall   bool     `json:"need_install,omitempty"   jsonschema:"description=montaj kerakmi"`
 	NeedDelivery  bool     `json:"need_delivery,omitempty"  jsonschema:"description=yetkazib berish kerakmi"`
-	Services      []string `json:"services,omitempty"       jsonschema:"description=xizmatlar: sewing tape hook (bo'sh = standart)"`
+	Services      []string `json:"services,omitempty"       jsonschema:"description=xizmat kalitlari — har biri ALOHIDA element: sewing / tape / hook / install / cornice; bo'sh = standart (sewing+tape+hook)"`
 	DiscountPct   float64  `json:"discount_pct,omitempty"   jsonschema:"description=sotuvchi/manager qo'lda kiritgan chegirma foizi"`
 	PrepaymentPct float64  `json:"prepayment_pct,omitempty" jsonschema:"description=avans %"`
 }

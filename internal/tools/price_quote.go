@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
@@ -121,7 +122,7 @@ func (h *priceQuoteHandler) do(ctx context.Context, a priceQuoteArgs) (priceQuot
 
 // services — bo'sh bo'lsa standart to'plam; montaj bayroq bilan.
 func services(a priceQuoteArgs) []string {
-	s := append([]string{}, a.Services...)
+	s := normalizeServiceKeys(a.Services)
 	if len(s) == 0 {
 		s = []string{"sewing", "tape", "hook"}
 	}
@@ -146,4 +147,26 @@ func rebuildInput(last *curtains.CalcResult, role curtains.UserRole) curtains.Ca
 		in.Measurements = append(in.Measurements, mi)
 	}
 	return in
+}
+
+// normalizeServiceKeys — LLM ba'zan bir nechta kalitni bitta satrga yozadi
+// ("sewing tape hook" yoki "sewing, tape"): bo'sh joy/vergul bo'yicha bo'linadi,
+// trim+lowercase, dublikat olib tashlanadi. Aks holda Django "'sewing tape hook'
+// xizmati topilmadi" deb butun hisobni rad etadi.
+func normalizeServiceKeys(raw []string) []string {
+	seen := map[string]bool{}
+	out := []string{}
+	for _, item := range raw {
+		for _, key := range strings.FieldsFunc(item, func(r rune) bool {
+			return r == ' ' || r == ',' || r == ';' || r == '\t' || r == '\n'
+		}) {
+			key = strings.ToLower(strings.TrimSpace(key))
+			if key == "" || seen[key] {
+				continue
+			}
+			seen[key] = true
+			out = append(out, key)
+		}
+	}
+	return out
 }
