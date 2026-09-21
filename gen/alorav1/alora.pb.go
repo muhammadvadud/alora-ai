@@ -160,10 +160,12 @@ func (x *ChatRequest) GetContext() map[string]string {
 type ChatEvent struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Voqea turi: start | thinking | content | tool_call | tool_args | tool_result |
-	//             products | stage | done | error.
+	//             products | stage | title | done | error.
 	//   products — `products` maydoni to'ldiriladi (ilova kartochka chizadi).
 	//   stage    — `content` = suhbat bosqichi (need|recommend|measure|calc|variants|order),
 	//              `result` = qisqa holat JSON; Django `Conversation.stage` ni yangilaydi.
+	//   title    — `content` = AI qo'ygan suhbat sarlavhasi (faqat birinchi navbatdan
+	//              keyin, ≤72 belgi); Django `Conversation.title` ni yangilaydi.
 	Kind string `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
 	// Matn kontenti (content event'ida to'ldiriladi).
 	Content string `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
@@ -1525,6 +1527,7 @@ type CatalogFason struct {
 	PartCount     int32                    `protobuf:"varint,6,opt,name=part_count,json=partCount,proto3" json:"part_count,omitempty"`
 	Parts         []*CatalogFasonPart      `protobuf:"bytes,7,rep,name=parts,proto3" json:"parts,omitempty"`
 	Accessories   []*CatalogFasonAccessory `protobuf:"bytes,8,rep,name=accessories,proto3" json:"accessories,omitempty"`
+	TenantId      string                   `protobuf:"bytes,9,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1615,6 +1618,13 @@ func (x *CatalogFason) GetAccessories() []*CatalogFasonAccessory {
 	return nil
 }
 
+func (x *CatalogFason) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
 type CatalogPrompt struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Versiya raqami (Django PromptVersion.version).
@@ -1703,6 +1713,7 @@ type CatalogProduct struct {
 	Variants []*CatalogVariant `protobuf:"bytes,19,rep,name=variants,proto3" json:"variants,omitempty"`
 	// Rasmlar URLs.
 	ImageUrls     []string `protobuf:"bytes,20,rep,name=image_urls,json=imageUrls,proto3" json:"image_urls,omitempty"`
+	TenantId      string   `protobuf:"bytes,21,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1877,6 +1888,13 @@ func (x *CatalogProduct) GetImageUrls() []string {
 	return nil
 }
 
+func (x *CatalogProduct) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
 type CatalogVariant struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1889,6 +1907,7 @@ type CatalogVariant struct {
 	PriceUnit     string                 `protobuf:"bytes,8,opt,name=price_unit,json=priceUnit,proto3" json:"price_unit,omitempty"`
 	OldPrice      float64                `protobuf:"fixed64,9,opt,name=old_price,json=oldPrice,proto3" json:"old_price,omitempty"`
 	IsActive      bool                   `protobuf:"varint,10,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	TenantId      string                 `protobuf:"bytes,11,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1993,6 +2012,13 @@ func (x *CatalogVariant) GetIsActive() bool {
 	return false
 }
 
+func (x *CatalogVariant) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
 type CatalogCategory struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -2000,6 +2026,7 @@ type CatalogCategory struct {
 	Slug          string                 `protobuf:"bytes,3,opt,name=slug,proto3" json:"slug,omitempty"`
 	ParentId      string                 `protobuf:"bytes,4,opt,name=parent_id,json=parentId,proto3" json:"parent_id,omitempty"`
 	SortOrder     int32                  `protobuf:"varint,5,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	TenantId      string                 `protobuf:"bytes,6,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2067,6 +2094,13 @@ func (x *CatalogCategory) GetSortOrder() int32 {
 		return x.SortOrder
 	}
 	return 0
+}
+
+func (x *CatalogCategory) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
 }
 
 type CatalogCalcRule struct {
@@ -3108,7 +3142,7 @@ const file_proto_alora_proto_rawDesc = "" +
 	"\vdefault_qty\x18\x03 \x01(\tR\n" +
 	"defaultQty\x12\x1f\n" +
 	"\vqty_formula\x18\x04 \x01(\tR\n" +
-	"qtyFormula\"\x8f\x02\n" +
+	"qtyFormula\"\xac\x02\n" +
 	"\fCatalogFason\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -3118,12 +3152,13 @@ const file_proto_alora_proto_rawDesc = "" +
 	"\n" +
 	"part_count\x18\x06 \x01(\x05R\tpartCount\x120\n" +
 	"\x05parts\x18\a \x03(\v2\x1a.alora.v1.CatalogFasonPartR\x05parts\x12A\n" +
-	"\vaccessories\x18\b \x03(\v2\x1f.alora.v1.CatalogFasonAccessoryR\vaccessories\"b\n" +
+	"\vaccessories\x18\b \x03(\v2\x1f.alora.v1.CatalogFasonAccessoryR\vaccessories\x12\x1b\n" +
+	"\ttenant_id\x18\t \x01(\tR\btenantId\"b\n" +
 	"\rCatalogPrompt\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x05R\aversion\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x03 \x01(\tR\tupdatedAt\"\x8a\x05\n" +
+	"updated_at\x18\x03 \x01(\tR\tupdatedAt\"\xa7\x05\n" +
 	"\x0eCatalogProduct\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vcategory_id\x18\x02 \x01(\tR\n" +
@@ -3148,7 +3183,8 @@ const file_proto_alora_proto_rawDesc = "" +
 	"\ttags_json\x18\x12 \x01(\tR\btagsJson\x124\n" +
 	"\bvariants\x18\x13 \x03(\v2\x18.alora.v1.CatalogVariantR\bvariants\x12\x1d\n" +
 	"\n" +
-	"image_urls\x18\x14 \x03(\tR\timageUrls\"\x95\x02\n" +
+	"image_urls\x18\x14 \x03(\tR\timageUrls\x12\x1b\n" +
+	"\ttenant_id\x18\x15 \x01(\tR\btenantId\"\xb2\x02\n" +
 	"\x0eCatalogVariant\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -3163,14 +3199,16 @@ const file_proto_alora_proto_rawDesc = "" +
 	"price_unit\x18\b \x01(\tR\tpriceUnit\x12\x1b\n" +
 	"\told_price\x18\t \x01(\x01R\boldPrice\x12\x1b\n" +
 	"\tis_active\x18\n" +
-	" \x01(\bR\bisActive\"\x85\x01\n" +
+	" \x01(\bR\bisActive\x12\x1b\n" +
+	"\ttenant_id\x18\v \x01(\tR\btenantId\"\xa2\x01\n" +
 	"\x0fCatalogCategory\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
 	"\x04slug\x18\x03 \x01(\tR\x04slug\x12\x1b\n" +
 	"\tparent_id\x18\x04 \x01(\tR\bparentId\x12\x1d\n" +
 	"\n" +
-	"sort_order\x18\x05 \x01(\x05R\tsortOrder\"\x97\x01\n" +
+	"sort_order\x18\x05 \x01(\x05R\tsortOrder\x12\x1b\n" +
+	"\ttenant_id\x18\x06 \x01(\tR\btenantId\"\x97\x01\n" +
 	"\x0fCatalogCalcRule\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x01R\x05value\x12\x12\n" +

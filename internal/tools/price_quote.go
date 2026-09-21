@@ -24,7 +24,7 @@ func PriceQuote(d Deps) tool.BaseTool {
 type priceQuoteHandler struct{ d Deps }
 
 func (h *priceQuoteHandler) do(ctx context.Context, a priceQuoteArgs) (priceQuoteResult, error) {
-	v, errMsg, stale := readyView(h.d)
+	v, errMsg, stale := readyView(ctx, h.d)
 	if errMsg != "" {
 		return priceQuoteResult{Error: errMsg}, nil
 	}

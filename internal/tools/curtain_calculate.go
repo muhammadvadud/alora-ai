@@ -24,7 +24,7 @@ func CurtainCalculate(d Deps) tool.BaseTool {
 type curtainCalcHandler struct{ d Deps }
 
 func (h *curtainCalcHandler) do(ctx context.Context, a curtainCalcArgs) (curtainCalcResult, error) {
-	v, errMsg, stale := readyView(h.d)
+	v, errMsg, stale := readyView(ctx, h.d)
 	if errMsg != "" {
 		return curtainCalcResult{Error: errMsg}, nil
 	}

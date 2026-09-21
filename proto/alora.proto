@@ -303,6 +303,7 @@ message CatalogFason {
   int32 part_count = 6;
   repeated CatalogFasonPart parts = 7;
   repeated CatalogFasonAccessory accessories = 8;
+  string tenant_id = 9;
 }
 
 message CatalogPrompt {
@@ -338,6 +339,7 @@ message CatalogProduct {
   repeated CatalogVariant variants = 19;
   // Rasmlar URLs.
   repeated string image_urls = 20;
+  string tenant_id = 21;
 }
 
 message CatalogVariant {
@@ -351,6 +353,7 @@ message CatalogVariant {
   string price_unit = 8;
   double old_price = 9;
   bool is_active = 10;
+  string tenant_id = 11;
 }
 
 message CatalogCategory {
@@ -359,6 +362,7 @@ message CatalogCategory {
   string slug = 3;
   string parent_id = 4;
   int32 sort_order = 5;
+  string tenant_id = 6;
 }
 
 message CatalogCalcRule {

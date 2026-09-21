@@ -46,6 +46,7 @@ type View struct {
 	Version    int64
 	SyncedAt   time.Time
 	Stale      bool
+	tenantID   string
 	products   map[string]Product
 	variants   map[string]Variant
 	byProduct  map[string][]string
@@ -162,12 +163,34 @@ func (c *Catalog) View() *View {
 
 func (v *View) Ready() bool { return !v.SyncedAt.IsZero() }
 
+func (v *View) ForTenant(tenantID string) *View {
+	if tenantID == "" {
+		return v
+	}
+	copy := *v
+	copy.tenantID = tenantID
+	return &copy
+}
+
+func (v *View) isValidTenant(itemTenantID string) bool {
+	if v.tenantID == "" || itemTenantID == "" {
+		return true
+	}
+	return v.tenantID == itemTenantID
+}
+
 func (v *View) Product(id string) (Product, bool) {
 	p, ok := v.products[id]
+	if ok && !v.isValidTenant(p.TenantID) {
+		return Product{}, false
+	}
 	return cloneProduct(p), ok
 }
 func (v *View) Variant(id string) (Variant, bool) {
 	x, ok := v.variants[id]
+	if ok && !v.isValidTenant(x.TenantID) {
+		return Variant{}, false
+	}
 	return cloneVariant(x), ok
 }
 
@@ -176,6 +199,9 @@ func (v *View) VariantsOf(productID string) []Variant {
 	result := make([]Variant, 0, len(ids))
 	for _, id := range ids {
 		if x, ok := v.variants[id]; ok {
+			if !v.isValidTenant(x.TenantID) {
+				continue
+			}
 			result = append(result, cloneVariant(x))
 		}
 	}
@@ -185,6 +211,9 @@ func (v *View) VariantsOf(productID string) []Variant {
 func (v *View) Products() []Product {
 	result := make([]Product, 0, len(v.products))
 	for _, p := range v.products {
+		if !v.isValidTenant(p.TenantID) {
+			continue
+		}
 		result = append(result, cloneProduct(p))
 	}
 	sort.Slice(result, func(i, j int) bool {
@@ -198,6 +227,9 @@ func (v *View) Products() []Product {
 
 func (v *View) Category(id string) (Category, bool) {
 	x, ok := v.categories[id]
+	if ok && !v.isValidTenant(x.TenantID) {
+		return Category{}, false
+	}
 	return cloneCategory(x), ok
 }
 func (v *View) CalcRule(key string) (decimal.Decimal, bool) { x, ok := v.calcRules[key]; return x, ok }
@@ -218,7 +250,19 @@ func (v *View) OrderDefaults() (OrderDefaults, bool) {
 	}
 	return *v.defaults, true
 }
-func (v *View) Fasons() []Fason            { return cloneFasons(v.fasons) }
+func (v *View) Fasons() []Fason {
+	fasons := cloneFasons(v.fasons)
+	if v.tenantID == "" {
+		return fasons
+	}
+	result := make([]Fason, 0, len(fasons))
+	for _, f := range fasons {
+		if v.isValidTenant(f.TenantID) {
+			result = append(result, f)
+		}
+	}
+	return result
+}
 func (v *View) Knowledge() []KnowledgeRule { return cloneKnowledge(v.knowledge) }
 func (v *View) Prompt() (PromptVersion, bool) {
 	if v.prompt == nil {

@@ -23,7 +23,7 @@ func ProductSearch(d Deps) tool.BaseTool {
 type productSearchHandler struct{ d Deps }
 
 func (h *productSearchHandler) do(ctx context.Context, a productSearchArgs) (productSearchResult, error) {
-	v, errMsg, stale := readyView(h.d)
+	v, errMsg, stale := readyView(ctx, h.d)
 	if errMsg != "" {
 		return productSearchResult{Error: errMsg}, nil
 	}

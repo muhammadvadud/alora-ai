@@ -61,7 +61,11 @@ func TestCatalog_MemoryBudget(t *testing.T) {
 	c.ApplySnapshot(largeSnapshot())
 	runtime.GC()
 	runtime.ReadMemStats(&after)
-	if used := after.Alloc - before.Alloc; used > 200*1024*1024 {
+	var used uint64
+	if after.Alloc > before.Alloc {
+		used = after.Alloc - before.Alloc
+	}
+	if used > 200*1024*1024 {
 		t.Fatalf("katalog xotirasi %d MB, limit 200 MB", used/1024/1024)
 	}
 }

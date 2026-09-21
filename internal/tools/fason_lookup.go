@@ -26,7 +26,7 @@ func FasonLookup(d Deps) tool.BaseTool {
 type fasonLookupHandler struct{ d Deps }
 
 func (h *fasonLookupHandler) do(ctx context.Context, a fasonLookupArgs) (fasonLookupResult, error) {
-	v, errMsg, stale := readyView(h.d)
+	v, errMsg, stale := readyView(ctx, h.d)
 	if errMsg != "" {
 		return fasonLookupResult{Error: errMsg}, nil
 	}

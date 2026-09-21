@@ -44,6 +44,7 @@ const (
 // Narx decimal — float64 pul uchun taqiqlangan (rules §1.5).
 type Variant struct {
 	ID        string
+	TenantID  string
 	ProductID string
 	SKU       string
 	ColorName string
@@ -58,6 +59,7 @@ type Variant struct {
 // Product — katalog mahsuloti (proto CatalogProduct); variantlar alohida saqlanadi.
 type Product struct {
 	ID               string
+	TenantID         string
 	CategoryID       string
 	Name             string
 	Code             string
@@ -82,6 +84,7 @@ type Product struct {
 // Category — mahsulot kategoriyasi (proto CatalogCategory).
 type Category struct {
 	ID        string
+	TenantID  string
 	Name      string
 	Slug      string
 	ParentID  string
@@ -150,6 +153,7 @@ type FasonAccessory struct {
 // Fason — tayyor fason shabloni (Django Fason + parts + accessories).
 type Fason struct {
 	ID          string
+	TenantID    string
 	Name        string
 	Style       string
 	Rooms       []string

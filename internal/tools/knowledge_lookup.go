@@ -32,7 +32,7 @@ func KnowledgeLookup(d Deps) tool.BaseTool {
 type knowledgeLookupHandler struct{ d Deps }
 
 func (h *knowledgeLookupHandler) do(ctx context.Context, a knowledgeLookupArgs) (knowledgeLookupResult, error) {
-	v, errMsg, stale := readyView(h.d)
+	v, errMsg, stale := readyView(ctx, h.d)
 	if errMsg != "" {
 		return knowledgeLookupResult{Error: errMsg}, nil
 	}

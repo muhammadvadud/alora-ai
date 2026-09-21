@@ -26,7 +26,7 @@ func BuildOptions(d Deps) tool.BaseTool {
 type buildOptionsHandler struct{ d Deps }
 
 func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (buildOptionsResult, error) {
-	v, errMsg, stale := readyView(h.d)
+	v, errMsg, stale := readyView(ctx, h.d)
 	if errMsg != "" {
 		return buildOptionsResult{Error: errMsg}, nil
 	}

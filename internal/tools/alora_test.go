@@ -32,11 +32,13 @@ func testCatalog() *curtains.Catalog {
 			{ID: "p1", CategoryID: "c1", Name: "Velvet Milano", Style: "hi_tech", Pattern: "plain",
 				RecommendedRooms: []string{"living"}, Segment: curtains.SegmentStandard, VariantIDs: []string{vPortyera, vCheap}},
 			{ID: "p2", CategoryID: "c2", Name: "Dekorativ gul", Segment: curtains.SegmentStandard, VariantIDs: []string{vGul}},
+			{ID: "p3", TenantID: "tenant-2", CategoryID: "c1", Name: "Boshqa filial mato", VariantIDs: []string{"vOther"}},
 		},
 		Variants: []curtains.Variant{
 			{ID: vPortyera, ProductID: "p1", SKU: "VM-GRAFIT", ColorName: "grafit", WidthM: d("2.8"), Price: d("180000"), PriceUnit: curtains.PerSqm, IsActive: true},
 			{ID: vCheap, ProductID: "p1", SKU: "VM-BEJ", ColorName: "bej", WidthM: d("2.8"), Price: d("120000"), PriceUnit: curtains.PerSqm, IsActive: true},
 			{ID: vGul, ProductID: "p2", SKU: "GUL-OLTIN", ColorName: "oltin", Price: d("85000"), PriceUnit: curtains.PerPiece, IsActive: true},
+			{ID: "vOther", TenantID: "tenant-2", ProductID: "p3", SKU: "OTHER", Price: d("100000"), PriceUnit: curtains.PerSqm, IsActive: true},
 		},
 		Services: []curtains.Service{{Key: "sewing", Name: "Tikuv", Price: d("12500"), Unit: curtains.PerSqm, IsActive: true}},
 		Policy:   &curtains.DiscountPolicy{ManualMaxPercentEmployee: d("5"), ManualMaxPercentManager: d("15")},
@@ -104,7 +106,7 @@ func deps(t *testing.T) (Deps, *fakeCalc, *memState) {
 
 func ctxFor(role curtains.UserRole) (context.Context, *agent.ProductCollector) {
 	ctx := session.WithID(context.Background(), "s1")
-	ctx = curtains.WithUser(ctx, curtains.UserInfo{Role: role})
+	ctx = curtains.WithUser(ctx, curtains.UserInfo{Role: role, TenantID: "tenant-1"})
 	return agent.WithProductCollector(ctx)
 }
 
@@ -274,4 +276,33 @@ func withPrepayment(res curtains.CalcResult, pct decimal.Decimal) curtains.CalcR
 	bal := res.Total.Sub(pre)
 	res.PrepaymentPercent, res.PrepaymentAmount, res.BalanceAmount = &pct, &pre, &bal
 	return res
+}
+
+func TestTenantIsolation(t *testing.T) {
+	dp, _, _ := deps(t)
+	// 1. Qidiruvda boshqa tenant mahsuloti chiqmasligi kerak
+	ctx, _ := ctxFor(curtains.RoleEmployee)
+	ctx = curtains.WithUser(ctx, curtains.UserInfo{Role: curtains.RoleEmployee, TenantID: "tenant-1"})
+	res, err := (&productSearchHandler{d: dp}).do(ctx, productSearchArgs{Kind: "fabric"})
+	if err != nil {
+		t.Fatalf("search xato: %v", err)
+	}
+	for _, p := range res.Products {
+		if p.VariantID == "vOther" {
+			t.Errorf("boshqa filial mahsuloti chiqdi")
+		}
+	}
+
+	// 2. Hisoblashda boshqa filial varianti ishlatilmasligi kerak
+	v, _, _ := readyView(ctx, dp)
+	variant, ok := v.Variant("vOther")
+	t.Logf("DEBUG Variant: ok=%v variant.TenantID=%v\n", ok, variant.TenantID)
+
+	calcRes, _ := (&curtainCalcHandler{d: dp}).do(ctx, curtainCalcArgs{
+		CorniceLengthM: 3.0, HeightM: 2.5,
+		Parts: []calcPart{{VariantID: "vOther", Role: "portyera", Coefficient: 2.5}},
+	})
+	if calcRes.Error == "" || !strings.Contains(calcRes.Error, "topilmadi") {
+		t.Errorf("boshqa filial variantini hisoblashga ruxsat berildi: '%s'", calcRes.Error)
+	}
 }

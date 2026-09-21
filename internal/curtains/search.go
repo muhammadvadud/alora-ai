@@ -89,6 +89,9 @@ func Search(v *View, q SearchQuery) []ProductCard {
 	kind := q.Kind
 	top := make([]candidate, 0, limit)
 	for _, p := range v.products {
+		if !v.isValidTenant(p.TenantID) {
+			continue
+		}
 		// Segment filtr mahsulot darajasidagi — variantlarga test qilmasdan oldin
 		// butun mahsulotni chiqarib tashlaymiz. Bu 3 ta variant uchun 3× qayta
 		// tekshirish o'rniga 1× tekshirish (rules §4.3.5: variant hash'larini tejaydi).

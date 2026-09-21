@@ -152,13 +152,19 @@ func decPtr(f float64) *decimal.Decimal {
 }
 
 // readyView — katalog tayyor bo'lmasa xato matni; stale bo'lsa ogohlantirish.
-func readyView(d Deps) (*curtains.View, string, bool) {
+func readyView(ctx context.Context, d Deps) (*curtains.View, string, bool) {
 	if d.Catalog == nil {
 		return nil, errCatalogNotReady, false
 	}
 	v := d.Catalog.View()
 	if !v.Ready() {
 		return nil, errCatalogNotReady, false
+	}
+	if user, ok := curtains.UserFromContext(ctx); ok && user.TenantID != "" {
+		v = v.ForTenant(user.TenantID)
+		fmt.Printf("DEBUG: readyView set tenantID=%s\n", user.TenantID)
+	} else {
+		fmt.Printf("DEBUG: readyView ok=%v user.TenantID=%s\n", ok, user.TenantID)
 	}
 	return v, "", v.Stale
 }

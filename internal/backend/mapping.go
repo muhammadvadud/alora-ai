@@ -61,7 +61,7 @@ func productFromPB(p *alorav1.CatalogProduct) (curtains.Product, error) {
 		}
 	}
 	return curtains.Product{
-		ID: p.GetId(), CategoryID: p.GetCategoryId(), Name: p.GetName(), Code: p.GetCode(),
+		ID: p.GetId(), TenantID: p.GetTenantId(), CategoryID: p.GetCategoryId(), Name: p.GetName(), Code: p.GetCode(),
 		Description: p.GetDescription(), FabricType: p.GetFabricType(), Pattern: p.GetPattern(),
 		Style: p.GetStyle(), Transparency: p.GetTransparency(), Density: density,
 		Composition: p.GetComposition(), Care: p.GetCare(), RecommendedRooms: append([]string(nil), p.GetRecommendedRooms()...),
@@ -84,11 +84,11 @@ func variantFromPB(v *alorav1.CatalogVariant) (curtains.Variant, error) {
 	if err != nil {
 		return curtains.Variant{}, fmt.Errorf("variant old_price: %w", err)
 	}
-	return curtains.Variant{ID: v.GetId(), ProductID: v.GetProductId(), SKU: v.GetSku(), ColorName: v.GetColorName(), ColorHex: v.GetColorHex(), WidthM: width, Price: price, PriceUnit: curtains.PriceUnit(v.GetPriceUnit()), OldPrice: oldPrice, IsActive: v.GetIsActive()}, nil
+	return curtains.Variant{ID: v.GetId(), TenantID: v.GetTenantId(), ProductID: v.GetProductId(), SKU: v.GetSku(), ColorName: v.GetColorName(), ColorHex: v.GetColorHex(), WidthM: width, Price: price, PriceUnit: curtains.PriceUnit(v.GetPriceUnit()), OldPrice: oldPrice, IsActive: v.GetIsActive()}, nil
 }
 
 func categoryFromPB(c *alorav1.CatalogCategory) curtains.Category {
-	return curtains.Category{ID: c.GetId(), Name: c.GetName(), Slug: c.GetSlug(), ParentID: c.GetParentId(), SortOrder: int(c.GetSortOrder())}
+	return curtains.Category{ID: c.GetId(), TenantID: c.GetTenantId(), Name: c.GetName(), Slug: c.GetSlug(), ParentID: c.GetParentId(), SortOrder: int(c.GetSortOrder())}
 }
 
 func calcRuleFromPB(r *alorav1.CatalogCalcRule) (curtains.CalcRule, error) {
@@ -148,7 +148,7 @@ func defaultsFromPB(d *alorav1.CatalogOrderDefaults) (curtains.OrderDefaults, er
 }
 
 func fasonFromPB(f *alorav1.CatalogFason) (curtains.Fason, error) {
-	result := curtains.Fason{ID: f.GetId(), Name: f.GetName(), Style: f.GetStyle(), Rooms: append([]string(nil), f.GetRooms()...), ImageURL: f.GetImageUrl(), PartCount: int(f.GetPartCount())}
+	result := curtains.Fason{ID: f.GetId(), TenantID: f.GetTenantId(), Name: f.GetName(), Style: f.GetStyle(), Rooms: append([]string(nil), f.GetRooms()...), ImageURL: f.GetImageUrl(), PartCount: int(f.GetPartCount())}
 	for _, p := range f.GetParts() {
 		width, err := decimalText(p.GetWidthShare())
 		if err != nil {
