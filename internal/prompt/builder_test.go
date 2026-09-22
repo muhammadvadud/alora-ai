@@ -166,3 +166,18 @@ func TestBuilder_Build(t *testing.T) {
 		}
 	})
 }
+
+func TestBuild_DjangoPromptAppendsToFallback(t *testing.T) {
+	b := Builder{Fallback: "ASOSIY QOIDALAR"}
+	out := b.Build(Input{Base: "8. HECH QACHON chegirma va'da qilma."})
+	if !strings.Contains(out, "ASOSIY QOIDALAR") {
+		t.Fatal("asosiy prompt yo'qolmasligi kerak")
+	}
+	if !strings.Contains(out, "## Do'kon qoidalari (manager kiritgan)\n8. HECH QACHON") {
+		t.Fatalf("manager qoidasi qo'shilishi kerak: %q", out)
+	}
+	if !strings.Contains(b.Build(Input{Base: "  "}), "ASOSIY QOIDALAR") ||
+		strings.Contains(b.Build(Input{Base: "  "}), "Do'kon qoidalari") {
+		t.Fatal("bo'sh Django prompt'ida faqat asosiy bo'lishi kerak")
+	}
+}

@@ -28,13 +28,15 @@ type Input struct {
 
 // Build system prompt'ni yig'adi.
 func (b Builder) Build(in Input) string {
-	base := in.Base
-	if base == "" {
-		base = b.Fallback
-	}
-
+	// Django'dagi PromptVersion asosiy (embed) prompt'ni ALMASHTIRMAYDI — unga
+	// qo'shiladi: manager qo'shimcha do'kon qoidalarini yozadi, asosiy tool/
+	// xavfsizlik ko'rsatmalari esa tasodifan o'chib ketmaydi.
 	var sb strings.Builder
-	sb.WriteString(base)
+	sb.WriteString(b.Fallback)
+	if extra := strings.TrimSpace(in.Base); extra != "" {
+		sb.WriteString("\n\n## Do'kon qoidalari (manager kiritgan)\n")
+		sb.WriteString(extra)
+	}
 
 	sb.WriteString("\n\n<state>")
 	sb.WriteString(in.State.PromptBlock())
