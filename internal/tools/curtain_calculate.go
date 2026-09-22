@@ -33,7 +33,7 @@ func (h *curtainCalcHandler) do(ctx context.Context, a curtainCalcArgs) (curtain
 	}
 
 	in := calcInputFrom(a, userRole(ctx))
-	if err := curtains.Validate(in, v.Variant); err != nil {
+	if err := curtains.ValidateWithLimits(in, v.Variant, v.Limits()); err != nil {
 		return curtainCalcResult{Error: err.Error()}, nil
 	}
 

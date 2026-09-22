@@ -26,19 +26,45 @@ const (
 	MaxParts = 10
 )
 
-// Validate hisob-kitob uchun kiritilgan ma'lumotlarning to'g'riligini tekshiradi.
-// Qoidalar rules.md §4.2.3 va ADR-010 ga asosan amalga oshirilgan.
+// Limits hisob-kitoblar uchun ruxsat etilgan o'lcham chegaralarini belgilaydi.
+type Limits struct {
+	MinLength decimal.Decimal
+	MaxLength decimal.Decimal
+	MinHeight decimal.Decimal
+	MaxHeight decimal.Decimal
+	MinCoef   decimal.Decimal
+	MaxCoef   decimal.Decimal
+}
+
+// DefaultLimits hozirgi qattiq kodlangan chegaralarni qaytaradi.
+func DefaultLimits() Limits {
+	return Limits{
+		MinLength: MinLengthM,
+		MaxLength: MaxLengthM,
+		MinHeight: MinHeightM,
+		MaxHeight: MaxHeightM,
+		MinCoef:   MinCoef,
+		MaxCoef:   MaxCoef,
+	}
+}
+
+// Validate hisob-kitob uchun kiritilgan ma'lumotlarning to'g'riligini standart chegaralar bilan tekshiradi.
 func Validate(in CalcInput, lookup func(variantID string) (Variant, bool)) error {
+	return ValidateWithLimits(in, lookup, DefaultLimits())
+}
+
+// ValidateWithLimits hisob-kitob uchun kiritilgan ma'lumotlarning to'g'riligini berilgan chegaralar bilan tekshiradi.
+func ValidateWithLimits(in CalcInput, lookup func(variantID string) (Variant, bool), limits Limits) error {
 	if in.DiscountPercent.LessThan(decimal.Zero) || in.DiscountPercent.GreaterThan(decimal.RequireFromString("100")) {
 		return validationf("discount_percent", "chegirma foizi 0–100 oralig'ida bo'lishi kerak, kiritildi: %s", in.DiscountPercent.String())
 	}
 
 	for _, m := range in.Measurements {
-		if m.Length.LessThan(MinLengthM) || m.Length.GreaterThan(MaxLengthM) {
-			return validationf("cornice_length_m", "karniz uzunligi 0.5–15 m oralig'ida bo'lishi kerak, kiritildi: %s", m.Length.String())
+		if m.Length.LessThan(limits.MinLength) || m.Length.GreaterThan(limits.MaxLength) {
+			return validationf("cornice_length_m", "karniz uzunligi %s–%s m oralig'ida bo'lishi kerak, kiritildi: %s", limits.MinLength.String(), limits.MaxLength.String(), m.Length.String())
 		}
-		if m.Height.LessThan(MinHeightM) || m.Height.GreaterThan(MaxHeightM) {
-			return validationf("height_m", "balandlik 0.5–6 m oralig'ida bo'lishi kerak, kiritildi: %s", m.Height.String())
+		if m.Height.LessThan(limits.MinHeight) || m.Height.GreaterThan(limits.MaxHeight) {
+			return validationf("height_m", "balandlik %s–%s m oralig'ida bo'lishi kerak, kiritildi: %s", limits.MinHeight.String(), limits.MaxHeight.String(), m.Height.String())
 		}
 
 		if len(m.Parts) < 1 || len(m.Parts) > MaxParts {

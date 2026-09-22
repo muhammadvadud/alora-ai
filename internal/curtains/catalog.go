@@ -233,6 +233,44 @@ func (v *View) Category(id string) (Category, bool) {
 	return cloneCategory(x), ok
 }
 func (v *View) CalcRule(key string) (decimal.Decimal, bool) { x, ok := v.calcRules[key]; return x, ok }
+
+func (v *View) Limits() Limits {
+	l := DefaultLimits()
+
+	if val, ok := v.CalcRule("min_cornice_length_m"); ok && val.GreaterThan(decimal.Zero) {
+		l.MinLength = val
+	}
+	if val, ok := v.CalcRule("max_cornice_length_m"); ok && val.GreaterThan(decimal.Zero) {
+		l.MaxLength = val
+	}
+	if val, ok := v.CalcRule("min_height_m"); ok && val.GreaterThan(decimal.Zero) {
+		l.MinHeight = val
+	}
+	if val, ok := v.CalcRule("max_height_m"); ok && val.GreaterThan(decimal.Zero) {
+		l.MaxHeight = val
+	}
+	if val, ok := v.CalcRule("min_coef"); ok && val.GreaterThan(decimal.Zero) {
+		l.MinCoef = val
+	}
+	if val, ok := v.CalcRule("max_coef"); ok && val.GreaterThan(decimal.Zero) {
+		l.MaxCoef = val
+	}
+
+	if l.MinLength.GreaterThan(l.MaxLength) {
+		l.MinLength = DefaultLimits().MinLength
+		l.MaxLength = DefaultLimits().MaxLength
+	}
+	if l.MinHeight.GreaterThan(l.MaxHeight) {
+		l.MinHeight = DefaultLimits().MinHeight
+		l.MaxHeight = DefaultLimits().MaxHeight
+	}
+	if l.MinCoef.GreaterThan(l.MaxCoef) {
+		l.MinCoef = DefaultLimits().MinCoef
+		l.MaxCoef = DefaultLimits().MaxCoef
+	}
+
+	return l
+}
 func (v *View) Service(key string) (Service, bool) {
 	x, ok := v.services[key]
 	return cloneService(x), ok

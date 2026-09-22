@@ -221,8 +221,7 @@ prompt ──► curtains (state, knowledge)
    payload'i bilan **bir xil** (`calc_cases.json` `input`); `CalcResult` — `expected` bilan bir xil.
    Proto: `CalcPreviewRequest{payload_json, user_role}` → `CalcPreviewResponse{result_json, error, error_fields_json}`.
    Django `ValidationError` → Go `ValidationError{Field, Msg}` → tool `{"error"}`.
-3. **Validatsiya (`validate.go`) Django'ga yuborishdan oldin:** `0.5 ≤ L ≤ 15`, `0.5 ≤ H ≤ 6`,
-   `1 ≤ len(parts) ≤ 10`, `K ∈ [1.0, 4.0]`, `qty > 0`, variant katalogda bor va faol. Xato o'zbekcha.
+3. **Validatsiya (`validate.go`) Django'ga yuborishdan oldin:** o'lchamlar CalcRule'dan, default: `0.5 ≤ L ≤ 15`, `0.5 ≤ H ≤ 6`, `K ∈ [1.0, 4.0]`. `1 ≤ len(parts) ≤ 10`, `qty > 0`, variant katalogda bor va faol. Xato o'zbekcha.
    (Σwidth ≤ L qoidasi olib tashlandi — lambrekan/tul butun L ni egallaydi, ADR-010.)
 4. **Natija o'zgartirilmaydi:** sonlar Django'dan kelganicha (string decimal). Go faqat
    qo'shadi: `explanation`, `warnings` (Django'nikiga qo'shimcha), `stale`, `catalog_version`,

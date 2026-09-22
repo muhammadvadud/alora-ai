@@ -155,3 +155,39 @@ func TestCatalog_TouchResetsStale(t *testing.T) {
 		t.Fatalf("Touch versiyani o'zgartirmasligi kerak: %d", c.Version())
 	}
 }
+
+func TestView_Limits(t *testing.T) {
+	v := &View{
+		calcRules: map[string]decimal.Decimal{
+			"max_cornice_length_m": decimal.RequireFromString("30"),
+			"min_cornice_length_m": decimal.RequireFromString("2.0"),
+			"max_height_m":         decimal.RequireFromString("5"),
+			"min_height_m":         decimal.RequireFromString("0.1"),
+			"max_coef":             decimal.RequireFromString("5.0"),
+			"min_coef":             decimal.RequireFromString("1.5"),
+		},
+	}
+
+	l := v.Limits()
+	if !l.MaxLength.Equal(decimal.RequireFromString("30")) {
+		t.Errorf("MaxLength xato: %v", l.MaxLength)
+	}
+	if !l.MinLength.Equal(decimal.RequireFromString("2.0")) {
+		t.Errorf("MinLength xato: %v", l.MinLength)
+	}
+
+	// Xato chegaralar: min > max
+	vBad := &View{
+		calcRules: map[string]decimal.Decimal{
+			"max_cornice_length_m": decimal.RequireFromString("1"),
+			"min_cornice_length_m": decimal.RequireFromString("2.0"),
+		},
+	}
+	lBad := vBad.Limits()
+	if !lBad.MaxLength.Equal(MaxLengthM) {
+		t.Errorf("MaxLength fallback xato: %v", lBad.MaxLength)
+	}
+	if !lBad.MinLength.Equal(MinLengthM) {
+		t.Errorf("MinLength fallback xato: %v", lBad.MinLength)
+	}
+}

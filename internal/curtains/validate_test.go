@@ -236,3 +236,30 @@ func cloneInput(in curtains.CalcInput) curtains.CalcInput {
 	}
 	return out
 }
+
+func TestValidateWithLimits(t *testing.T) {
+	mockLookup := func(variantID string) (curtains.Variant, bool) {
+		return curtains.Variant{ID: "v_fabric", IsActive: true, PriceUnit: curtains.PerSqm}, true
+	}
+
+	validInput := curtains.CalcInput{
+		DiscountPercent: dec("0"),
+		Measurements: []curtains.MeasurementInput{
+			{
+				Length: dec("20.0"), // 20 m
+				Height: dec("2.5"),
+				Parts: []curtains.PartInput{
+					{VariantID: "v_fabric", Role: curtains.RolePortyera, WidthM: decPtr("20.0"), HeightM: decPtr("2.5"), Coef: decPtr("2.5")},
+				},
+			},
+		},
+	}
+
+	limits := curtains.DefaultLimits()
+	limits.MaxLength = dec("30") // 30 m
+
+	err := curtains.ValidateWithLimits(validInput, mockLookup, limits)
+	if err != nil {
+		t.Fatalf("kutilmagan xato 20 m uchun (max=30): %v", err)
+	}
+}
