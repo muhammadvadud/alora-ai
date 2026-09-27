@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"syscall"
 	"testing"
 )
 
@@ -20,6 +21,9 @@ func TestIsRetryable(t *testing.T) {
 		{"network timeout", timeout, true},
 		{"503", errors.New("upstream returned 503"), true},
 		{"rate limit", errors.New("rate limit exceeded"), true},
+		{"conn reset", fmt.Errorf("send: %w", syscall.ECONNRESET), true},
+		{"conn reset text", errors.New(`Post "https://api.deepseek.com/v1/chat/completions": read tcp: read: connection reset by peer`), true},
+		{"unexpected eof", errors.New("stream: unexpected EOF"), true},
 		{"400", errors.New("bad request 400"), false},
 		{"auth", errors.New("401 unauthorized"), false},
 		{"canceled", context.Canceled, false},
