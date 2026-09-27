@@ -1,7 +1,9 @@
 package curtains
 
 import (
+	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/shopspring/decimal"
 )
@@ -83,9 +85,33 @@ func PlanOptions(v *View, st SessionState, q SearchQuery) [3]OptionPlan {
 				continue
 			}
 		}
-		plans[i].Why = whyFor(plans[i].Tier)
+		plans[i].Why = whyFor(plans[i].Tier) + transparencyNote(v, plans[i].Parts, q.Transparency)
 	}
 	return plans
+}
+
+// transparencyNote — so'ralgan shaffoflik segmentda topilmay, paket ballga qaytganini
+// aytadi. Aks holda model paketni so'ralgan shaffoflikda deb o'ylab, mijozga semi
+// matoni "blackout" deb taqdim etdi (2026-09-27 live). Faqat nomuvofiqlikda — token tejaladi.
+func transparencyNote(v *View, parts []PartSpec, want string) string {
+	if want == "" {
+		return ""
+	}
+	for _, p := range parts {
+		if p.Role != RolePortyera {
+			continue
+		}
+		x, ok := v.variants[p.VariantID]
+		if !ok {
+			return ""
+		}
+		got := v.products[x.ProductID].Transparency
+		if strings.EqualFold(got, want) {
+			return ""
+		}
+		return fmt.Sprintf(" (bu segmentda %s yo'q — mato %s)", want, got)
+	}
+	return ""
 }
 
 func whyFor(t OptionTier) string {
@@ -110,11 +136,21 @@ func basicPart(card ProductCard, role PartRole, st SessionState, coef decimal.De
 // Segmentda qatlam bo'lmasa `fallback` segmentlari navbat bilan sinaladi —
 // premium tul katalogda bo'lmasligi mumkin, lekin tul tul bo'lib qolaveradi.
 func cheapestLayer(v *View, q SearchQuery, layer string, segments ...Segment) []ProductCard {
+	return cheapestWhere(v, q, layer, "", segments...)
+}
+
+// cheapestWhere — cheapestLayer, ixtiyoriy qat'iy shaffoflik filtri bilan (bo'sh — filtr yo'q).
+// Filtr skor guruhidan OLDIN qo'llanadi: aks holda xona balli yuqori semi mato guruhni
+// egallab, blackout variant umuman ko'rilmay qoladi.
+func cheapestWhere(v *View, q SearchQuery, layer, transparency string, segments ...Segment) []ProductCard {
 	q.Kind, q.Layer, q.Limit = "fabric", layer, 10
+	if transparency != "" {
+		q.Transparency, q.StrictTransparency = transparency, true
+	}
 	var cards []ProductCard
 	for _, seg := range segments {
 		q.Segment = seg
-		if cards = Search(v, q); len(cards) > 0 {
+		if cards = bestMatches(Search(v, q)); len(cards) > 0 {
 			break
 		}
 	}
@@ -127,14 +163,40 @@ func cheapestLayer(v *View, q SearchQuery, layer string, segments ...Segment) []
 	return cards
 }
 
+// bestMatches — Search tartibidagi (skor kamayish) natijadan faqat eng yuqori skorli
+// guruhni qoldiradi: paket "search → calc" (rules §4.4.1), ya'ni avval talabga moslik
+// (xona/uslub/shaffoflik), keyin shu guruh ichida eng arzoni. Ilgari skor tashlanib
+// faqat narx bo'yicha saralanardi — blackout so'ralganda semi mato tushdi (2026-09-27 live).
+func bestMatches(cards []ProductCard) []ProductCard {
+	if len(cards) == 0 {
+		return cards
+	}
+	n := 1
+	for n < len(cards) && cards[n].Score == cards[0].Score {
+		n++
+	}
+	return cards[:n]
+}
+
 // cheapestFabric — asosiy (portyera) mato. Economy katalogi eski bo'lishi mumkin;
 // faqat shu paketda segmentsiz fallback ishlatiladi, aks holda standard/premium
 // mahsulotlari noto'g'ri paketga o'tadi.
 func cheapestFabric(v *View, q SearchQuery, segment Segment) []ProductCard {
+	segments := []Segment{segment}
 	if segment == SegmentEconomy {
-		return cheapestLayer(v, q, "portyera", SegmentEconomy, "")
+		segments = append(segments, "")
 	}
-	return cheapestLayer(v, q, "portyera", segment)
+	// Shaffoflik asosiy mato uchun funksional talab (blackout — xonani qoraytiradi),
+	// shuning uchun Search'dagi +2 balldan tashqari avval qat'iy sinaladi; segmentda
+	// mos mato bo'lmasagina paket bo'sh qolmasligi uchun ballga qaytiladi. Qat'iy sinov
+	// faqat paketning O'Z segmentida — segmentsiz fallback bilan economy'ga standard
+	// blackout tushib, paketlar bir-biriga aralashardi.
+	if q.Transparency != "" {
+		if cards := cheapestWhere(v, q, "portyera", q.Transparency, segment); len(cards) > 0 {
+			return cards
+		}
+	}
+	return cheapestLayer(v, q, "portyera", segments...)
 }
 
 func premiumParts(v *View, st SessionState, q SearchQuery, coef decimal.Decimal) ([]PartSpec, []AccessoryInput) {

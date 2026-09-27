@@ -114,3 +114,45 @@ func TestPlanOptions_PremiumLayersNeverUseLambrekanAsFabric(t *testing.T) {
 		t.Fatalf("standard tul: %+v", got[1].Parts)
 	}
 }
+
+// TestPlanOptions_RespectsTransparencyAndScore — blackout so'ralsa asosiy mato blackout
+// bo'ladi (xona balli yuqori arzon semi mato bo'lsa ham); segmentda blackout yo'q bo'lsa
+// paket bo'sh qolmaydi — ballga qaytiladi (2026-09-27 live: blackout o'rniga semi).
+func TestPlanOptions_RespectsTransparencyAndScore(t *testing.T) {
+	d := decimal.RequireFromString
+	c := NewCatalog(RealClock{}, time.Hour)
+	c.ApplySnapshot(Snapshot{
+		Version: 1,
+		Products: []Product{
+			{ID: "eco", Name: "Eco", Segment: SegmentEconomy, Transparency: "semi", RecommendedRooms: []string{"living"}, VariantIDs: []string{"eco-v"}},
+			{ID: "std-semi", Name: "Std semi", Segment: SegmentStandard, Transparency: "semi", RecommendedRooms: []string{"living"}, VariantIDs: []string{"std-semi-v"}},
+			{ID: "std-black", Name: "Std black", Segment: SegmentStandard, Transparency: "blackout", VariantIDs: []string{"std-black-v"}},
+			{ID: "std-black2", Name: "Std black 2", Segment: SegmentStandard, Transparency: "blackout", RecommendedRooms: []string{"living"}, VariantIDs: []string{"std-black2-v"}},
+			{ID: "tul", Name: "Tul", Segment: SegmentStandard, Transparency: "transparent", VariantIDs: []string{"tul-v"}},
+		},
+		Variants: []Variant{
+			{ID: "eco-v", ProductID: "eco", Price: d("10"), PriceUnit: PerSqm, IsActive: true},
+			{ID: "std-semi-v", ProductID: "std-semi", Price: d("15"), PriceUnit: PerSqm, IsActive: true},
+			{ID: "std-black-v", ProductID: "std-black", Price: d("20"), PriceUnit: PerSqm, IsActive: true},
+			{ID: "std-black2-v", ProductID: "std-black2", Price: d("40"), PriceUnit: PerSqm, IsActive: true},
+			{ID: "tul-v", ProductID: "tul", Price: d("8"), PriceUnit: PerSqm, IsActive: true},
+		},
+		CalcRules: []CalcRule{{Key: "coef_default", Value: d("2")}},
+	})
+	st := SessionState{Room: "living", CorniceLengthM: d("3"), HeightM: d("2.7")}
+	got := PlanOptions(c.View(), st, SearchQuery{Room: "living", Transparency: "blackout"})
+
+	if len(got[0].Parts) != 1 || got[0].Parts[0].VariantID != "eco-v" {
+		t.Fatalf("economy: segmentda blackout yo'q — eco-v kutilgan, olindi %+v", got[0].Parts)
+	}
+	if got[0].Why != "asosiy portyera (bu segmentda blackout yo'q — mato semi)" {
+		t.Fatalf("economy why: %q", got[0].Why)
+	}
+	if got[1].Why != "portyera va tul" {
+		t.Fatalf("standard why (blackout topilgan — izoh bo'lmasligi kerak): %q", got[1].Why)
+	}
+	// std-black2 (blackout + xona) ball bo'yicha std-black'dan yuqori — narxidan qat'i nazar.
+	if len(got[1].Parts) != 2 || got[1].Parts[0].VariantID != "std-black2-v" || got[1].Parts[1].VariantID != "tul-v" {
+		t.Fatalf("standard: std-black2-v + tul-v kutilgan, olindi %+v", got[1].Parts)
+	}
+}

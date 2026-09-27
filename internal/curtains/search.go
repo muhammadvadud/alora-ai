@@ -30,6 +30,9 @@ type SearchQuery struct {
 	Segment      Segment         // narx segmenti (berilsa — mos kelishi shart)
 	MaxPrice     decimal.Decimal // yuqori narx chegarasi (0 — cheklovsiz)
 	Limit        int             // natija soni
+	// StrictTransparency — Transparency ball emas, qat'iy filtr (faqat build_options
+	// ichki chaqiruvi; product_search DTO'siga chiqmaydi — u yerda ball qoidasi §4.3.1).
+	StrictTransparency bool
 }
 
 // ProductCard — qidiruv natijasidagi bitta variantning kartochkasi (TZ §3.1).
@@ -90,6 +93,15 @@ func Search(v *View, q SearchQuery) []ProductCard {
 	top := make([]candidate, 0, limit)
 	for _, p := range v.products {
 		if !v.isValidTenant(p.TenantID) {
+			continue
+		}
+		// Etalon (REF-*) mahsulotlar narx testlari uchun katalogda turadi, sotuv uchun
+		// emas — tavsiya va paketga tushmasin (2026-09-27 live: "REF-PORTYERA" mijozga
+		// chiqdi). Variant ID bo'yicha hisob (View.Variant) ta'sirlanmaydi (ADR-012).
+		if isReferenceProduct(v, p) {
+			continue
+		}
+		if q.StrictTransparency && !strings.EqualFold(p.Transparency, q.Transparency) {
 			continue
 		}
 		// Segment filtr mahsulot darajasidagi — variantlarga test qilmasdan oldin
@@ -275,6 +287,27 @@ func underAccessoriesChain(v *View, p Product) bool {
 			return true
 		}
 		id = cat.ParentID
+	}
+	return false
+}
+
+// referenceCategorySlug — Django seed'idagi etalon kategoriyasi (seed_dev_catalog).
+const referenceCategorySlug = "etalon"
+
+// isReferenceProduct mahsulot (yoki ota-kategoriyasi) etalon kategoriyasida bo'lsa true.
+// Xarita to'g'ridan-to'g'ri o'qiladi — View.Category clone qiladi, Search byudjetiga
+// (rules §4.3.5) ortiqcha alloc qo'shmaslik uchun. Sikldan himoya — chuqurlik chegarasi.
+func isReferenceProduct(v *View, p Product) bool {
+	id := p.CategoryID
+	for depth := 0; id != "" && depth < 8; depth++ {
+		c, ok := v.categories[id]
+		if !ok {
+			return false
+		}
+		if c.Slug == referenceCategorySlug {
+			return true
+		}
+		id = c.ParentID
 	}
 	return false
 }

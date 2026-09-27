@@ -295,6 +295,7 @@
 - [x] 4.10 (tekshirildi 2026-09-13: `order_draft(action=quote)` LastQuote/LastCalc + display qaytaradi — PDF Django'da) PDF taklif — Django tomonida; Go faqat `LastQuote` ni `order_draft(quote)` bilan beradi (o'zgarish yo'q, tekshiruv).
 - [x] 4.11 (tekshirildi 2026-09-13: Go'da o'zgarish yo'q; katalog snapshot faqat Django→Go) Oflayn/keshlangan katalog — mobil tomonda; Go'da o'zgarish yo'q (tekshiruv).
 - [ ] 4.12 `ombor qoldig'i` (v2): `stock_check` tool, skorga `+2`, ogohlantirish — faqat buyurtmachi tasdiqlasa.
+- [x] 4.13 (2026-09-27 live) `build_options`: etalon (REF-*) mahsulotlar tavsiyaga chiqmaydi; asosiy mato talabga moslik (skor) bo'yicha, so'ralgan shaffoflik segmentda qat'iy; topilmasa `why` da izoh (ADR-012).
 
 ---
 

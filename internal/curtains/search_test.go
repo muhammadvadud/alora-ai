@@ -357,3 +357,34 @@ func assertVariantIDs(t *testing.T, got []ProductCard, want []string) {
 		}
 	}
 }
+
+// TestSearch_ExcludesReferenceProducts — etalon (REF-*) mahsulot tavsiyaga chiqmaydi,
+// lekin View.Variant orqali hisob uchun topiladi (ADR-012; 2026-09-27 live).
+func TestSearch_ExcludesReferenceProducts(t *testing.T) {
+	v := searchView(Snapshot{
+		Version: 1,
+		Categories: []Category{
+			{ID: "c-ref", Name: "Etalon", Slug: "etalon"},
+			{ID: "c-ref-sub", Name: "Etalon mato", Slug: "etalon-mato", ParentID: "c-ref"},
+			{ID: "c-mato", Name: "Matolar", Slug: "matolar"},
+		},
+		Products: []Product{
+			{ID: "p-ref", Name: "REF-PORTYERA", CategoryID: "c-ref", VariantIDs: []string{"v-ref"}},
+			{ID: "p-ref2", Name: "REF-TUL", CategoryID: "c-ref-sub", VariantIDs: []string{"v-ref2"}},
+			{ID: "p-real", Name: "Blackout Duo", CategoryID: "c-mato", VariantIDs: []string{"v-real"}},
+		},
+		Variants: []Variant{
+			{ID: "v-ref", ProductID: "p-ref", Price: dec("25000"), PriceUnit: PerSqm, IsActive: true},
+			{ID: "v-ref2", ProductID: "p-ref2", Price: dec("8000"), PriceUnit: PerSqm, IsActive: true},
+			{ID: "v-real", ProductID: "p-real", Price: dec("95000"), PriceUnit: PerSqm, IsActive: true},
+		},
+	})
+
+	got := Search(v, SearchQuery{Kind: "fabric", Limit: 10})
+	if len(got) != 1 || got[0].VariantID != "v-real" {
+		t.Fatalf("faqat v-real kutilgan, olindi %+v", got)
+	}
+	if _, ok := v.Variant("v-ref"); !ok {
+		t.Fatal("etalon variant hisob uchun View.Variant orqali topilishi kerak")
+	}
+}
