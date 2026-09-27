@@ -23,6 +23,7 @@ type Input struct {
 	CatalogVersion     int64
 	CatalogStale       bool
 	Locale             string // uz | ru
+	MessageLocale      string // joriy xabardan aniqlangan til ("ru" yoki bo'sh) — Locale'dan ustun
 	CustomerMode       bool
 }
 
@@ -44,9 +45,11 @@ func (b Builder) Build(in Input) string {
 
 	_, hint := in.State.NextQuestion()
 	if hint != "" {
-		sb.WriteString("\n<next_question>")
+		// rules §4.5.4: ko'rsatma, majburiyat emas — foydalanuvchi hisob/variant so'rasa
+		// model savolni kechiktiradi (ilgari so'rovni e'tiborsiz qoldirib savol takrorlardi).
+		sb.WriteString("\n<next_question>Keyingi aniqlanishi kerak: ")
 		sb.WriteString(hint)
-		sb.WriteString("</next_question>")
+		sb.WriteString(" (so'ralgan hisob/variant ustun)</next_question>")
 	}
 
 	// Knowledge filtr va saralash
@@ -96,10 +99,18 @@ func (b Builder) Build(in Input) string {
 		tailSb.WriteString("\n<customer_mode>Hozir qurilma mijoz qo'lida: tannarx, ichki izoh va chegirma chegarasini aytma.</customer_mode>")
 	}
 
-	if in.Locale == "ru" {
-		tailSb.WriteString("\nJavob tili: rus")
-	} else {
-		tailSb.WriteString("\nJavob tili: o'zbek (lotin)")
+	// locale — ilova tili, ya'ni faqat standart (rules §7.5). Foydalanuvchi boshqa tilda
+	// yozsa o'sha til ustun: ikki ko'rsatma to'qnashganda model navbatma-navbat til
+	// almashtirardi (2026-09-27 live: ruscha suhbatda 4-javob o'zbekcha).
+	// Xabar tili kod bilan aniqlansa (ADR-013) — qat'iy: faqat prompt ko'rsatmasi yetmadi,
+	// model uz locale'ga qarab ruscha xabarga o'zbekcha javob berdi.
+	switch {
+	case in.MessageLocale == "ru":
+		tailSb.WriteString("\nJavob tili: rus (foydalanuvchi ruscha yozdi)")
+	case in.Locale == "ru":
+		tailSb.WriteString("\nJavob tili: rus; foydalanuvchining oxirgi xabari boshqa tilda bo'lsa — o'sha tilda")
+	default:
+		tailSb.WriteString("\nJavob tili: o'zbek (lotin); foydalanuvchining oxirgi xabari boshqa tilda bo'lsa — o'sha tilda")
 	}
 
 	// Uzunlik tekshiruvi: base + state + next_question + tail + knowledge <= 24000

@@ -296,6 +296,7 @@
 - [x] 4.11 (tekshirildi 2026-09-13: Go'da o'zgarish yo'q; katalog snapshot faqat Django→Go) Oflayn/keshlangan katalog — mobil tomonda; Go'da o'zgarish yo'q (tekshiruv).
 - [ ] 4.12 `ombor qoldig'i` (v2): `stock_check` tool, skorga `+2`, ogohlantirish — faqat buyurtmachi tasdiqlasa.
 - [x] 4.13 (2026-09-27 live) `build_options`: etalon (REF-*) mahsulotlar tavsiyaga chiqmaydi; asosiy mato talabga moslik (skor) bo'yicha, so'ralgan shaffoflik segmentda qat'iy; topilmasa `why` da izoh (ADR-012).
+- [x] 4.14 (2026-09-27 live) Suhbat oqimi: `NextQuestion` bosqichga mos (§4.5.4), `PromptBlock` ga ehtiyoj maydonlari, javob tili joriy xabardan (`MessageLocale`, ADR-013), prompt: variantlar ko'rsatilmagan bo'lsa avval `build_options`, tool oldidan matn yo'q.
 
 ---
 

@@ -45,7 +45,7 @@ func promptFunc(store session.Store, catalog *curtains.Catalog, fallback string,
 		}
 		return builder.Build(prompt.Input{
 			Base: baseText, State: st, Knowledge: view.Knowledge(), KnowledgeInlineMax: inlineMax,
-			CatalogVersion: view.Version, CatalogStale: view.Stale, Locale: user.Locale, CustomerMode: user.CustomerMode,
+			CatalogVersion: view.Version, CatalogStale: view.Stale, Locale: user.Locale, MessageLocale: user.MessageLocale, CustomerMode: user.CustomerMode,
 		})
 	}
 }

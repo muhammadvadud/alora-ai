@@ -304,3 +304,44 @@ func TestSessionState_SetStage(t *testing.T) {
 		t.Errorf("expected stage to be set backwards to recommend")
 	}
 }
+
+// TestSessionState_NextQuestion_StageAware — ehtiyoj savollari faqat need bosqichida;
+// measure'da xona+o'lcham, hisobdan keyin savol yo'q (rules §4.5.4; 2026-09-27 live).
+func TestSessionState_NextQuestion_StageAware(t *testing.T) {
+	tests := []struct {
+		name  string
+		st    curtains.SessionState
+		field string
+	}{
+		{"measure: xona yo'q", curtains.SessionState{Stage: curtains.StageMeasure}, "room"},
+		{"measure: o'lcham yo'q", curtains.SessionState{Stage: curtains.StageMeasure, Room: "bedroom"}, "cornice_length_m"},
+		{"measure: hammasi bor, naqsh so'ralmaydi", curtains.SessionState{Stage: curtains.StageMeasure, Room: "bedroom", CorniceLengthM: decimal.NewFromInt(2), HeightM: decimal.NewFromFloat(2.6)}, ""},
+		{"recommend: balandlik yo'q", curtains.SessionState{Stage: curtains.StageRecommend, Room: "living", CorniceLengthM: decimal.NewFromInt(3)}, "height_m"},
+		{"calc: savol yo'q", curtains.SessionState{Stage: curtains.StageCalc}, ""},
+		{"variants: savol yo'q", curtains.SessionState{Stage: curtains.StageVariants}, ""},
+		{"need: ehtiyoj ketma-ketligi", curtains.SessionState{Stage: curtains.StageNeed, Room: "bedroom"}, "light"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if field, _ := tt.st.NextQuestion(); field != tt.field {
+				t.Fatalf("field %q, kutilgan %q", field, tt.field)
+			}
+		})
+	}
+}
+
+// TestSessionState_PromptBlock_NeedFields — ehtiyoj maydonlari blokda bor (tarix kesilganda
+// model blackout/rang talabini yo'qotmasin; 2026-09-27 live).
+func TestSessionState_PromptBlock_NeedFields(t *testing.T) {
+	s := curtains.NewSessionState()
+	s.Room = "bedroom"
+	s.Pattern = "plain"
+	s.Transparency = "blackout"
+	s.LightPreference = "janub"
+	s.Colors = []string{"bej", "kulrang"}
+	s.BudgetMax = decimal.NewFromInt(2000000)
+	want := "Hozirgi holat: bosqich=need; xona=bedroom; bezak=plain; shaffoflik=blackout; yorug'lik=janub; ranglar=bej,kulrang; budjet=0–2000000"
+	if got := s.PromptBlock(); got != want {
+		t.Fatalf("PromptBlock\n got: %q\nwant: %q", got, want)
+	}
+}

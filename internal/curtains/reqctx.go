@@ -9,6 +9,7 @@ type UserInfo struct {
 	TenantID       string
 	Role           UserRole
 	Locale         string
+	MessageLocale  string // joriy xabar matnidan aniqlangan til (MessageLocale), bo'sh — noma'lum
 	CustomerMode   bool
 	ConversationID string
 }

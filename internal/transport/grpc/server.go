@@ -128,7 +128,8 @@ func (s *Server) Chat(req *alorav1.ChatRequest, stream grpcgo.ServerStreamingSer
 	ctx = WithRequestInfo(ctx, info)
 	ctx = curtains.WithUser(ctx, curtains.UserInfo{
 		UserID: info.UserID, TenantID: info.TenantID, Role: curtains.UserRole(info.Role),
-		Locale: info.Locale, CustomerMode: info.CustomerMode, ConversationID: info.ConversationID,
+		Locale: info.Locale, MessageLocale: curtains.MessageLocale(req.GetMessage()),
+		CustomerMode: info.CustomerMode, ConversationID: info.ConversationID,
 	})
 	info = requestInfo(req)
 	if s.reporter != nil {

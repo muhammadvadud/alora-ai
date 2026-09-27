@@ -258,8 +258,21 @@ func (s *SessionState) SetStage(stage Stage) {
 	s.Stage = stage
 }
 
-// NextQuestion yetishmayotgan birinchi maydon va o'zbekcha yordamchini qaytaradi.
+// NextQuestion joriy bosqich (Stage) bo'yicha yetishmayotgan birinchi maydon va o'zbekcha
+// yordamchini qaytaradi (rules §4.5.4). Ehtiyoj savollari faqat `need` bosqichida; o'lcham
+// kelgach (`measure`) faqat xona va o'lcham, hisobdan keyin — savol yo'q. Ilgari bosqich
+// hisobga olinmasdi: o'lcham va hisob tayyor bo'lsa ham "gulli/gulsiz" qayta-qayta
+// so'ralib, "eng arzonini" degan mijozga narx kechikdi (2026-09-27 live).
 func (s *SessionState) NextQuestion() (field, hint string) {
+	switch s.Stage {
+	case StageCalc, StageVariants, StageChoose, StageOrder:
+		return "", ""
+	case StageRecommend, StageMeasure:
+		if s.Room == "" {
+			return "room", "xona turi"
+		}
+		return s.nextMeasurement()
+	}
 	if s.Room == "" {
 		return "room", "xona turi"
 	}
@@ -281,14 +294,16 @@ func (s *SessionState) NextQuestion() (field, hint string) {
 	if s.BudgetMin.IsZero() && s.BudgetMax.IsZero() {
 		return "budget", "budjet"
 	}
+	return s.nextMeasurement()
+}
 
+func (s *SessionState) nextMeasurement() (field, hint string) {
 	if s.CorniceLengthM.IsZero() {
 		return "cornice_length_m", "karniz uzunligi"
 	}
 	if s.HeightM.IsZero() {
 		return "height_m", "balandlik"
 	}
-
 	return "", ""
 }
 
@@ -301,6 +316,23 @@ func (s SessionState) PromptBlock() string {
 	}
 	if s.Style != "" {
 		parts = append(parts, fmt.Sprintf("uslub=%s", s.Style))
+	}
+	// Ehtiyoj maydonlari ham kiradi: trimHistory eski xabarlarni kesganda model mijozning
+	// blackout/rang talabini faqat shu blokdan biladi (TZ §5 — state kontekstga tayanmaydi).
+	if s.Pattern != "" {
+		parts = append(parts, fmt.Sprintf("bezak=%s", s.Pattern))
+	}
+	if s.Transparency != "" {
+		parts = append(parts, fmt.Sprintf("shaffoflik=%s", s.Transparency))
+	}
+	if s.LightPreference != "" {
+		parts = append(parts, fmt.Sprintf("yorug'lik=%s", s.LightPreference))
+	}
+	if len(s.Colors) > 0 {
+		parts = append(parts, fmt.Sprintf("ranglar=%s", strings.Join(s.Colors, ",")))
+	}
+	if !s.BudgetMin.IsZero() || !s.BudgetMax.IsZero() {
+		parts = append(parts, fmt.Sprintf("budjet=%s–%s", s.BudgetMin.String(), s.BudgetMax.String()))
 	}
 	if !s.CorniceLengthM.IsZero() {
 		parts = append(parts, fmt.Sprintf("karniz=%s m", s.CorniceLengthM.String()))

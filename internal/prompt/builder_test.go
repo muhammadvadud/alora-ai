@@ -37,7 +37,7 @@ func TestBuilder_Build(t *testing.T) {
 			t.Errorf("Bloklar tartibi noto'g'ri: state=%d, next=%d, know=%d, cat=%d", idxState, idxNext, idxKnow, idxCat)
 		}
 
-		if !strings.Contains(res, "<next_question>xona turi</next_question>") {
+		if !strings.Contains(res, "<next_question>Keyingi aniqlanishi kerak: xona turi (so'ralgan hisob/variant ustun)</next_question>") {
 			t.Errorf("Bo'sh state uchun next_question 'xona turi' bo'lishi kerak, lekin yo'q:\n%s", res)
 		}
 
@@ -107,6 +107,15 @@ func TestBuilder_Build(t *testing.T) {
 		}
 		if !strings.Contains(res, "Javob tili: rus") {
 			t.Error("ru locale uchun matn yo'q")
+		}
+		// locale faqat standart: foydalanuvchi tili ustunligi aytilishi shart (2026-09-27 live).
+		if !strings.Contains(res, "oxirgi xabari boshqa tilda bo'lsa — o'sha tilda") {
+			t.Error("foydalanuvchi tili ustunligi qatori yo'q")
+		}
+		// Xabardan aniqlangan til locale'dan ustun (ADR-013).
+		uz := b.Build(Input{State: curtains.NewSessionState(), Locale: "uz", MessageLocale: "ru"})
+		if !strings.Contains(uz, "Javob tili: rus (foydalanuvchi ruscha yozdi)") {
+			t.Error("MessageLocale=ru bo'lsa javob tili rus bo'lishi kerak")
 		}
 	})
 
