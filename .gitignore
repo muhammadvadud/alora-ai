@@ -8,3 +8,6 @@ coverage.out
 
 # LLM trace — dev debug, LLM matni repo/logga tushmaydi (rules §13)
 *.jsonl
+
+# Lokal agent/muharrir sozlamalari
+.claude/
