@@ -19,6 +19,11 @@ import (
 //go:embed migrations/*.sql
 var migrationFiles embed.FS
 
+// errSessionOwnerMismatch — so'rov egasi sessiya egasi bilan mos kelmadi. Postgres va
+// in-memory store bitta sentinel'ni qaytaradi (rules §10.4: boshqa sotuvchi suhbatni
+// o'qiy ham, yoza ham olmaydi) — shu sababli xato matni va kelib chiqishi bir xil.
+var errSessionOwnerMismatch = errors.New("sessiya egasi mos emas")
+
 type PostgresOptions struct{ AutoMigrate bool }
 
 type pgStore struct{ pool *pgxpool.Pool }
@@ -126,7 +131,7 @@ func (s *pgStore) Append(ctx context.Context, id string, msgs ...*schema.Message
 		return err
 	}
 	if !ok {
-		return fmt.Errorf("sessiya egasi mos emas")
+		return errSessionOwnerMismatch
 	}
 	if _, err := s.pool.Exec(ctx, `UPDATE agent.sessions SET messages=messages || $2::jsonb, updated_at=now() WHERE session_id=$1`, id, raw); err != nil {
 		return fmt.Errorf("tarixni saqlash: %w", err)
@@ -177,7 +182,7 @@ func (s *pgStore) SetState(ctx context.Context, id string, st curtains.SessionSt
 		return err
 	}
 	if !ok {
-		return fmt.Errorf("sessiya egasi mos emas")
+		return errSessionOwnerMismatch
 	}
 	if _, err := s.pool.Exec(ctx, `UPDATE agent.sessions SET state=$2::jsonb, updated_at=now() WHERE session_id=$1`, id, raw); err != nil {
 		return fmt.Errorf("state saqlash: %w", err)
@@ -192,11 +197,12 @@ func (s *pgStore) Reset(ctx context.Context, id string) error {
 	return nil
 }
 
+// ownerMatches — so'rov egasi sessiya egasi bilan mos keladimi (rules §10.4).
+// Yozuv yo'q bo'lsa ruxsat beriladi: sessiya birinchi yozuvda o'z egasini oladi.
+// Bo'sh user_id ham shu qoidaga bo'ysunadi — u FAQAT egasiz (user_id bo'sh) sessiyaga
+// kira oladi. Aks holda (fail-open) har qanday so'rov boshqa sotuvchi suhbatini
+// o'qirdi: sessiya izolyatsiyasi butunlay yo'qolgan bo'lardi.
 func (s *pgStore) ownerMatches(ctx context.Context, id string) (bool, error) {
-	userID, tenantID := owner(ctx)
-	if userID == "" {
-		return true, nil
-	}
 	var storedUser, storedTenant string
 	err := s.pool.QueryRow(ctx, `SELECT user_id,tenant_id FROM agent.sessions WHERE session_id=$1`, id).Scan(&storedUser, &storedTenant)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -205,7 +211,25 @@ func (s *pgStore) ownerMatches(ctx context.Context, id string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("sessiya egasini tekshirish: %w", err)
 	}
-	return storedUser == userID && storedTenant == tenantID, nil
+	return ownerAllows(sessionOwner{user: storedUser, tenant: storedTenant}, true, ownerOf(ctx)), nil
+}
+
+// sessionOwner — sessiya egasining (user_id, tenant_id) juftligi; Postgres'dagi
+// agent.sessions ustunlariga mos. Ikkalasini ham saqlash shart: bitta tenant ichida
+// ko'p sotuvchi (user_id) ishlaydi, tenant esa kelganda ajratadi.
+type sessionOwner struct {
+	user   string
+	tenant string
+}
+
+// ownerAllows — egalik qarorining YAGONA qoidasi (Postgres va in-memory store shuni
+// ishlatadi, aks holda chalkashlik chiqadi va xavfsizlik nuqsoni yashirin bo'lib qoladi):
+// yozuv yo'q (yoki egasiz) — ruxsat (yangi sessiya), yozuv bor — faqat aniq moslik.
+func ownerAllows(stored sessionOwner, hasOwner bool, want sessionOwner) bool {
+	if !hasOwner {
+		return true
+	}
+	return stored == want
 }
 
 func owner(ctx context.Context) (string, string) {
@@ -213,6 +237,12 @@ func owner(ctx context.Context) (string, string) {
 		return strings.TrimSpace(u.UserID), strings.TrimSpace(u.TenantID)
 	}
 	return "", ""
+}
+
+// ownerOf — so'rov kontekstidagi ega (`owner` dan juftlikka yig'iladi).
+func ownerOf(ctx context.Context) sessionOwner {
+	userID, tenantID := owner(ctx)
+	return sessionOwner{user: userID, tenant: tenantID}
 }
 
 func (s *pgStore) Close() { s.pool.Close() }

@@ -18,7 +18,9 @@ services:
     expose:
       - "9090"
     ports:
-      - "8081:8081" # /healthz /readyz /metrics
+      # /healthz /readyz /metrics — faqat host loopback: metrikalar ichki ma'lumot
+      # (sessiya sonlari, LLM tokenlari) va rules §16.1 bo'yicha tashqariga ochiq emas.
+      - "127.0.0.1:8081:8081"
     restart: unless-stopped
     networks:
       - backend_default

@@ -79,8 +79,10 @@ func TestLoad_50ParallelSessions(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < reqsPerSession; j++ {
 				reqStart := time.Now()
+				// user_id majburiy (Chat bo'sh user_id ni rad etadi, tasks 4.16).
 				req := &alorav1.ChatRequest{
 					SessionId: sid,
+					UserId:    "load",
 					Message:   "salom",
 				}
 				stream, err := client.Chat(context.Background(), req)
@@ -159,7 +161,7 @@ func TestLoad_ClientCancelReleases(t *testing.T) {
 
 	for i := 0; i < 20; i++ {
 		ctx, cancel := context.WithCancel(context.Background())
-		req := &alorav1.ChatRequest{SessionId: fmt.Sprintf("c-%d", i), Message: "salom"}
+		req := &alorav1.ChatRequest{SessionId: fmt.Sprintf("c-%d", i), UserId: "load", Message: "salom"}
 		stream, err := client.Chat(ctx, req)
 		if err == nil {
 			_, _ = stream.Recv()

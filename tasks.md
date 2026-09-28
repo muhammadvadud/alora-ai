@@ -298,6 +298,7 @@
 - [x] 4.13 (2026-09-27 live) `build_options`: etalon (REF-*) mahsulotlar tavsiyaga chiqmaydi; asosiy mato talabga moslik (skor) bo'yicha, so'ralgan shaffoflik segmentda qat'iy; topilmasa `why` da izoh (ADR-012).
 - [x] 4.14 (2026-09-27 live) Suhbat oqimi: `NextQuestion` bosqichga mos (§4.5.4), `PromptBlock` ga ehtiyoj maydonlari, javob tili joriy xabardan (`MessageLocale`, ADR-013), prompt: variantlar ko'rsatilmagan bo'lsa avval `build_options`, tool oldidan matn yo'q.
 - [x] 4.15 (2026-09-27 live) `IsRetryable`: ulanish uzilishi (`connection reset`, `broken pipe`, `unexpected EOF`) qayta urinishga kiradi.
+- [x] 4.16 (2026-09-28 xavfsizlik auditi) Sessiya izolyatsiyasi: pgStore `ownerMatches` fail-open olib tashlandi (bo'sh `user_id` faqat egasiz sessiyaga kirsin, `ownerAllows` — yagona qoida), memoryStore ham shu semantikada (ega `(user_id, tenant_id)`, o'qish `warn`+bo'sh, yozuv `errSessionOwnerMismatch`); gRPC rejimida `DATABASE_URL` yo'q bo'lsa startup aniq xato bilan to'xtaydi; `Chat` bo'sh `user_id` ni `InvalidArgument` bilan rad etadi; `/metrics` porti `127.0.0.1` ga bog'landi.
 
 ---
 

@@ -173,6 +173,22 @@ func TestChatRejectsEmptyAndLongMessage(t *testing.T) {
 	}
 }
 
+// TestChatRejectsEmptyUserID — bo'sh (yoki bo'sh bo'luq) user_id bilan Chat rad etiladi:
+// egaliksiz so'rov sessiya izolyatsiyasini buzardi (bo'sh user_id egasiz deb qaralardi).
+func TestChatRejectsEmptyUserID(t *testing.T) {
+	srv := New(&fakeStreamer{}, Options{})
+	stream := &fakeChatStream{ctx: context.Background()}
+	for _, userID := range []string{"", "   "} {
+		err := srv.Chat(&alorav1.ChatRequest{SessionId: "s", UserId: userID, Message: "salom"}, stream)
+		if status.Code(err) != codes.InvalidArgument {
+			t.Fatalf("user_id %q code = %v", userID, status.Code(err))
+		}
+	}
+	if err := srv.Chat(&alorav1.ChatRequest{SessionId: "s", UserId: "u", Message: "salom"}, stream); err != nil {
+		t.Fatalf("user_id to'ldirilgan so'rov rad etildi: %v", err)
+	}
+}
+
 func TestServerSessionLimit(t *testing.T) {
 	blocking := &blockingStreamer{release: make(chan struct{})}
 	srv := New(blocking, Options{MaxSessions: 1})

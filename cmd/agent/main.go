@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -153,8 +154,9 @@ func run() error {
 		calc = backend.NewPricingClient(backendConn, cfg.Backend.Timeout, "")
 	}
 
-	// Suhbat xotirasi: DATABASE_URL berilgan bo'lsa Postgres, aks holda in-memory.
-	store, err := newStore(ctx, cfg.DB.URL, cfg.DB.AutoMigrate)
+	// Suhbat xotirasi: DATABASE_URL berilgan bo'lsa Postgres, aks holda in-memory
+	// (faqat dev rejimlari — newStore grpc'da jimgina o'tishga yo'l qo'ymaydi).
+	store, err := newStore(ctx, cfg.DB.URL, cfg.DB.AutoMigrate, cfg.Mode)
 	if err != nil {
 		return err
 	}
@@ -325,8 +327,15 @@ type httpReady struct{}
 func (httpReady) Ready() (bool, string) { return true, "" }
 
 // newStore DB URL bo'lsa Postgres store, aks holda in-memory store qaytaradi.
-func newStore(ctx context.Context, dbURL string, autoMigrate bool) (session.Store, error) {
+// gRPC (prod) rejimida in-memory RUXSAT ETILMAYDI: sessiyalar jarayon bilan birga
+// o'ladi, ko'p instansada umuman bo'lmaydi va konfiguratsiya xatosi jim qoladi —
+// xavfsizlik nuqsoni (sessiya izolyatsiyasi yo'qolishi) faqat ishlayotgan prod'da
+// ko'rinmasdi. Shuning uchun aniq xato bilan to'xtaymiz (rules §12.1).
+func newStore(ctx context.Context, dbURL string, autoMigrate bool, mode string) (session.Store, error) {
 	if dbURL == "" {
+		if mode == "grpc" {
+			return nil, errors.New("db.url (DATABASE_URL) bo'lishi shart: gRPC rejimida in-memory store ishlatilmaydi — sessiyalar jarayon bilan birga yo'qoladi va izolyatsiya saqlanmaydi")
+		}
 		slog.Info("suhbat xotirasi: in-memory (DATABASE_URL berilmagan)")
 		return session.NewMemory(), nil
 	}

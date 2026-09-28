@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -117,6 +118,12 @@ func (s *Server) Chat(req *alorav1.ChatRequest, stream grpcgo.ServerStreamingSer
 	}
 	if err := validateMessage(req.GetMessage(), s.maxMessageChars); err != nil {
 		return err
+	}
+	// Bo'sh user_id — sessiya izolyatsiyasi yo'qoladi: Store egalikni (user_id +
+	// tenant_id) tekshiradi, bo'sh so'rov esa faqat egasiz sessiyaga kirsagina
+	// keladi. Kirish nuqtasi shu yerda yopiladi — ResetSession kabi.
+	if strings.TrimSpace(req.GetUserId()) == "" {
+		return status.Error(codes.InvalidArgument, "user_id bo'sh bo'lishi mumkin emas")
 	}
 	if !s.acquireSession() {
 		return status.Error(codes.ResourceExhausted, "agent band (sessiya chegarasi)")
