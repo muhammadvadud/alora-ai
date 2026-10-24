@@ -585,6 +585,23 @@ tool **stub** (`{"error":"hali ulanmagan"}`) bilan qoladi, "bajarildi" belgilanm
 
 ## 19. Qarorlar jurnali (ADR)
 
+### ADR-021 — Sotuv bilimlari va token byudjeti (2026-10-25)
+
+Buyurtmachi O'zbekiston bozoriga mos professional sotuv yordamchisini,
+asosan bilim/prompt orqali yaxshilashni va pulli testlarni oxirga qoldirishni
+so'radi. Bilim va sotuv siyosati Django'dan keladi; embedded prompt faqat
+transport/tool xavfsizlik fallback'i. Katta bilim bazasida mos qoidalar
+promptga butun qoida sifatida, jami 2000 belgigacha va ko'pi bilan 8 ta
+qo'shiladi; qolganlari knowledge_lookup orqali olinadi. Qidiruvdagi
+o'zbek/rus/kirill sinonimlari til yordamchisi, biznes qoidasi emas.
+knowledge_lookup barcha sotuv bosqichlarida parvarish/xavfsizlik savoliga
+ochiq qoladi. Mahsulot kartochkasi faqat bazada bor tarkib/parvarishni beradi;
+semi/transparent blackout sifatida tavsiya qilinmaydi. Mijoz tanlagan tayyor
+paket qoralamaga snapshot'dan o'tadi, qayta qo'lda tuzilmaydi. Takroriy xizmat
+kaliti taklifga bir marta kiradi. Narx formulasi, proto va ReAct yadrosi
+o'zgarmaydi. Muqobil: uzun umumiy prompt va modelni qimmatrog'iga almashtirish
+— token sarfi va katalog cheklovlarini hal qilmagani uchun rad etildi.
+
 | # | Sana | Qaror | Sabab |
 |---|---|---|---|
 | ADR-001 | 2026-09-12 | `Catalog` gRPC serveri Django'da, Go — klient (TZ §7 "Agent, Catalog server" o'rniga) | Backend allaqachon `Catalog.Snapshot/Watch` serverini yozgan (`apps/chat/grpc_server/catalog_service.py`); Go Watch oqimini tortadi. Shartnoma o'zgarmaydi. |

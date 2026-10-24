@@ -280,6 +280,13 @@
 
 ---
 
+## Sotuv bilimlarini yaxshilash — 2026-10-25
+
+- [x] S.1 Boshlang'ich ish holati build/vet/lint/race bilan tekshirildi va alohida branchda saqlandi.
+- [x] S.2 Manbali bilim, ixcham prompt va minimal sotuv yordamchilari uchun ADR-021 qayd etildi.
+- [ ] S.3 Ko'p tilli bilim qidiruvi, manbali mahsulot ma'lumoti va izchil paket/qoralama oqimi.
+- [ ] S.4 Kalitsiz regressiyalar va tejamkor yakuniy API baholash.
+
 ## Bosqich 4 — Sayqal (davomiy)
 
 - [x] 4.1 Fallback provider (`fallback_provider: claude`) — 2 ketma-ket xato → o'sha navbat qayta; `usage.provider` to'g'ri;
