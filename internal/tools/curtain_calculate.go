@@ -79,6 +79,8 @@ func (h *curtainCalcHandler) do(ctx context.Context, a curtainCalcArgs) (curtain
 	st, sid := loadState(ctx, h.d)
 	st.Apply("curtain_calculate", argsMap(a), now(h.d))
 	st.LastCalc = &res
+	st.LastQuote = nil
+	st.SelectedOption = ""
 	saveState(ctx, h.d, sid, st)
 	return out, nil
 }

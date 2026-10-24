@@ -43,7 +43,7 @@ steps:
           Buyurtma qoralamasi tayyor: jami 5 070 000 so'm.
           Mijoz ismi, telefon va manzilini ilova formasida kiritadi.
     expect_tools: ["order_draft"]
-    expect_stage: calc
+    expect_stage: order
     expect_products: false
     expect_result_contains:
       - '"customer_form_required":true'

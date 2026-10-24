@@ -44,6 +44,10 @@ type productCard struct {
 	PriceUnit    string `json:"unit"`
 	WidthM       string `json:"width_m,omitempty"`
 	Transparency string `json:"transparency,omitempty"`
+	FabricType   string `json:"fabric_type,omitempty"`
+	Composition  string `json:"composition,omitempty"`
+	Care         string `json:"care,omitempty"`
+	Description  string `json:"description,omitempty"`
 	Segment      string `json:"segment,omitempty"`
 	// CalcSupported — faqat false bo'lganda chiqadi (rulon/rim: AI hisoblamaydi,
 	// sotuvchi narxni qo'lda belgilaydi — ADR-014). Boshqa mahsulotlarda maydon yo'q.
@@ -275,6 +279,8 @@ type fasonPartCard struct {
 	WidthShare  string `json:"width_share"`
 	HeightShare string `json:"height_share"`
 	DefaultCoef string `json:"default_coef"`
+	WidthM      string `json:"width_m,omitempty"`
+	HeightM     string `json:"height_m,omitempty"`
 	// Tayyor tanlov: shu rol uchun katalogdan eng mos variant (xona/uslub bo'yicha) —
 	// model curtain_calculate.parts ga aynan shuni uzatadi, qatlam-qatlam qidirmaydi.
 	VariantID    string `json:"variant_id,omitempty"`

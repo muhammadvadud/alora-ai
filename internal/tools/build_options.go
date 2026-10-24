@@ -19,7 +19,7 @@ import (
 func BuildOptions(d Deps) tool.BaseTool {
 	h := &buildOptionsHandler{d: d}
 	return must(utils.InferTool("build_options",
-		"Yig'ilgan talab va o'lchov asosida arzon / o'rtacha / premium — 3 ta to'liq taklifni bir chaqiruvda tuzadi (mahsulot tanlash + hisob). Faqat o'lcham ma'lum bo'lgach chaqir. Foydalanuvchi paket tanlasa, options ichidagi variants[].variant_id qiymatlarini curtain_calculate.parts[].variant_id ga aynan ko'chir; name, SKU yoki mahsulot nomini ID o'rniga yuborma.",
+		"Yig'ilgan talab va o'lchov asosida arzon / o'rtacha / premium paketlarni bir chaqiruvda hisoblaydi. Mos bo'lmagan segmentning cheklovini yashirma. Foydalanuvchi paket tanlasa darhol order_draft(action=draft, option_tier=economy|standard|premium) chaqir — paketni curtain_calculate/price_quote bilan qayta qurma.",
 		h.do))
 }
 
@@ -113,6 +113,7 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 	// Har muvaffaqiyatli paket holatga yoziladi: mijoz tanlasa price_quote/order_draft
 	// option_tier bilan aynan shu natijani oladi (ADR-016). Eski paketlar almashtiriladi.
 	st.LastOptions = make(map[curtains.OptionTier]curtains.OptionSnapshot, len(plans))
+	st.SelectedOption = ""
 	for i := range plans {
 		if results[i] != nil {
 			st.LastOptions[plans[i].Tier] = curtains.OptionSnapshot{Result: *results[i]}
@@ -235,14 +236,13 @@ func optionWarnings(results [3]*curtains.CalcResult) []string {
 // CompareOptions faqat Django qaytargan jami summalarni taqqoslaydi.
 func CompareOptions(results [3]*curtains.CalcResult) []string {
 	labels := []string{"Economy", "O'rtacha", "Premium"}
-	why := []string{"asosiy portyera", "tul qo'shilgan", "astar + lambrekan + montaj"}
 	var out []string
 	for i := 1; i < len(results); i++ {
 		if results[i] == nil || results[i-1] == nil || !results[i].Total.GreaterThan(results[i-1].Total) {
 			continue
 		}
 		diff := results[i].Total.Sub(results[i-1].Total)
-		out = append(out, labels[i]+" "+stringsLower(labels[i-1])+" "+displayMoney(diff)+" qimmat: "+why[i])
+		out = append(out, labels[i]+" "+stringsLower(labels[i-1])+" "+displayMoney(diff)+" qimmat")
 	}
 	return out
 }

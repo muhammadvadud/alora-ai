@@ -82,6 +82,7 @@ type SessionState struct {
 	LastCalc        *CalcResult                   `json:"last_calc,omitempty"`
 	LastQuote       *CalcResult                   `json:"last_quote,omitempty"`
 	LastOptions     map[OptionTier]OptionSnapshot `json:"last_options,omitempty"`
+	SelectedOption  OptionTier                    `json:"selected_option,omitempty"`
 	// EmptySearches — ketma-ket bo'sh qidiruvlar soni. Model qidiruvni
 	// takrorlab siklda qolmasligi kerak (ADR-020): 2-marta bo'sh natija
 	// kelganda product_search `stop` bilan javob beradi.
@@ -313,7 +314,7 @@ func (s *SessionState) Apply(tool string, args map[string]any, now time.Time) {
 	case "build_options":
 		advanceStage(StageVariants)
 	case "order_draft":
-		if v, ok := args["action"]; ok && toString(v) == "confirm" {
+		if v, ok := args["action"]; ok && toString(v) == "draft" {
 			advanceStage(StageOrder)
 		}
 	}
@@ -482,6 +483,12 @@ func (s *SessionState) nextMeasurementHint() (field, hint string) {
 func (s SessionState) PromptBlock() string {
 	var parts []string
 	parts = append(parts, fmt.Sprintf("bosqich=%s", s.Stage))
+	if s.SelectedOption != "" {
+		parts = append(parts, fmt.Sprintf("tanlangan_paket=%s", s.SelectedOption))
+	}
+	if s.Stage == StageOrder {
+		parts = append(parts, "qoralama tayyor; mijoz ma'lumotlari ilova formasida; tasdiq sotuvchida")
+	}
 	if s.Room != "" {
 		parts = append(parts, fmt.Sprintf("xona=%s", s.Room))
 	}
@@ -527,6 +534,9 @@ func (s SessionState) PromptBlock() string {
 func (s SessionState) Summary() map[string]any {
 	res := map[string]any{
 		"stage": string(s.Stage),
+	}
+	if s.SelectedOption != "" {
+		res["selected_option"] = s.SelectedOption
 	}
 	if s.Room != "" {
 		res["room"] = s.Room

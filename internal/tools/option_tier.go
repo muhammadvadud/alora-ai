@@ -16,6 +16,9 @@ func selectOption(st *curtains.SessionState, tier string) string {
 	default:
 		return "option_tier economy, standard yoki premium bo'lishi kerak"
 	}
+	if st.SelectedOption == t && (st.LastQuote != nil || st.LastCalc != nil) {
+		return ""
+	}
 	snap, ok := st.LastOptions[t]
 	if !ok {
 		return "bu paket hali tuzilmagan — avval build_options chaqir"
@@ -24,5 +27,7 @@ func selectOption(st *curtains.SessionState, tier string) string {
 	st.LastCalc = &res
 	// Oldingi taklif boshqa hisobga tegishli — tanlangan paket ustida qaytadan quriladi.
 	st.LastQuote = nil
+	st.SelectedOption = t
+	st.Stage = curtains.StageChoose
 	return ""
 }

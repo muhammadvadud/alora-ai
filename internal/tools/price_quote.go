@@ -73,6 +73,7 @@ func (h *priceQuoteHandler) do(ctx context.Context, a priceQuoteArgs) (priceQuot
 	if a.NeedCornice {
 		requested = append(requested, "cornice")
 	}
+	requested = normalizeServiceKeys(requested)
 	var warnings []string
 	in.Services = []string{}
 	var missing []string

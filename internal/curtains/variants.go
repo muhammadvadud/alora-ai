@@ -161,7 +161,7 @@ func whyFor(t OptionTier) string {
 	case OptionStandard:
 		return "portyera va tul"
 	default:
-		return "astar, lambrekan va montaj"
+		return "fason bo'yicha to'liq tarkib; tafsilotlar hisobda"
 	}
 }
 
@@ -265,7 +265,7 @@ func fabricFilters(q SearchQuery) []strictFilter {
 }
 
 func premiumParts(v *View, st SessionState, q SearchQuery, coef decimal.Decimal) ([]PartSpec, []AccessoryInput) {
-	fasons := LookupFason(v, st.Room, st.Style)
+	fasons := LookupFason(v, q.Room, q.Style)
 	port := cheapestFabric(v, q, SegmentPremium)
 	// Yordamchi qatlamlar premium segmentda bo'lmasa pastroq segmentdan olinadi.
 	tul := cheapestLayer(v, q, "tul", SegmentPremium, SegmentStandard, SegmentEconomy)
@@ -284,6 +284,12 @@ func premiumParts(v *View, st SessionState, q SearchQuery, coef decimal.Decimal)
 				card = tul[0]
 			case RoleAstar:
 				card = astar[0]
+			case RoleLambrekan, RoleKant, RoleDekor:
+				matches := cheapestLayer(v, q, string(p.Role), SegmentPremium, SegmentStandard, SegmentEconomy)
+				if len(matches) == 0 {
+					return nil, nil
+				}
+				card = matches[0]
 			}
 			roles[p.Role] = card.VariantID
 		}

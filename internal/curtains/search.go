@@ -51,6 +51,9 @@ type ProductCard struct {
 	PriceUnit    PriceUnit       `json:"price_unit"`
 	WidthM       decimal.Decimal `json:"width_m"`
 	FabricType   string          `json:"fabric_type"`
+	Composition  string          `json:"composition,omitempty"`
+	Care         string          `json:"care,omitempty"`
+	Description  string          `json:"description,omitempty"`
 	Transparency string          `json:"transparency"`
 	Segment      Segment         `json:"segment"`
 	ImageURL     string          `json:"image_url"`
@@ -228,6 +231,9 @@ func buildCard(p Product, vx Variant, q SearchQuery, cm colorMatcher) ProductCar
 		PriceUnit:    vx.PriceUnit,
 		WidthM:       vx.WidthM,
 		FabricType:   p.FabricType,
+		Composition:  p.Composition,
+		Care:         p.Care,
+		Description:  p.Description,
 		Transparency: p.Transparency,
 		Segment:      p.Segment,
 		Score:        cardScore(p, vx, q, cm),
@@ -424,6 +430,9 @@ func LayerOf(v *View, p Product) string {
 // biror variant SKU/rang nomi ichida bo'lsa true (registrga sezgir emas).
 func nameMatches(v *View, p Product, query string) bool {
 	hay := strings.ToLower(p.Name + " " + p.Code)
+	for _, alias := range conditionValues(p.Tags["sales_aliases"]) {
+		hay += " " + strings.ToLower(alias)
+	}
 	for _, vid := range v.byProduct[p.ID] {
 		if vx, ok := v.variants[vid]; ok {
 			hay += " " + strings.ToLower(vx.SKU+" "+vx.ColorName)

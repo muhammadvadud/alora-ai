@@ -33,6 +33,7 @@ func (h *productSearchHandler) do(ctx context.Context, a productSearchArgs) (pro
 		Layer: a.Layer, Color: a.Color, Kind: a.Kind, Segment: curtains.Segment(a.Segment),
 		Limit: a.Limit,
 	}
+	q.StrictTransparency = a.Transparency != ""
 	if a.MaxPrice > 0 {
 		q.MaxPrice = decimal.NewFromFloat(a.MaxPrice)
 	}
@@ -45,6 +46,9 @@ func (h *productSearchHandler) do(ctx context.Context, a productSearchArgs) (pro
 		for _, layer := range a.Layers {
 			lq := q
 			lq.Layer, lq.Limit = layer, 3
+			if layer != "portyera" && a.Transparency == "blackout" {
+				lq.Transparency, lq.StrictTransparency = "", false
+			}
 			lc := curtains.Search(v, lq)
 			res.ByLayer[layer] = toCards(lc)
 			cards = append(cards, lc...)
@@ -104,6 +108,8 @@ func toCards(cs []curtains.ProductCard) []productCard {
 			VariantID: c.VariantID, Name: c.Name, ColorName: c.ColorName,
 			Price: c.Price.String(), PriceDisplay: displayMoney(c.Price), PriceUnit: string(c.PriceUnit),
 			WidthM: c.WidthM.String(), Transparency: c.Transparency,
+			FabricType: c.FabricType, Composition: curtains.Sanitize(c.Composition, 120),
+			Care: curtains.Sanitize(c.Care, 160), Description: curtains.Sanitize(c.Description, 180),
 			Segment: string(c.Segment), Why: why,
 		})
 	}

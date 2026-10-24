@@ -114,10 +114,10 @@ func TestSessionState_Apply(t *testing.T) {
 			check:         func(t *testing.T, s curtains.SessionState) {},
 		},
 		{
-			name:          "order_draft confirm moves to order",
+			name:          "order_draft draft moves to order",
 			initialStage:  curtains.StageVariants,
 			tool:          "order_draft",
-			args:          map[string]any{"action": "confirm"},
+			args:          map[string]any{"action": "draft"},
 			expectedStage: curtains.StageOrder,
 			check:         func(t *testing.T, s curtains.SessionState) {},
 		},

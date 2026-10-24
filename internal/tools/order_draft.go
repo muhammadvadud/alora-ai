@@ -15,7 +15,8 @@ import (
 func OrderDraft(d Deps) tool.BaseTool {
 	h := &orderDraftHandler{d: d}
 	return must(utils.InferTool("order_draft",
-		"action=quote — joriy taklifni ko'rsatadi; action=draft — taklifni buyurtma qoralamasiga shakllantiradi "+
+		"Paket tanlansa action=draft va option_tier bilan DARHOL chaqir: saqlangan paketni aynan oladi, curtain_calculate/price_quote bilan qayta qurma. "+
+			"action=quote — joriy taklifni ko'rsatadi; action=draft — taklifni buyurtma qoralamasiga shakllantiradi "+
 			"va customer_form_required=true qaytaradi: mijoz ismi, telefoni va manzilini ILOVA FORMASI orqali sotuvchi kiritadi. "+
 			"Mijoz ma'lumotlarini hech qachon so'rama va tool'ga yuborma. Yakuniy tasdiq sotuvchida.",
 		h.do))
@@ -46,11 +47,13 @@ func (h *orderDraftHandler) do(ctx context.Context, a orderDraftArgs) (orderDraf
 			Display: displayTotals(*quote),
 		}, nil
 	case "draft":
+		st.Apply("order_draft", argsMap(a), now(h.d))
+		saveState(ctx, h.d, sid, st)
 		// Mijoz ma'lumotlari AI orqali YIG'ILMAYDI — forma shtrixi shu yerda
 		// chiqadi. Bu yerda Django'ga yozilmaydi: buyurtma sotuvchi ilovada
 		// formani to'ldirib tasdiqlaganda yaratiladi (ADR-020).
 		return orderDraftResult{
-			OptionTier:           a.OptionTier,
+			OptionTier:           string(st.SelectedOption),
 			Quote:                toAny(quote),
 			Display:              displayTotals(*quote),
 			TotalDisplay:         displayMoney(quote.Total),

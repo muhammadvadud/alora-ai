@@ -196,6 +196,7 @@ func KnowledgeTokens(query string) []string {
 	var out []string
 	for _, tok := range strings.Fields(cleaned) {
 		tok = strings.ReplaceAll(tok, string(numberMark), ".")
+		tok = strings.Trim(tok, "ʼ")
 		tok = canonicalKnowledgeToken(tok)
 		if countRunes(tok) < minTokenRunes || seen[tok] {
 			continue
