@@ -284,6 +284,7 @@
 
 - [x] S.1 Boshlang'ich ish holati build/vet/lint/race bilan tekshirildi va alohida branchda saqlandi.
 - [x] S.2 Manbali bilim, ixcham prompt va minimal sotuv yordamchilari uchun ADR-021 qayd etildi.
+- [x] S.2a O'zbek/rus/kirill bilim qidiruvi, 8 qoida/2000 belgi prompt byudjeti va 6 natijali lookup kalitsiz testlar bilan tekshirildi.
 - [ ] S.3 Ko'p tilli bilim qidiruvi, manbali mahsulot ma'lumoti va izchil paket/qoralama oqimi.
 - [ ] S.4 Kalitsiz regressiyalar va tejamkor yakuniy API baholash.
 

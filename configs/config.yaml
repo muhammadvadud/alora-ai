@@ -92,7 +92,7 @@ catalog:
 
 # Bilim qoidalarini prompt'ga joylash chegarasi (rules.md §4.6.2).
 knowledge:
-  inline_max: 50
+  inline_max: 8
 
 # Ovoz (3-bosqichga tayyorlik; kalitlar ENV'dan: OPENAI_API_KEY, ELEVENLABS_API_KEY).
 stt:

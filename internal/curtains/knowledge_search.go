@@ -100,6 +100,17 @@ func KnowledgeSearch(rules []KnowledgeRule, st SessionState, topic, query string
 	byState := MatchKnowledge(rules, st)
 	t := NormalizeTopic(topic)
 	tokens := KnowledgeTokens(query)
+	if len(tokens) > 0 {
+		seen := make(map[string]bool, len(byState))
+		for _, rule := range byState {
+			seen[rule.ID] = true
+		}
+		for _, rule := range rules {
+			if !seen[rule.ID] && queryMatchesUnknownConditions(rule, st, tokens) {
+				byState = append(byState, rule)
+			}
+		}
+	}
 
 	if len(tokens) == 0 {
 		// Query yo'q — faqat mavzu bo'yicha. MatchKnowledge umumiy qoidalarni
@@ -185,6 +196,7 @@ func KnowledgeTokens(query string) []string {
 	var out []string
 	for _, tok := range strings.Fields(cleaned) {
 		tok = strings.ReplaceAll(tok, string(numberMark), ".")
+		tok = canonicalKnowledgeToken(tok)
 		if countRunes(tok) < minTokenRunes || seen[tok] {
 			continue
 		}
@@ -266,3 +278,34 @@ func sortScored(rules []KnowledgeRule, score map[string]int) []KnowledgeRule {
 func normalizeHaystack(s string) string { return strings.Join(KnowledgeTokens(s), " ") }
 
 func countRunes(s string) int { return len([]rune(s)) }
+
+func queryMatchesUnknownConditions(rule KnowledgeRule, state SessionState, tokens []string) bool {
+	if len(rule.Condition) == 0 {
+		return false
+	}
+	for key, value := range rule.Condition {
+		actual, supported := state.matchValue(key)
+		if !supported {
+			return false
+		}
+		if actual != "" {
+			if !state.conditionMatches(key, value) {
+				return false
+			}
+			continue
+		}
+		matched := false
+		for _, candidate := range conditionValues(value) {
+			words := KnowledgeTokens(candidate)
+			for _, token := range tokens {
+				if matchesToken(words, token) {
+					matched = true
+				}
+			}
+		}
+		if !matched {
+			return false
+		}
+	}
+	return true
+}

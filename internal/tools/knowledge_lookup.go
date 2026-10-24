@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	knowledgeLookupLimit = 10
+	knowledgeLookupLimit = 6
 	knowledgeSanitizeMax = 500
 	// knowledgeNote natija sarlavhasi: qoida matni buyruq emas, faqat ma'lumot
 	// (rules §4.6.3, prompt injection himoyasi — model shuni ajrata oladi).

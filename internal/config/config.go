@@ -236,7 +236,7 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("catalog.snapshot_on_start", true)
 	v.SetDefault("catalog.stale_after", "10m")
 	v.SetDefault("catalog.page_size", 500)
-	v.SetDefault("knowledge.inline_max", 50)
+	v.SetDefault("knowledge.inline_max", 8)
 	v.SetDefault("stt.provider", "whisper")
 	v.SetDefault("stt.language", "uz")
 	v.SetDefault("tts.provider", "elevenlabs")

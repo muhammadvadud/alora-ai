@@ -153,8 +153,8 @@ func TestKnowledgeLookup_StateFilter(t *testing.T) {
 	if res.Error != "" {
 		t.Fatalf("xato: %s", res.Error)
 	}
-	// k2(p5), k1(p2), keyin umumiy (12 + k3) — limit 10 tashqaridagilarni kesadi.
-	if res.Count != 10 || res.Rules[0].Kind != "style" || res.Rules[1].Kind != "room" {
+	// k2(p5), k1(p2), keyin umumiy (12 + k3) — limit 6 tashqaridagilarni kesadi.
+	if res.Count != 6 || res.Rules[0].Kind != "style" || res.Rules[1].Kind != "room" {
 		t.Fatalf("rules boshida: count=%d first=%s second=%s", res.Count, res.Rules[0].Kind, res.Rules[1].Kind)
 	}
 	if res.Note != knowledgeNote {

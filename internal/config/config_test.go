@@ -80,7 +80,7 @@ func TestLoad_Defaults(t *testing.T) {
 		{cfg.Catalog.SnapshotOnStart, true},
 		{cfg.Catalog.StaleAfter, 10 * time.Minute},
 		{cfg.Catalog.PageSize, 500},
-		{cfg.Knowledge.InlineMax, 50},
+		{cfg.Knowledge.InlineMax, 8},
 		{cfg.STT.Provider, "whisper"},
 		{cfg.STT.Language, "uz"},
 		{cfg.TTS.Provider, "elevenlabs"},

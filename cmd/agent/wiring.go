@@ -68,12 +68,12 @@ func stageTools(stage string) []string {
 	case "recommend", "measure":
 		return []string{"set_context", "product_search", "fason_lookup", "knowledge_lookup", "curtain_calculate", "build_options"}
 	case "calc", "variants", "choose":
-		return []string{"set_context", "product_search", "fason_lookup", "curtain_calculate", "price_quote", "build_options", "order_draft"}
+		return []string{"set_context", "product_search", "fason_lookup", "knowledge_lookup", "curtain_calculate", "price_quote", "build_options", "order_draft"}
 	case "order":
 		// order_draft FAQAT taklif/qoralamaning o'zini beradi — mijoz ma'lumotlari
 		// shu yerda yig'ilmaydi, shuning uchun order bosqichida set_context ham
 		// kerak emas (ADR-020).
-		return []string{"order_draft", "price_quote", "curtain_calculate"}
+		return []string{"order_draft", "price_quote", "curtain_calculate", "knowledge_lookup"}
 	default:
 		return []string{"set_context", "product_search", "knowledge_lookup", "fason_lookup", "curtain_calculate", "build_options"}
 	}
