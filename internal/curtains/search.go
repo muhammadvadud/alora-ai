@@ -433,6 +433,11 @@ func nameMatches(v *View, p Product, query string) bool {
 	for _, alias := range conditionValues(p.Tags["sales_aliases"]) {
 		hay += " " + strings.ToLower(alias)
 	}
+	for tag, value := range p.Tags {
+		if enabled, ok := value.(bool); ok && enabled {
+			hay += " " + strings.ToLower(tag)
+		}
+	}
 	for _, vid := range v.byProduct[p.ID] {
 		if vx, ok := v.variants[vid]; ok {
 			hay += " " + strings.ToLower(vx.SKU+" "+vx.ColorName)

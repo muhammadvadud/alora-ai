@@ -30,3 +30,17 @@ func TestProductSearch_ReturnsOnlyVerifiedFactsAndLocalAliases(t *testing.T) {
 		t.Fatalf("blackout o'rniga semi o'tmasligi kerak: %v %+v", err, result)
 	}
 }
+
+func TestProductSearch_ListTagAliasesFromCatalog(t *testing.T) {
+	catalog := curtains.NewCatalog(curtains.RealClock{}, time.Hour)
+	catalog.ApplySnapshot(curtains.Snapshot{Version: 1,
+		Products: []curtains.Product{{ID: "fabric", Name: "Sample Velvet", Tags: map[string]any{"baxmal": true, "бархат": true}, VariantIDs: []string{"fabric-v"}}},
+		Variants: []curtains.Variant{{ID: "fabric-v", ProductID: "fabric", PriceUnit: curtains.PerSqm, Price: d("45000"), IsActive: true}},
+	})
+	for _, query := range []string{"baxmal", "бархат"} {
+		result, err := (&productSearchHandler{d: Deps{Catalog: catalog}}).do(context.Background(), productSearchArgs{Query: query})
+		if err != nil || len(result.Products) != 1 {
+			t.Fatalf("ro'yxat aliasi %s: %v %+v", query, err, result)
+		}
+	}
+}
