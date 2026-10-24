@@ -18,6 +18,15 @@ const (
 	errCalcUnavailable = "hisob xizmati vaqtincha ishlamayapti"
 	errUnknownRole     = "foydalanuvchi roli noma'lum — chegirma berib bo'lmaydi"
 	warnStale          = "narxlar yangilanmagan bo'lishi mumkin (katalog eskirgan)"
+
+	// errCatalogEmpty — filial katalogi umuman bo'sh (barcha mahsulotlar import
+	// qilinmagan). Bu xizmat uzilishi EMAS: model "hisob xizmati ishlamayapti"
+	// demasin, balki sotuvchiga katalogni to'ldirish kerakligini aytsin (ADR-020).
+	errCatalogEmpty = "bu filial katalogi bo'sh — menejer katalogni to'ldirishi kerak"
+
+	// hintEmptySearch — 2-marta ketma-ket bo'sh qidiruvdan keyin modelga ko'rsatma
+	// (ADR-020): qayta qidirmaslik, mijozga to'g'ri aytish.
+	hintEmptySearch = "katalogda topilmadi — qayta qidirma; foydalanuvchiga ayt va mavjud muqobilni taklif qil"
 )
 
 // displayMoney — "5382000" → "5 382 000 so'm". LLM sonni o'zi formatlamasin.
@@ -91,8 +100,15 @@ func compactCalc(v *curtains.View, r curtains.CalcResult) (*calcTotals, []calcLi
 			})
 		}
 	}
-	if len(lines) > 8 {
-		lines = lines[:8]
+	// Ko'p o'chovda qatorlar ko'payadi — hisob chegarasi 2 KB (rules §5.5), shuning
+	// uchun bir o'chovda 8, bir nechta o'chovda 4 qator; oyna bo'yicha yig'indi
+	// esa windowLines'da qoladi.
+	maxLines := 8
+	if len(r.Measurements) > 1 {
+		maxLines = 4
+	}
+	if len(lines) > maxLines {
+		lines = lines[:maxLines]
 	}
 	services := make([]calcServiceLine, 0, len(r.Services))
 	for _, s := range r.Services {
@@ -114,6 +130,75 @@ func compactDecimal(value decimal.Decimal) string {
 		return ""
 	}
 	return value.String()
+}
+
+// windowLines — oyna (karniz kesimi) bo'yicha ixcham natija qatorlari: xona, o'lcham,
+// nechta deraza va jami. Ko'p o'chovda `lines` qisqaradi (yuqoriga qarang), shuning
+// uchun oyna bo'yicha yig'indi shu yerda kerak.
+//
+// Jami — Django qaytargan qatorlar (line_total) va bezaklar (accessories_total)
+// YIG'INDISI: Go hech narsa hisoblamaydi, faqat Django sonlarini jamlaydi va
+// ko'rsatadi (rules §0.3). Specs yo'q/short bo'lsa — har o'lchov alohida qator.
+func windowLines(specs []curtains.WindowSpec, r curtains.CalcResult) []calcWindowLine {
+	if len(r.Measurements) == 0 {
+		return nil
+	}
+	if len(specs) == 0 {
+		specs = []curtains.WindowSpec{{}}
+	}
+	out := make([]calcWindowLine, 0, len(specs))
+	idx := 0
+	for _, w := range specs {
+		qty := w.Qty
+		if qty < 1 {
+			qty = 1
+		}
+		if idx+qty > len(r.Measurements) {
+			break
+		}
+		total, parts := decimal.Zero, w.Parts
+		for _, m := range r.Measurements[idx : idx+qty] {
+			for _, p := range m.Parts {
+				total = total.Add(p.LineTotal)
+			}
+			for _, x := range m.Accessories {
+				total = total.Add(x.LineTotal)
+			}
+			if parts == 0 {
+				parts = len(m.Parts)
+			}
+		}
+		out = append(out, calcWindowLine{
+			RoomName: w.RoomName,
+			LengthM:  decWindow(w.LengthM),
+			HeightM:  decWindow(w.HeightM),
+			Qty:      qty,
+			Parts:    parts,
+			Total:    total.String(),
+		})
+		idx += qty
+	}
+	// Specs qisqalgan bo'lsa, qolgan o'lchovlar ko'rinmasdan qolmasin.
+	for ; idx < len(r.Measurements); idx++ {
+		m := r.Measurements[idx]
+		total := decimal.Zero
+		for _, p := range m.Parts {
+			total = total.Add(p.LineTotal)
+		}
+		for _, x := range m.Accessories {
+			total = total.Add(x.LineTotal)
+		}
+		out = append(out, calcWindowLine{
+			LengthM: decWindow(m.Length), HeightM: decWindow(m.Height),
+			Parts: len(m.Parts), Total: total.String(),
+		})
+	}
+	return out
+}
+
+// decWindow — oyna o'lchamini ixcham ko'rinishda chiqaradi (nol = ko'rsatilmaydi).
+func decWindow(d decimal.Decimal) string {
+	return compactDecimal(d)
 }
 
 // decStr — kontrakt 1.4.1 oraliq yig'indisi: Django ularni bermasa nil —
@@ -151,6 +236,52 @@ func decPtr(f float64) *decimal.Decimal {
 	return &d
 }
 
+// discountBlock — natijaga chegirma TARKIBINI qo'shadi (ADR-020): qaysi foiz
+// bosqichli, qaysi qo'lda va qanday qoidalar bo'yicha. Sonlar Django'dan
+// (rules §0.2) — Go hech narsa hisoblamaydi, faqat maydonlarni ko'rsatadi.
+//
+// Chegirma yo'q bo'lsa blok chiqmaydi (token tejaladi). Mijoz rejimida
+// manual_max_percent HECH QACHON chiqmaydi (rules §1.6: chegirma chegarasi
+// mijozga aytilmaydi).
+func discountBlock(ctx context.Context, v *curtains.View, res curtains.CalcResult, role curtains.UserRole) *calcDiscount {
+	if !res.DiscountPercent.IsPositive() {
+		return nil
+	}
+	out := &calcDiscount{
+		TierPercent:    compactDecimal(res.TierDiscountPercent),
+		ManualPercent:  compactDecimal(res.ManualDiscountPercent),
+		AppliedPercent: res.DiscountPercent.String(),
+	}
+	policy, hasPolicy := v.DiscountPolicy()
+	if !hasPolicy {
+		return out
+	}
+	// Qoida Django belgilaydi (stack_with_tier) — Go uni faqat o'zbekchaga
+	// tarjima qiladi, o'zgartirmaydi. Matn atama qisqa: 2 KB natija limiti
+	// (rules §16.1) — ma'nosi tool tavsifida yozilgan.
+	if policy.StackWithTier {
+		out.Rule = "qo'shiladi"
+	} else {
+		out.Rule = "kattasi"
+	}
+	if u, ok := curtains.UserFromContext(ctx); ok && u.CustomerMode {
+		return out // chegirma chegarasi mijozga aytilmaydi
+	}
+	if max := manualMaxFor(policy, role); max.IsPositive() {
+		out.ManualMaxPercent = max.StringFixed(0)
+	}
+	return out
+}
+
+// manualMaxFor — joriy rol uchun qo'lda chegirma chegarasi. Noma'lum rol —
+// employee (eng qat'iy): limit oshmasligi kerak (rules §5.6).
+func manualMaxFor(policy curtains.DiscountPolicy, role curtains.UserRole) decimal.Decimal {
+	if role == curtains.RoleManager || role == curtains.RoleAdmin {
+		return policy.ManualMaxPercentManager
+	}
+	return policy.ManualMaxPercentEmployee
+}
+
 // readyView — katalog tayyor bo'lmasa xato matni; stale bo'lsa ogohlantirish.
 func readyView(ctx context.Context, d Deps) (*curtains.View, string, bool) {
 	if d.Catalog == nil {
@@ -162,11 +293,22 @@ func readyView(ctx context.Context, d Deps) (*curtains.View, string, bool) {
 	}
 	if user, ok := curtains.UserFromContext(ctx); ok && user.TenantID != "" {
 		v = v.ForTenant(user.TenantID)
-		fmt.Printf("DEBUG: readyView set tenantID=%s\n", user.TenantID)
-	} else {
-		fmt.Printf("DEBUG: readyView ok=%v user.TenantID=%s\n", ok, user.TenantID)
 	}
 	return v, "", v.Stale
+}
+
+// readyCatalogView — readyView + bo'sh katalog tekshiruvi. Katalog yuklangan, lekin
+// unda BIRTA ham mahsulot/fason/xizmat yo'q (filial ma'lumot kiritmagan): bu xizmat
+// uzilishi EMAS, modelga boshqa xato aytib bermasligi kerak (ADR-020).
+func readyCatalogView(ctx context.Context, d Deps) (*curtains.View, string, bool) {
+	v, errMsg, stale := readyView(ctx, d)
+	if errMsg != "" {
+		return nil, errMsg, stale
+	}
+	if v.IsEmpty() {
+		return nil, errCatalogEmpty, stale
+	}
+	return v, "", stale
 }
 
 // loadState / saveState — sessiya holati (State nil bo'lsa — dev/CLI: holat saqlanmaydi).

@@ -37,8 +37,10 @@ func (h *knowledgeLookupHandler) do(ctx context.Context, a knowledgeLookupArgs) 
 		return knowledgeLookupResult{Error: errMsg}, nil
 	}
 	st, _ := loadState(ctx, h.d)
-	rules := curtains.MatchKnowledge(v.Knowledge(), st)
-	rules = filterKnowledge(rules, a.Topic, a.Query)
+	// So'z bo'yicha qidiruv domen qatlamida (ADR-020): butun ibora emas, so'z/
+	// prefix mosligi; shartli qoidalar MatchKnowledge orqali holatga moslanadi,
+	// umumiy (shartsiz) qoidalar esa har doim ko'riladi.
+	rules := curtains.KnowledgeSearch(v.Knowledge(), st, a.Topic, a.Query)
 	if len(rules) > knowledgeLookupLimit {
 		rules = rules[:knowledgeLookupLimit]
 	}

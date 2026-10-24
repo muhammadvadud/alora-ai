@@ -18,7 +18,7 @@ Agent foydalanadigan asosiy tool'lar:
 - `curtain_calculate`: Pardaning xomaki hisob-kitobi
 - `price_quote`: Xizmat va chegirmalar bilan yakuniy narx
 - `build_options`: Uch xil variantni shakllantirish (arzon, o'rta, premium)
-- `order_draft`: Buyurtma qoralamasini saqlash
+- `order_draft`: Yakuniy taklif/qoralamani beradi (mijoz ma'lumotlari shu yerda yig'ilmaydi — ADR-020)
 - `fason_lookup`: Xona/uslubga tayyor fason shablon topish
 - `knowledge_lookup`: Do'kon bilimlar bazasidan qoidalar olish
 

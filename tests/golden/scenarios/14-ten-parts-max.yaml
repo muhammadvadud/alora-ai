@@ -27,11 +27,11 @@ steps:
                   role: portyera
                 - variant_id: v-blackout-duo-grafit
                   role: dekor
-                - variant_id: v-carmel-kitchen
+                - variant_id: v-velvet-chek
                   role: portyera
                 - variant_id: v-office-minimal
                   role: astar
-      - text: "10 bo'lak bajarildi: jami mato 28 860 000 so'm."
+      - text: "10 bo'lak bajarildi: jami mato 30 810 000 so'm."
     expect_tools: ["curtain_calculate"]
     expect_stage: calc
     expect_products: false

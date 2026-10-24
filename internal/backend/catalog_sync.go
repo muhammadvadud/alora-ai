@@ -148,9 +148,19 @@ func (s *CatalogSyncer) watch(ctx context.Context) (bool, error) {
 			s.setSnapshotMetrics()
 			continue
 		}
-		if deltaPB.GetEntity() == "catalog" && deltaPB.GetAction() == "FULL_RESYNC" {
+		// entity="catalog" — Django katalog butunligi o'zgargan: "FULL_RESYNC" aniq
+		// buyruq, boshqa harakatlar (masalan "bulk_import") ham butun katalogni
+		// almashtiradi. Ularni alohida delta deb qo'llash View'niyarim qoldirib,
+		// mahsulotlar "yo'qoldi" deb ko'rinardi (2026-09-28 live: importdan keyin
+		// katalog bo'sh, keyin eskirgan deb ogohlantirildi) — shuning uchun har
+		// ikkalasi ham to'liq Snapshot qiladi (ADR-020).
+		if deltaPB.GetEntity() == "catalog" {
 			s.setWatch(false)
-			s.log.Info("catalog_resync", "reason", "FULL_RESYNC", "version", deltaPB.GetVersion())
+			reason := deltaPB.GetAction()
+			if reason != "FULL_RESYNC" {
+				reason = "bulk_import"
+			}
+			s.log.Info("catalog_resync", "reason", reason, "version", deltaPB.GetVersion())
 			if err := s.Snapshot(ctx); err != nil {
 				return false, err
 			}

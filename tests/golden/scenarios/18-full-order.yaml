@@ -1,4 +1,4 @@
-name: "buyurtma — to'liq: hisob, taklif, draft, confirm"
+name: "buyurtma — to'liq: hisob, taklif, draft (PIIsiz)"
 role: employee
 
 steps:
@@ -31,38 +31,25 @@ steps:
     expect_products: false
     forbid_price_outside_tools: true
 
+  # ADR-020: AI mijoz ma'lumotlarini YIG'MAYDI. Draft faqat taklif + forma talabini
+  # qaytaradi — savollash to'xtaydi, sotuvchi ilova formasini ochadi.
   - user: "Buyurtma qoralamasini tayyorla."
     llm:
       - tools:
           - name: order_draft
             args:
               action: draft
-      - text: "Mijoz ma'lumotlari yetishmayapti: ism, telefon va manzilni so'rayman."
+      - text: >
+          Buyurtma qoralamasi tayyor: jami 5 070 000 so'm.
+          Mijoz ismi, telefon va manzilini ilova formasida kiritadi.
     expect_tools: ["order_draft"]
     expect_stage: calc
     expect_products: false
     expect_result_contains:
-      - '"customer_name"'
-      - '"customer_phone"'
-      - '"address"'
-
-  - user: "Ismi Aziza, telefon +998901234567, manzil: Toshkent sh., Amir Temur 12."
-    llm:
-      - tools:
-          - name: order_draft
-            args:
-              action: confirm
-              customer_name: "Aziza"
-              customer_phone: "+998901234567"
-              address: "Toshkent sh., Amir Temur 12"
-      - text: >
-          Buyurtma qoralamasi saqlandi: ALR-2026-0007,
-          mijoz #4567, jami 5 070 000 so'm.
-    expect_tools: ["order_draft"]
-    expect_stage: order
-    expect_products: false
-    expect_result_contains:
-      - '"order_id":"ord-7"'
-      - '"order_number":"ALR-2026-0007"'
-      - '"customer_ref":"mijoz #4567"'
+      - '"customer_form_required":true'
+    forbid_content_regex:
+      - 'so.?rayman'
+      - 'ismingiz'
+      - 'telefoningiz'
+      - 'manzilingiz'
     forbid_price_outside_tools: true

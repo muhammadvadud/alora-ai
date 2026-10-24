@@ -46,9 +46,9 @@ Chat so'rovi (misol: gRPC `Chat.Stream`) quyidagi ketma-ketlikda o'tadi:
 | `curtain_calculate` | Parda va qismlari narxini hisoblaydi | `curtains.Validate`, `Calculator` | Ha (`Pricing.CalcPreview`) | `Apply("...", args)`, `LastCalc` |
 | `price_quote` | Xizmatlar va chegirma bilan yakuniy narx | `Calculator`, check limits| Ha (`Pricing.CalcPreview`) | `LastQuote` |
 | `build_options` | Arzon/o'rtacha/premium variantlar tuzadi | `curtains.PlanOptions`, `Calc` | Ha (3x `CalcPreview`) | `Apply("build_options", args)` |
-| `order_draft` | Buyurtma qoralama ko'rish va saqlash | `Orders.SaveOrderDraft`| Ha (faqat `confirm` action'da) | `Apply("order_draft", args)` |
+| `order_draft` | Yakuniy taklif/qoralamani beradi, PII yig'maydi (ADR-020) | `Calculator` (narx), `Orders` **ishlatilmaydi** | Ha (`Pricing.CalcPreview`) | `Apply("order_draft", args)` |
 | `fason_lookup` | Xona/uslubga tayyor fason shablon topadi | `curtains.LookupFason` | Yo'q | Yozmaydi |
-| `knowledge_lookup`| Do'kon tavsiyalari va qoidalarini topadi | `curtains.MatchKnowledge`| Yo'q | Yozmaydi |
+| `knowledge_lookup`| Do'kon tavsiyalari va qoidalarini so'z/prefix bo'yicha topadi | `curtains.KnowledgeSearch` (`MatchKnowledge` + so'z qidiruvi) | Yo'q | Yozmaydi |
 | `calculator` | Ikki son ustida oddiy arifmetik amal | (utils) | Yo'q | Yozmaydi |
 | `current_time` | Mintaqa bo'yicha joriy vaqtni qaytaradi | (utils) | Yo'q | Yozmaydi |
 

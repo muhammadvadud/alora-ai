@@ -10,8 +10,23 @@ import (
 	"github.com/muhammadvadud/alora-ai/internal/curtains"
 )
 
-// quoteFixture — price_quote natijasiga teng taklif (LastQuote); items_json sxemasi
-// testconfirmda CalcResult shaklidan tiklanadi.
+// fakeOrders — tools.Orders o'rnida chaqirilishini sanaydi. ADR-020 dan keyin
+// order_draft bu interfeysni ishlatmasligi KUTILADI (TestOrderDraft_DoesNotCallOrders).
+type fakeOrders struct {
+	mu     sync.Mutex
+	called int
+	got    curtains.OrderDraft
+}
+
+func (f *fakeOrders) SaveOrderDraft(_ context.Context, d curtains.OrderDraft) (curtains.OrderDraftResult, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.called++
+	f.got = d
+	return curtains.OrderDraftResult{}, nil
+}
+
+// quoteFixture — price_quote natijasiga teng taklif (LastQuote).
 func quoteFixture() *curtains.CalcResult {
 	return &curtains.CalcResult{
 		Measurements: []curtains.MeasurementResult{{
@@ -44,26 +59,6 @@ func setStateWithQuote(st *memState) context.Context {
 	return ctx
 }
 
-// fakeOrders — tools.Orders o'rnida: yuborilgan draftni ushlab, tayyor natija beradi.
-type fakeOrders struct {
-	mu     sync.Mutex
-	called int
-	got    curtains.OrderDraft
-	res    curtains.OrderDraftResult
-	err    error
-}
-
-func (f *fakeOrders) SaveOrderDraft(_ context.Context, d curtains.OrderDraft) (curtains.OrderDraftResult, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.called++
-	f.got = d
-	if f.err != nil {
-		return curtains.OrderDraftResult{}, f.err
-	}
-	return f.res, nil
-}
-
 func TestOrderDraft_Quote(t *testing.T) {
 	dp, _, st := deps(t)
 	ctx := setStateWithQuote(st)
@@ -75,6 +70,10 @@ func TestOrderDraft_Quote(t *testing.T) {
 	}
 	if _, ok := res.Display.(map[string]string); !ok {
 		t.Fatalf("display kutilgan: %+v", res.Display)
+	}
+	// quote — forma bayrog'i chiqmaydi, bu faqat ko'rsatish.
+	if res.CustomerFormRequired {
+		t.Fatalf("quote'da forma talabi bo'lmasligi kerak: %+v", res)
 	}
 }
 
@@ -100,132 +99,82 @@ func TestOrderDraft_NoQuote(t *testing.T) {
 	}
 }
 
-func TestOrderDraft_DraftMissing(t *testing.T) {
+// B6 (ADR-020): draft — taklif + forma talabi. PII yig'ilmaydi, Django'ga
+// yozilmaydi, tasdiq sotuvchida.
+func TestOrderDraft_DraftRequiresCustomerForm(t *testing.T) {
 	dp, _, st := deps(t)
 	ctx := setStateWithQuote(st)
 	h := &orderDraftHandler{d: dp}
 
 	res, _ := h.do(ctx, orderDraftArgs{Action: "draft"})
-	want := []string{"customer_name", "customer_phone", "address"}
-	if len(res.Missing) != 3 || res.Missing[0] != want[0] || res.Missing[1] != want[1] || res.Missing[2] != want[2] {
-		t.Fatalf("missing: %v", res.Missing)
-	}
-	if res.Ready || res.Hint == "" {
-		t.Fatalf("ready/hint: %+v", res)
-	}
-	// qisman to'ldirilgan bo'lsa ham tartib saqlanadi
-	res, _ = h.do(ctx, orderDraftArgs{Action: "draft", CustomerName: "Ali"})
-	if len(res.Missing) != 2 || res.Missing[0] != "customer_phone" {
-		t.Fatalf("qisman missing: %v", res.Missing)
-	}
-}
-
-func TestOrderDraft_DraftReadyPIIHidden(t *testing.T) {
-	dp, _, st := deps(t)
-	ctx := setStateWithQuote(st)
-	h := &orderDraftHandler{d: dp}
-
-	res, _ := h.do(ctx, orderDraftArgs{
-		Action: "draft", CustomerName: "Ali", CustomerPhone: "+998901234567", Address: "Toshkent, Chilonzor",
-	})
-	if res.Error != "" || !res.Ready || res.Summary == nil {
-		t.Fatalf("ready: %+v", res)
-	}
-	out, _ := json.Marshal(res)
-	if strings.Contains(string(out), "Ali") || strings.Contains(string(out), "8901234567") {
-		t.Fatalf("PII model kontekstiga tushib qolgan: %s", out)
-	}
-	if !strings.Contains(string(out), "mijoz #4567") {
-		t.Fatalf("customer_ref kutilgan: %s", out)
-	}
-}
-
-func TestOrderDraft_ConfirmSuccess(t *testing.T) {
-	dp, _, st := deps(t)
-	fo := &fakeOrders{res: curtains.OrderDraftResult{OrderID: "order-99", OrderNumber: "ALR-2026-000099"}}
-	dp.Orders = fo
-	ctx := setStateWithQuote(st)
-	h := &orderDraftHandler{d: dp}
-
-	res, _ := h.do(ctx, orderDraftArgs{
-		Action: "confirm", CustomerName: "Ali", CustomerPhone: "+998901234567", Address: "Toshkent, Chilonzor",
-		Note: "oldingi eshikdan kiring",
-	})
 	if res.Error != "" {
-		t.Fatalf("xato: %s", res.Error)
+		t.Fatalf("draft xatosi: %s", res.Error)
 	}
-	if res.OrderID != "order-99" || res.OrderNumber != "ALR-2026-000099" || res.CustomerRef != "mijoz #4567" {
-		t.Fatalf("natija: %+v", res)
+	if !res.CustomerFormRequired {
+		t.Fatalf("customer_form_required=true kutilgan: %+v", res)
+	}
+	if res.Quote == nil || res.Summary == nil {
+		t.Fatalf("draft taklif/summary bermadi: %+v", res)
+	}
+	if !strings.Contains(res.Hint, "ilova forma") {
+		t.Fatalf("forma hinti: %q", res.Hint)
 	}
 	if !strings.Contains(res.TotalDisplay, "5 712 000 so'm") {
 		t.Fatalf("total_display: %q", res.TotalDisplay)
 	}
-
-	// Django'ga to'liq telefon yuborilgan, natijada yo'q
-	fo.mu.Lock()
-	if fo.called != 1 || fo.got.CustomerPhone != "+998901234567" {
-		t.Fatalf("draft: %+v (calls=%d)", fo.got, fo.called)
-	}
-	fo.mu.Unlock()
-	if strings.Contains(res.CustomerRef, "8901234567") {
-		t.Fatalf("telefon natijada: %+v", res)
-	}
-
-	// items_json Django payload sxemasi (calc_cases.json input formati)
-	var payload struct {
-		Measurements []struct {
-			Length string `json:"length"`
-			Parts  []struct {
-				Role string `json:"role"`
-				Coef string `json:"coef"`
-			} `json:"parts"`
-		} `json:"measurements"`
-		Services        []string `json:"services"`
-		Delivery        bool     `json:"delivery"`
-		DiscountPercent string   `json:"discount_percent"`
-	}
-	if err := json.Unmarshal([]byte(fo.got.ItemsJSON), &payload); err != nil {
-		t.Fatalf("items_json sxema: %v — %s", err, fo.got.ItemsJSON)
-	}
-	if len(payload.Measurements) != 1 || payload.Measurements[0].Length != "3.000" ||
-		payload.Measurements[0].Parts[0].Role != "portyera" || payload.Measurements[0].Parts[0].Coef != "2.5" {
-		t.Fatalf("measurements: %+v", payload.Measurements)
-	}
-	if strings.Join(payload.Services, ",") != "sewing,tape" || !payload.Delivery || payload.DiscountPercent != "5" {
-		t.Fatalf("services/delivery/discount: %+v", payload)
-	}
-
-	if s, _ := st.State(ctx, "s1"); s.Stage != curtains.StageOrder {
-		t.Fatalf("stage=order kutilgan: %s", s.Stage)
-	}
 }
 
-func TestOrderDraft_ConfirmDjangoError(t *testing.T) {
-	dp, _, st := deps(t)
-	dp.Orders = &fakeOrders{err: &curtains.ValidationError{Field: "order", Msg: "manzil to'liq emas"}}
-	ctx := setStateWithQuote(st)
-
-	res, _ := (&orderDraftHandler{d: dp}).do(ctx, orderDraftArgs{
-		Action: "confirm", CustomerName: "Ali", CustomerPhone: "+998901234567",
-		Address: "Toshkent, Chilonzor",
-	})
-	if res.Error != "manzil to'liq emas" {
-		t.Fatalf("Django xatosi: %q", res.Error)
-	}
-	if s, _ := st.State(ctx, "s1"); s.Stage != curtains.StageNeed {
-		// muvaffaqiyatsiz confirm stage ni o'zgartirmaydi
-		t.Fatalf("stage o'zgarmasligi kerak: %s", s.Stage)
-	}
-}
-
-func TestOrderDraft_ConfirmOrdersNil(t *testing.T) {
+// B6: natija hech qanday PII (ism/telefon/manzil) saqlamasligi kerak.
+func TestOrderDraft_ResultHasNoPIIFields(t *testing.T) {
 	dp, _, st := deps(t)
 	ctx := setStateWithQuote(st)
 
-	res, _ := (&orderDraftHandler{d: dp}).do(ctx, orderDraftArgs{
-		Action: "confirm", CustomerName: "Ali", CustomerPhone: "+998901234567", Address: "X",
-	})
-	if res.Error != "buyurtma xizmati ulanmagan" {
-		t.Fatalf("nil Orders: %q", res.Error)
+	res, _ := (&orderDraftHandler{d: dp}).do(ctx, orderDraftArgs{Action: "draft", Note: "eski eshikdan"})
+	out, _ := json.Marshal(res)
+	raw := string(out)
+	for _, banned := range []string{"customer_name", "customer_phone", "address", "order_id", "order_number", "customer_ref"} {
+		if strings.Contains(raw, banned) {
+			t.Fatalf("natijada %q maydoni qoldi: %s", banned, raw)
+		}
+	}
+}
+
+// B6: PII argumentlari sxemada umuman yo'q — model ularni tool'ga yubora olmaydi.
+func TestOrderDraft_ArgsHaveNoPII(t *testing.T) {
+	raw, err := json.Marshal(orderDraftArgs{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	props := string(raw)
+	for _, banned := range []string{"customer_name", "customer_phone", "address", "confirm"} {
+		if strings.Contains(props, banned) {
+			t.Fatalf("argumentda %q maydoni qoldi: %s", banned, props)
+		}
+	}
+}
+
+// B6: action=confirm yo'q — AI buyurtmani tasdiqlamaydi.
+func TestOrderDraft_ConfirmRejected(t *testing.T) {
+	dp, _, st := deps(t)
+	ctx := setStateWithQuote(st)
+
+	res, _ := (&orderDraftHandler{d: dp}).do(ctx, orderDraftArgs{Action: "confirm"})
+	if !strings.Contains(res.Error, "confirm") {
+		t.Fatalf("confirm rad etilmishi kerak: %q", res.Error)
+	}
+}
+
+// B6: order_draft Django'ga HECH QANDAY yozuv qilmaydi.
+func TestOrderDraft_DoesNotCallOrders(t *testing.T) {
+	dp, _, st := deps(t)
+	fo := &fakeOrders{}
+	dp.Orders = fo
+	ctx := setStateWithQuote(st)
+
+	if _, err := (&orderDraftHandler{d: dp}).do(ctx, orderDraftArgs{Action: "draft", Note: "x"}); err != nil {
+		t.Fatal(err)
+	}
+	if fo.called != 0 {
+		t.Fatalf("Orders chaqirildi (calls=%d) — ADR-020 bo'yicha yozilmaydi", fo.called)
 	}
 }

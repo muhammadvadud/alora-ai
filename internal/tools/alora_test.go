@@ -59,7 +59,10 @@ func (f *fakeCalc) Calculate(_ context.Context, in curtains.CalcInput) (curtains
 		return curtains.CalcResult{}, f.err
 	}
 	m := in.Measurements[0]
-	res := curtains.CalcResult{Subtotal: d("5382000"), Total: d("5382000"), DiscountPercent: in.DiscountPercent, Warnings: []string{}}
+	// price_quote-dagi `discount_pct` — qo'lda berilgan chegirma: Django uni ham
+	// ManualDiscountPercent sifatida qaytaradi (B5 natijada ikkalasi ko'rinadi).
+	res := curtains.CalcResult{Subtotal: d("5382000"), Total: d("5382000"),
+		ManualDiscountPercent: in.DiscountPercent, DiscountPercent: in.DiscountPercent, Warnings: []string{}}
 	mr := curtains.MeasurementResult{Length: m.Length, Height: m.Height}
 	for _, p := range m.Parts {
 		mr.Parts = append(mr.Parts, curtains.PartResult{VariantID: p.VariantID, SKU: "VM-GRAFIT", Role: p.Role,

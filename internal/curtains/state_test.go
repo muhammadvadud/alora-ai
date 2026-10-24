@@ -345,3 +345,23 @@ func TestSessionState_PromptBlock_NeedFields(t *testing.T) {
 		t.Fatalf("PromptBlock\n got: %q\nwant: %q", got, want)
 	}
 }
+
+// TestSessionState_LastOptionsJSONRoundTrip — paketlar holat bilan saqlanib qaytadi
+// (Postgres JSONB va memory cloneState ikkalasi JSON orqali ishlaydi).
+func TestSessionState_LastOptionsJSONRoundTrip(t *testing.T) {
+	s := curtains.NewSessionState()
+	s.LastOptions = map[curtains.OptionTier]curtains.OptionSnapshot{
+		curtains.OptionPremium: {Result: curtains.CalcResult{Total: decimal.NewFromInt(7907000)}},
+	}
+	raw, err := json.Marshal(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var back curtains.SessionState
+	if err := json.Unmarshal(raw, &back); err != nil {
+		t.Fatal(err)
+	}
+	if got := back.LastOptions[curtains.OptionPremium].Result.Total; !got.Equal(decimal.NewFromInt(7907000)) {
+		t.Fatalf("premium natijasi tiklanmadi: %s", got)
+	}
+}

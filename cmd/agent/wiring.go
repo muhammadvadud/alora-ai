@@ -57,7 +57,8 @@ func promptFunc(store session.Store, catalog *curtains.Catalog, fallback string,
 //   - need: foydalanuvchi hali nima istagani aniq emas — faqat kontekst yig'ish.
 //   - recommend: katalog tavsiyasi (product_search) + o'lcham/xona tahlili.
 //   - measure/calc/variants/choose: narx/parametr hisobi markazda — curtain_calculate.
-//   - order: buyurtma oqimi — order_draft asosiy, narx/parametr tekshiruv uchun.
+//   - order: buyurtma oqimi — order_draft taklif/qoralamani beradi (ADR-020: PII
+//     yig'maydi, tasdiq sotuvchida), narx/parametr tekshiruv uchun price_quote.
 //
 // Har bir to'plamga set_context qo'shilgan (xona/o'lcham ma'lumotlarini olish uchun)
 // va knowledge_lookup faqat dastlabki bosqichlarda — kech bosqichda aniq narx-tavsiya
@@ -69,6 +70,9 @@ func stageTools(stage string) []string {
 	case "calc", "variants", "choose":
 		return []string{"set_context", "product_search", "fason_lookup", "curtain_calculate", "price_quote", "build_options", "order_draft"}
 	case "order":
+		// order_draft FAQAT taklif/qoralamaning o'zini beradi — mijoz ma'lumotlari
+		// shu yerda yig'ilmaydi, shuning uchun order bosqichida set_context ham
+		// kerak emas (ADR-020).
 		return []string{"order_draft", "price_quote", "curtain_calculate"}
 	default:
 		return []string{"set_context", "product_search", "knowledge_lookup", "fason_lookup", "curtain_calculate", "build_options"}

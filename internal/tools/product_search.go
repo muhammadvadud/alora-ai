@@ -16,14 +16,15 @@ func ProductSearch(d Deps) tool.BaseTool {
 	h := &productSearchHandler{d: d}
 	return must(utils.InferTool("product_search",
 		"Katalogdan mato/aksessuar topadi. Ko'p qatlam kerak bo'lsa layers=[...] bilan BIR marta chaqir (by_layer). "+
-			"Nom aytilsa query. Bo'sh natijada filtrlarni yumshatib 1 marta qayta qidir; aks holda qayta chaqirma. variant_id → curtain_calculate.",
+			"Nom aytilsa query. Bo'sh natijada filtrlarni yumshatib 1 marta qayta qidir; aks holda qayta chaqirma. "+
+			"variant_id → curtain_calculate. stop:true qaytsa — qayta qidirma, mijozga yo'qligini aytib, katalogdagi eng yaqinini taklif qil.",
 		h.do))
 }
 
 type productSearchHandler struct{ d Deps }
 
 func (h *productSearchHandler) do(ctx context.Context, a productSearchArgs) (productSearchResult, error) {
-	v, errMsg, stale := readyView(ctx, h.d)
+	v, errMsg, stale := readyCatalogView(ctx, h.d)
 	if errMsg != "" {
 		return productSearchResult{Error: errMsg}, nil
 	}
@@ -56,6 +57,21 @@ func (h *productSearchHandler) do(ctx context.Context, a productSearchArgs) (pro
 	if stale {
 		res.Warnings = append(res.Warnings, warnStale)
 	}
+
+	st, sid := loadState(ctx, h.d)
+	// Bo'sh natija sikli (ADR-020): model so'rovni filtrlarni yumshatib takrorlab
+	// 10+ marta chaqirdi va mijozga javob berolmadi. 2-marta ketma-ket bo'sh
+	// natijadan keyin `stop` — model qayta qidirmaydi, mijozga aytadi.
+	if len(cards) == 0 {
+		exhausted := st.NoteEmptySearch() >= 2
+		if exhausted {
+			res.Stop = true
+			res.Hint = hintEmptySearch
+		}
+	} else {
+		st.ResetEmptySearches()
+	}
+
 	refs := make([]agent.ProductRef, 0, len(cards))
 	for _, c := range cards {
 		// Kartochka ixcham: faqat LLM tanlash uchun kerakli maydonlar (≤ 2 KB).
@@ -70,7 +86,6 @@ func (h *productSearchHandler) do(ctx context.Context, a productSearchArgs) (pro
 	// Ilova kartochka chizsin (KindProducts) — LLM'ga emas, transportga.
 	agent.AttachProducts(ctx, refs)
 
-	st, sid := loadState(ctx, h.d)
 	st.Apply("product_search", argsMap(a), now(h.d))
 	saveState(ctx, h.d, sid, st)
 	return res, nil

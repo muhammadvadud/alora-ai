@@ -33,6 +33,9 @@ type SearchQuery struct {
 	// StrictTransparency — Transparency ball emas, qat'iy filtr (faqat build_options
 	// ichki chaqiruvi; product_search DTO'siga chiqmaydi — u yerda ball qoidasi §4.3.1).
 	StrictTransparency bool
+	// StrictRoom — Room ham ball emas, qat'iy filtr (xuddi shu sabab bilan faqat
+	// build_options ichki chaqiruvi; product_search DTO'siga chiqmaydi).
+	StrictRoom bool
 }
 
 // ProductCard — qidiruv natijasidagi bitta variantning kartochkasi (TZ §3.1).
@@ -102,6 +105,12 @@ func Search(v *View, q SearchQuery) []ProductCard {
 			continue
 		}
 		if q.StrictTransparency && !strings.EqualFold(p.Transparency, q.Transparency) {
+			continue
+		}
+		// Xona qat'iy: so'ralgan xona uchun tavsiya etilmagan mato paketga tushmasligi
+		// kerak (ADR-015). Aks holda wedding so'rovida kids xonasiga tavsiya etilgan
+		// mato "mos" deb paketga kirdi.
+		if q.StrictRoom && q.Room != "" && !containsFold(p.RecommendedRooms, q.Room) {
 			continue
 		}
 		// Segment filtr mahsulot darajasidagi — variantlarga test qilmasdan oldin

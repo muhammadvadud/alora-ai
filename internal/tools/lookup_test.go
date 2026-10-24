@@ -186,10 +186,22 @@ func TestKnowledgeLookup_Sanitize(t *testing.T) {
 	ctx, _ := ctxFor(curtains.RoleEmployee)
 	_ = dp.State.SetState(ctx, "s1", curtains.SessionState{Style: "modern"})
 	res, _ := (&knowledgeLookupHandler{d: dp}).do(ctx, knowledgeLookupArgs{Topic: "style"})
-	if res.Count != 1 {
+	// B7 (ADR-020): topic lug'ati bitta — `style` va `room` ikkalasi `room_style`
+	// ga xarilanadi, shuning uchun topic=style umumiy (kind=room) qoidalarni ham
+	// qaytaradi. Sanitize tekshiruvi shu qoidalardan birida bajariladi.
+	if res.Count == 0 {
 		t.Fatalf("style rules: %+v", res.Rules)
 	}
-	rec := res.Rules[0].Recommendation
+	rec := ""
+	for _, r := range res.Rules {
+		if r.Kind == "style" {
+			rec = r.Recommendation
+			break
+		}
+	}
+	if rec == "" {
+		t.Fatalf("style qoidasi topilmadi: %+v", res.Rules)
+	}
 	if strings.ContainsAny(rec, "<>") {
 		t.Fatalf("HTML tozalanmagan: %q", rec)
 	}

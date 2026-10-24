@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
@@ -17,6 +18,8 @@ func CurtainCalculate(d Deps) tool.BaseTool {
 	h := &curtainCalcHandler{d: d}
 	return must(utils.InferTool("curtain_calculate",
 		"Parda uchun mato (m2), bezaklar va narxini hisoblaydi — o'lchamlar ma'lum bo'lgach, hisob so'ralganda chaqir. "+
+			"Bitta oyna uchun cornice_length_m + height_m + parts, bir nechta oyna uchun windows[] (har birida o'lcham, qty — nechta shunday deraza, parts). "+
+			"Rulon/rim (tayyor, burmasiz) pardalar hisoblanmaydi — sotuvchiga uzat. "+
 			"Natijadagi total ni aynan ayting. Narxni FAQAT shu tool beradi. variant_id uchun faqat katalog tool natijasidagi to'liq ID'dan foydalan; mahsulot nomi yoki SKU'ni variant_id qilib yuborma.",
 		h.do))
 }
@@ -32,7 +35,22 @@ func (h *curtainCalcHandler) do(ctx context.Context, a curtainCalcArgs) (curtain
 		return curtainCalcResult{Error: errCalcUnavailable}, nil
 	}
 
-	in := calcInputFrom(a, userRole(ctx))
+	measurements, windows, errMsg := calcMeasurements(a)
+	if errMsg != "" {
+		return curtainCalcResult{Error: errMsg}, nil
+	}
+	// Rulon/rim — tayyor, burmasiz mahsulot: kalkulyator ularni to'g'ri narxlamaydi
+	// (ADR-014). Model roli "portyera" qilib aylab o'tsa ham rad etiladi — tekshiruv
+	// rolda emas, mahsulotning katalog qatlamida.
+	for _, m := range measurements {
+		for _, p := range m.Parts {
+			if _, ok := curtains.CalcSupportLayer(v, p.VariantID); !ok {
+				return curtainCalcResult{Error: curtains.MsgNotCalcSupported}, nil
+			}
+		}
+	}
+
+	in := curtains.CalcInput{Measurements: measurements, Services: []string{}, Role: userRole(ctx)}
 	if err := curtains.ValidateWithLimits(in, v.Variant, v.Limits()); err != nil {
 		return curtainCalcResult{Error: err.Error()}, nil
 	}
@@ -45,8 +63,10 @@ func (h *curtainCalcHandler) do(ctx context.Context, a curtainCalcArgs) (curtain
 	t, lines, services := compactCalc(v, res)
 	out := curtainCalcResult{
 		Totals:      t,
+		Windows:     windowLines(windows, res),
 		Lines:       lines,
 		Services:    services,
+		Discount:    discountBlock(ctx, v, res, in.Role),
 		Display:     displayTotals(res),
 		Warnings:    append([]string{}, res.Warnings...),
 		Explanation: append(buildExplanation(v, res), curtains.Explain(res)...),
@@ -63,19 +83,70 @@ func (h *curtainCalcHandler) do(ctx context.Context, a curtainCalcArgs) (curtain
 	return out, nil
 }
 
-// calcInputFrom — DTO (float64) → domen (decimal). Bo'sh maydonlar nil — Django o'lchovdan oladi.
-func calcInputFrom(a curtainCalcArgs, role curtains.UserRole) curtains.CalcInput {
-	m := curtains.MeasurementInput{Length: dec(a.CorniceLengthM), Height: dec(a.HeightM)}
-	for _, p := range a.Parts {
+// calcMeasurements — DTO (float64) → domen o'lchovlari (decimal) + oyna spesi.
+//
+// windows[] bo'lsa har bir oyna alohida o'lchov bo'ladi; qty bo'yicha o'lchov
+// TAKRORLANADI (Django'ga har biri alohida yozuv) — Go summani ko'paytirmaydi,
+// chunki formula faqat Django'da (rules §0.2). Eski top-level maydonlar saqlanadi,
+// ikkalasi birga kelsa xato: model qaysi o'lchov kerakligini chalkashtirmasin.
+func calcMeasurements(a curtainCalcArgs) (measurements []curtains.MeasurementInput, windows []curtains.WindowSpec, errMsg string) {
+	if len(a.Windows) == 0 {
+		if a.CorniceLengthM <= 0 || a.HeightM <= 0 {
+			return nil, nil, "karniz uzunligi va balandlikni yozing (cornice_length_m, height_m) yoki bir nechta oyna uchun windows[] yuboring"
+		}
+		return []curtains.MeasurementInput{measurementFrom(a.CorniceLengthM, a.HeightM, a.Parts, a.Accessories)},
+			[]curtains.WindowSpec{{LengthM: dec(a.CorniceLengthM), HeightM: dec(a.HeightM), Parts: len(a.Parts), Qty: 1}},
+			""
+	}
+	if a.CorniceLengthM > 0 || a.HeightM > 0 || len(a.Parts) > 0 || len(a.Accessories) > 0 {
+		return nil, nil, "windows[] bilan birga cornice_length_m/height_m/parts/accessories'ni yuborma — har bir oyna o'z o'lchamini windows ichida oladi"
+	}
+	for _, w := range a.Windows {
+		qty := w.Qty
+		if qty < 1 {
+			qty = 1
+		}
+		if qty > curtains.MaxMeasurements {
+			return nil, nil, fmt.Sprintf("bir chaqiruvda %d tadan ko'p o'lchov bo'lmaydi", curtains.MaxMeasurements)
+		}
+		if w.CorniceLengthM <= 0 || w.HeightM <= 0 {
+			return nil, nil, "har bir oyna uchun cornice_length_m va height_m majburiy"
+		}
+		if len(w.Parts) < 1 {
+			return nil, nil, "har bir oyna uchun parts majburiy"
+		}
+		spec := curtains.WindowSpec{
+			RoomName: w.RoomName,
+			LengthM:  dec(w.CorniceLengthM),
+			HeightM:  dec(w.HeightM),
+			Qty:      qty,
+			Parts:    len(w.Parts),
+		}
+		for i := 0; i < qty; i++ {
+			measurements = append(measurements, measurementFrom(w.CorniceLengthM, w.HeightM, w.Parts, w.Accessories))
+		}
+		windows = append(windows, spec)
+	}
+	if len(measurements) > curtains.MaxMeasurements {
+		return nil, nil, fmt.Sprintf("bir chaqiruvda %d tadan ko'p o'lchov bo'lmaydi", curtains.MaxMeasurements)
+	}
+	return measurements, windows, ""
+}
+
+// measurementFrom — bitta oyna: o'lcham + bo'laklar + bezaklar. Bo'sh maydonlar nil —
+// Django o'lchovdan oladi (rules §4.4.2).
+func measurementFrom(lengthM, heightM float64, parts []calcPart, accessories []calcAccessory) curtains.MeasurementInput {
+	m := curtains.MeasurementInput{Length: dec(lengthM), Height: dec(heightM)}
+	for _, p := range parts {
 		m.Parts = append(m.Parts, curtains.PartInput{
 			VariantID: p.VariantID, Role: curtains.PartRole(p.Role),
 			WidthM: decPtr(p.WidthM), HeightM: decPtr(p.HeightM), Coef: decPtr(p.Coefficient),
 		})
 	}
-	for _, x := range a.Accessories {
+	for _, x := range accessories {
 		m.Accessories = append(m.Accessories, curtains.AccessoryInput{VariantID: x.VariantID, Qty: dec(x.Qty)})
 	}
-	return curtains.CalcInput{Measurements: []curtains.MeasurementInput{m}, Services: []string{}, Role: role}
+	return m
 }
 
 // calcErrorText — Django/klient xatosi → sotuvchiga tushunarli matn; ichki tafsilot sizib chiqmaydi.

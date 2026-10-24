@@ -24,6 +24,11 @@ var (
 const (
 	// MaxParts bitta derazadagi bo'laklar maksimal soni
 	MaxParts = 10
+	// MaxMeasurements bitta hisobdagi (CalcInput.Measurements) o'chovlar maksimal soni.
+	// curtain_calculate windows[] + qty orqali ko'p o'chov yuboradi: har biri Django'ga
+	// alohida yozuv, shuning uchun chegarasiz qidiruv kirsa Django katta payload olardi
+	// (ADR-016).
+	MaxMeasurements = 20
 )
 
 // Limits hisob-kitoblar uchun ruxsat etilgan o'lcham chegaralarini belgilaydi.
@@ -57,6 +62,9 @@ func Validate(in CalcInput, lookup func(variantID string) (Variant, bool)) error
 func ValidateWithLimits(in CalcInput, lookup func(variantID string) (Variant, bool), limits Limits) error {
 	if in.DiscountPercent.LessThan(decimal.Zero) || in.DiscountPercent.GreaterThan(decimal.RequireFromString("100")) {
 		return validationf("discount_percent", "chegirma foizi 0–100 oralig'ida bo'lishi kerak, kiritildi: %s", in.DiscountPercent.String())
+	}
+	if len(in.Measurements) < 1 || len(in.Measurements) > MaxMeasurements {
+		return validationf("measurements", "o'lchovlar soni 1–%d ta bo'lishi kerak, kiritildi: %d", MaxMeasurements, len(in.Measurements))
 	}
 
 	for _, m := range in.Measurements {

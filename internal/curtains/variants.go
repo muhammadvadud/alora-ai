@@ -85,7 +85,12 @@ func PlanOptions(v *View, st SessionState, q SearchQuery) [3]OptionPlan {
 				continue
 			}
 		}
-		plans[i].Why = whyFor(plans[i].Tier) + transparencyNote(v, plans[i].Parts, q.Transparency)
+		plans[i].Why = whyFor(plans[i].Tier) + transparencyNote(v, plans[i].Parts, q.Transparency) + roomNote(v, plans[i].Parts, q.Room)
+		// Rulon/rim paketga tushsa (kategoriya nomi/xalqaro SKU mos kelmagan holda) —
+		// narxini sotuvchi qo'lda belgilaydi, AI hisoblamaydi (ADR-014).
+		if !PartsCalcSupported(v, plans[i].Parts) {
+			plans[i].Parts, plans[i].Accessories, plans[i].Why = nil, nil, MsgNotCalcSupported
+		}
 	}
 	return plans
 }
@@ -114,6 +119,41 @@ func transparencyNote(v *View, parts []PartSpec, want string) string {
 	return ""
 }
 
+// roomNote — transparencyNote uslubida, lekin xona uchun: so'ralgan xonaga tavsiya
+// etilmagan mato paketga tushsa, mijozga izohsiz "mos mato" deyish noto'g'ri edi
+// (2026-09-28 live: wedding so'rog'ida kids xonasiga matosi keldi). Faqat nomuvofiqlikda.
+func roomNote(v *View, parts []PartSpec, want string) string {
+	if want == "" {
+		return ""
+	}
+	for _, p := range parts {
+		if p.Role != RolePortyera {
+			continue
+		}
+		x, ok := v.variants[p.VariantID]
+		if !ok {
+			return ""
+		}
+		rooms := v.products[x.ProductID].RecommendedRooms
+		if containsFold(rooms, want) {
+			return ""
+		}
+		return fmt.Sprintf(" (bu segmentda %s uchun mato yo'q — mato %s uchun)", want, displayRooms(rooms))
+	}
+	return ""
+}
+
+// displayRooms xonalar ro'yxatini qisqacha ko'rsatadi (bo'sh bo'lsa "boshqa xonalar").
+func displayRooms(rooms []string) string {
+	if len(rooms) == 0 {
+		return "boshqa xonalar"
+	}
+	if len(rooms) > 3 {
+		rooms = rooms[:3]
+	}
+	return strings.Join(rooms, ", ")
+}
+
 func whyFor(t OptionTier) string {
 	switch t {
 	case OptionEconomy:
@@ -136,21 +176,26 @@ func basicPart(card ProductCard, role PartRole, st SessionState, coef decimal.De
 // Segmentda qatlam bo'lmasa `fallback` segmentlari navbat bilan sinaladi —
 // premium tul katalogda bo'lmasligi mumkin, lekin tul tul bo'lib qolaveradi.
 func cheapestLayer(v *View, q SearchQuery, layer string, segments ...Segment) []ProductCard {
-	return cheapestWhere(v, q, layer, "", segments...)
+	return cheapestWhere(v, q, layer, strictFilter{}, segments...)
 }
 
-// cheapestWhere — cheapestLayer, ixtiyoriy qat'iy shaffoflik filtri bilan (bo'sh — filtr yo'q).
+// strictFilter — SearchQuery ichidagi qat'iy filtrlar kombinatsiyasi. Ball emas,
+// "mos bo'lishi shart" (ADR-012 shaffoflik, ADR-015 xona).
+type strictFilter struct {
+	room         bool
+	transparency bool
+}
+
+// cheapestWhere — cheapestLayer, ixtiyoriy qat'iy filtr bilan (bo'sh — filtr yo'q).
 // Filtr skor guruhidan OLDIN qo'llanadi: aks holda xona balli yuqori semi mato guruhni
 // egallab, blackout variant umuman ko'rilmay qoladi.
-func cheapestWhere(v *View, q SearchQuery, layer, transparency string, segments ...Segment) []ProductCard {
+func cheapestWhere(v *View, q SearchQuery, layer string, f strictFilter, segments ...Segment) []ProductCard {
 	q.Kind, q.Layer, q.Limit = "fabric", layer, 10
-	if transparency != "" {
-		q.Transparency, q.StrictTransparency = transparency, true
-	}
+	q.StrictRoom, q.StrictTransparency = f.room, f.transparency
 	var cards []ProductCard
 	for _, seg := range segments {
 		q.Segment = seg
-		if cards = bestMatches(Search(v, q)); len(cards) > 0 {
+		if cards = DropUnsupportedCards(v, bestMatches(Search(v, q))); len(cards) > 0 {
 			break
 		}
 	}
@@ -181,22 +226,42 @@ func bestMatches(cards []ProductCard) []ProductCard {
 // cheapestFabric — asosiy (portyera) mato. Economy katalogi eski bo'lishi mumkin;
 // faqat shu paketda segmentsiz fallback ishlatiladi, aks holda standard/premium
 // mahsulotlari noto'g'ri paketga o'tadi.
+//
+// Talab funksional bo'lgani uchun avval QAT'IY sinanadi, keyin ballga qaytiladi:
+//  1. xona + shaffoflik — ikkalasi ham mos bo'lgani (matn talabi);
+//  2. shaffoflik — xonadan voz kechildi, funksional talab saqlanadi (ADR-012);
+//  3. xona — shaffoflikdan voz kechildi, xona talabi saqlanadi (ADR-015);
+//  4. ball — hech biri topilmasa.
+//
+// Qat'iy sinov faqat paketning O'Z segmentida — segmentsiz fallback bilan economy'ga
+// standard blackout tushib, paketlar bir-biriga aralashardi.
 func cheapestFabric(v *View, q SearchQuery, segment Segment) []ProductCard {
+	for _, f := range fabricFilters(q) {
+		if cards := cheapestWhere(v, q, "portyera", f, segment); len(cards) > 0 {
+			return cards
+		}
+	}
 	segments := []Segment{segment}
 	if segment == SegmentEconomy {
 		segments = append(segments, "")
 	}
-	// Shaffoflik asosiy mato uchun funksional talab (blackout — xonani qoraytiradi),
-	// shuning uchun Search'dagi +2 balldan tashqari avval qat'iy sinaladi; segmentda
-	// mos mato bo'lmasagina paket bo'sh qolmasligi uchun ballga qaytiladi. Qat'iy sinov
-	// faqat paketning O'Z segmentida — segmentsiz fallback bilan economy'ga standard
-	// blackout tushib, paketlar bir-biriga aralashardi.
-	if q.Transparency != "" {
-		if cards := cheapestWhere(v, q, "portyera", q.Transparency, segment); len(cards) > 0 {
-			return cards
-		}
-	}
 	return cheapestLayer(v, q, "portyera", segments...)
+}
+
+// fabricFilters — asosiy mato uchun qat'iy filtr bosqichlari tartibi. Bo'sh maydon
+// (shaffoflik/xona so'ralmagan) bosqichni butunlay tushiradi.
+func fabricFilters(q SearchQuery) []strictFilter {
+	var out []strictFilter
+	if q.Transparency != "" && q.Room != "" {
+		out = append(out, strictFilter{room: true, transparency: true})
+	}
+	if q.Transparency != "" {
+		out = append(out, strictFilter{transparency: true})
+	}
+	if q.Room != "" {
+		out = append(out, strictFilter{room: true})
+	}
+	return out
 }
 
 func premiumParts(v *View, st SessionState, q SearchQuery, coef decimal.Decimal) ([]PartSpec, []AccessoryInput) {

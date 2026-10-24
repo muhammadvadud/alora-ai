@@ -45,7 +45,10 @@ type productCard struct {
 	WidthM       string `json:"width_m,omitempty"`
 	Transparency string `json:"transparency,omitempty"`
 	Segment      string `json:"segment,omitempty"`
-	Why          string `json:"why,omitempty"`
+	// CalcSupported — faqat false bo'lganda chiqadi (rulon/rim: AI hisoblamaydi,
+	// sotuvchi narxni qo'lda belgilaydi — ADR-014). Boshqa mahsulotlarda maydon yo'q.
+	CalcSupported *bool  `json:"calc_supported,omitempty"`
+	Why           string `json:"why,omitempty"`
 }
 
 type productSearchResult struct {
@@ -54,6 +57,8 @@ type productSearchResult struct {
 	ByLayer  map[string][]productCard `json:"by_layer,omitempty"`
 	Count    int                      `json:"count"`
 	Stale    bool                     `json:"stale,omitempty"`
+	Stop     bool                     `json:"stop,omitempty"` // bo'sh qidiruv sikli tugdi — qayta qidirma (ADR-020)
+	Hint     string                   `json:"hint,omitempty"` // stop bilan birga: nima qilish kerak
 	Warnings []string                 `json:"warnings,omitempty"`
 	Error    string                   `json:"error,omitempty"`
 }
@@ -74,11 +79,24 @@ type calcAccessory struct {
 }
 
 type curtainCalcArgs struct {
-	CorniceLengthM float64         `json:"cornice_length_m"      jsonschema:"description=karniz uzunligi metrda"`
-	HeightM        float64         `json:"height_m"              jsonschema:"description=pardaning umumiy balandligi metrda"`
-	Parts          []calcPart      `json:"parts"                 jsonschema:"description=pardani tashkil qiluvchi mato bo'laklari — 1 tadan 10 tagacha"`
+	CorniceLengthM float64         `json:"cornice_length_m"      jsonschema:"description=karniz uzunligi metrda — windows bo'lmasa"`
+	HeightM        float64         `json:"height_m"              jsonschema:"description=pardaning umumiy balandligi metrda — windows bo'lmasa"`
+	Parts          []calcPart      `json:"parts,omitempty"       jsonschema:"description=pardani tashkil qiluvchi mato bo'laklari — 1 tadan 10 tagacha"`
 	Accessories    []calcAccessory `json:"accessories,omitempty" jsonschema:"description=matodan tashqari bezaklar: dekorativ gul — podxvat — kisti — bahroma — halqa"`
 	RoomName       string          `json:"room_name,omitempty"   jsonschema:"description=xona nomi — masalan mehmonxona"`
+	// Windows — bir nechta o'ynaning o'lchovi. qty bo'yicha Django'ga alohida
+	// o'lchov yozuvlari ketadi (Go summani ko'paytirmaydi, rules §0.2).
+	Windows []calcWindow `json:"windows,omitempty" jsonschema:"description=bir nechta oyna — turli karniz/balandlik; bir xil o'lchovli bir nechta deraza uchun qty"`
+}
+
+// calcWindow — bitta oyna (karniz kesimi) o'lchovi va unga tegishli bo'laklar.
+type calcWindow struct {
+	CorniceLengthM float64         `json:"cornice_length_m"           jsonschema:"description=shu oynaning karniz uzunligi metrda"`
+	HeightM        float64         `json:"height_m"                   jsonschema:"description=shu oynaning parda balandligi metrda"`
+	Qty            int             `json:"qty,omitempty"              jsonschema:"description=shu o'lchamdagi derazalar soni — 1 dan 20 gacha, bo'sh = 1"`
+	Parts          []calcPart      `json:"parts"                      jsonschema:"description=bu oynaning mato bo'laklari"`
+	Accessories    []calcAccessory `json:"accessories,omitempty"      jsonschema:"description=faqat shu oynaga tegishli bezaklar"`
+	RoomName       string          `json:"room_name,omitempty"        jsonschema:"description=xona nomi — masalan mehmonxona"`
 }
 
 // ---- ixcham hisob natijasi (curtain_calculate / price_quote) ----
@@ -118,10 +136,38 @@ type calcServiceLine struct {
 	LineTotal string `json:"line_total"`
 }
 
+// calcWindowLine — bitta oynaning ixcham natija qatori: xona, o'lcham, nechta deraza
+// va Django qatorlaridan yig'indi. Ko'p oynali hisobda `lines` 8 ta bilan
+// chegaralanadi, shuning uchun oyna bo'yicha yig'indi shu yerda kerak (rules §5.5).
+type calcWindowLine struct {
+	RoomName string `json:"room_name,omitempty"`
+	LengthM  string `json:"length_m,omitempty"`
+	HeightM  string `json:"height_m,omitempty"`
+	Qty      int    `json:"qty,omitempty"`
+	Parts    int    `json:"parts,omitempty"`
+	Total    string `json:"total"` // Django line_total + accessories_total
+}
+
+// calcDiscount — chegirma TARKIBI (ADR-020). Avval natijada faqat yalpi foiz
+// bor edi; mijoz "12% qayerdа?" deb so'raganda model qo'lda va bosqichli
+// chegirmani chalkashtirdi. Barcha sonlar Django CalcResult dan olinadi.
+type calcDiscount struct {
+	TierPercent    string `json:"tier_percent,omitempty"`    // bosqichli (mijoz miqdori) chegirma
+	ManualPercent  string `json:"manual_percent,omitempty"`  // sotuvchi qo'lda bergan chegirma
+	AppliedPercent string `json:"applied_percent,omitempty"` // jami qo'llangan foiz
+	// Rule — chegirma qoidasi matni (stack_with_tier dan), mijozga tushuntirish uchun.
+	Rule string `json:"rule,omitempty"`
+	// ManualMaxPercent — joriy rol uchun qo'lda chegirma chegarasi. Mijoz rejimida
+	// (customer_mode) HECH QACHON chiqmaydi (rules §1.6).
+	ManualMaxPercent string `json:"manual_max_percent,omitempty"`
+}
+
 type curtainCalcResult struct {
 	Totals      *calcTotals       `json:"totals,omitempty"`
+	Windows     []calcWindowLine  `json:"windows,omitempty"`
 	Lines       []calcLine        `json:"lines,omitempty"`
 	Services    []calcServiceLine `json:"services,omitempty"`
+	Discount    *calcDiscount     `json:"discount,omitempty"`
 	Display     any               `json:"display,omitempty"` // o'qiladigan summalar: {"subtotal":"5 382 000 so'm",...}
 	Warnings    []string          `json:"warnings,omitempty"`
 	Explanation []string          `json:"explanation,omitempty"` // curtains.Explain — izoh/tejash tavsiyalari (1.9)
@@ -171,6 +217,7 @@ type buildOptionsResult struct {
 // ---- price_quote ----
 
 type priceQuoteArgs struct {
+	OptionTier    string   `json:"option_tier,omitempty"    jsonschema:"description=mijoz tanlagan paket: economy|standard|premium — bo'sh bo'lsa oxirgi curtain_calculate"`
 	NeedCornice   bool     `json:"need_cornice,omitempty"   jsonschema:"description=yangi karniz kerakmi"`
 	NeedInstall   bool     `json:"need_install,omitempty"   jsonschema:"description=montaj kerakmi"`
 	NeedDelivery  bool     `json:"need_delivery,omitempty"  jsonschema:"description=yetkazib berish kerakmi"`
@@ -181,8 +228,11 @@ type priceQuoteArgs struct {
 
 type priceQuoteResult struct {
 	Totals      *calcTotals       `json:"totals,omitempty"`
+	OptionTier  string            `json:"option_tier,omitempty"` // hisoblangan paket darajasi
+	Windows     []calcWindowLine  `json:"windows,omitempty"`
 	Lines       []calcLine        `json:"lines,omitempty"`
 	Services    []calcServiceLine `json:"services,omitempty"`
+	Discount    *calcDiscount     `json:"discount,omitempty"`
 	Display     any               `json:"display,omitempty"` // o'qiladigan summalar, shu jumladan prepayment/balance
 	Warnings    []string          `json:"warnings,omitempty"`
 	Explanation []string          `json:"explanation,omitempty"` // curtains.Explain — izoh/tejash tavsiyalari (1.9)
@@ -259,8 +309,8 @@ type fasonLookupResult struct {
 // ---- knowledge_lookup ----
 
 type knowledgeLookupArgs struct {
-	Topic string `json:"topic,omitempty" jsonschema:"description=qoida turi,enum=room,enum=style,enum=objection,enum=light,enum=construction,enum=color"`
-	Query string `json:"query,omitempty" jsonschema:"description=tavsiya matnida qidiriladigan kalit so'z"`
+	Topic string `json:"topic,omitempty" jsonschema:"description=so'rov mavzusi,enum=room_style,enum=light,enum=color,enum=construction,enum=objection,enum=general"`
+	Query string `json:"query,omitempty" jsonschema:"description=so'rov matnidan asosiy so'zlar — masalan 'bolalar xonasi xavfsiz'"`
 }
 
 type knowledgeRuleCard struct {
@@ -280,27 +330,28 @@ type knowledgeLookupResult struct {
 
 // ---- order_draft ----
 
+// orderDraftArgs — PII (ism/telefon/manzil) BU YERDA YO'Q (ADR-020). Mijoz
+// ma'lumotlari LLM kontekstiga kirmaydi: ularni ilova formasiga sotuvchi
+// kiritadi. `confirm` ham olib tashlandi — AI buyurtmani tasdiqlamaydi.
 type orderDraftArgs struct {
-	Action        string  `json:"action"                  jsonschema:"description=amal — buyurtma qoralamasini saqlash,enum=quote,enum=draft,enum=confirm"`
-	CustomerName  string  `json:"customer_name,omitempty" jsonschema:"description=mijoz ismi — SOTUVCHI kiritadi — mijozdan so'ralmaydi"`
-	CustomerPhone string  `json:"customer_phone,omitempty" jsonschema:"description=mijoz telefoni — masalan +998901234567 — SOTUVCHI kiritadi"`
-	Address       string  `json:"address,omitempty"       jsonschema:"description=yetkazib berish manzili — SOTUVCHI kiritadi"`
+	Action        string  `json:"action"                  jsonschema:"description=amal,enum=quote,enum=draft"`
+	OptionTier    string  `json:"option_tier,omitempty"   jsonschema:"description=mijoz tanlagan paket: economy|standard|premium — bo'sh bo'lsa oxirgi price_quote"`
 	Note          string  `json:"note,omitempty"          jsonschema:"description=buyurtmaga qo'shimcha eslatma"`
 	DeadlineDays  int     `json:"deadline_days,omitempty" jsonschema:"description=bajarish muddati kunlarda; bo'sh bo'lsa do'kon standarti"`
 	PrepaymentPct float64 `json:"prepayment_pct,omitempty" jsonschema:"description=avans %"`
 }
 
 type orderDraftResult struct {
-	Quote        any      `json:"quote,omitempty"`         // Django taklifi (LastQuote) — action=quote
-	Display      any      `json:"display,omitempty"`       // o'qiladigan summalar: {"subtotal":"...","total":"..."}
-	Missing      []string `json:"missing,omitempty"`       // yetishmayotgan mijoz maydonlari — action=draft
-	Hint         string   `json:"hint,omitempty"`          // AI'ga nega missing borligini tushuntiradi
-	Ready        bool     `json:"ready,omitempty"`         // hamma maydon to'ldi, confirm mumkin
-	Summary      any      `json:"summary,omitempty"`       // action=draft tayyor bo'lganda qisqa referens
-	OrderID      string   `json:"order_id,omitempty"`      // Django buyurtma UUID si — action=confirm
-	OrderNumber  string   `json:"order_number,omitempty"`  // ALR-2026-000123 — action=confirm
-	CustomerRef  string   `json:"customer_ref,omitempty"`  // "mijoz #1234" — ism/telefon EMAS (rules §1.6)
-	TotalDisplay string   `json:"total_display,omitempty"` // yakuniy summa — action=confirm
-	Warnings     []string `json:"warnings,omitempty"`
-	Error        string   `json:"error,omitempty"`
+	OptionTier string `json:"option_tier,omitempty"` // hisoblanadigan paket darajasi
+	Quote      any    `json:"quote,omitempty"`       // Django taklifi (LastQuote)
+	Display    any    `json:"display,omitempty"`     // o'qiladigan summalar: {"subtotal":"...","total":"..."}
+	// CustomerFormRequired — mijoz ma'lumotlari (ism/telefon/manzil) AI orqali
+	// yigilmaydi: sotuvchi ilova formasida kiritadi. Shu bayroq modelga "endi
+	// savol berib tugat, forma ochilsin" signalini beradi (ADR-020).
+	CustomerFormRequired bool     `json:"customer_form_required,omitempty"`
+	Hint                 string   `json:"hint,omitempty"`          // AI'ga keyingi qadamni aytadi
+	Summary              any      `json:"summary,omitempty"`       // qisqa referens: summa, muddat, avans (PII yo'q)
+	TotalDisplay         string   `json:"total_display,omitempty"` // yakuniy summa
+	Warnings             []string `json:"warnings,omitempty"`
+	Error                string   `json:"error,omitempty"`
 }

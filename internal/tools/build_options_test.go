@@ -134,3 +134,46 @@ func TestBuildOptions_MissingCatalogServiceIsDroppedWithWarning(t *testing.T) {
 		}
 	}
 }
+
+// TestOrderDraft_OptionTierUsesChosenPackage — mijoz premiumni tanlasa qoralama
+// aynan premium paket natijasida chiqadi, keyin qilingan boshqa hisobda emas
+// (2026-09-28 live: "premium" 7 907 000 o'rniga 5 120 000 lik qoralama chiqdi).
+func TestOrderDraft_OptionTierUsesChosenPackage(t *testing.T) {
+	d, _, state := optionsDeps()
+	ctx := session.WithID(context.Background(), "options-tier")
+	res, err := (&buildOptionsHandler{d: d}).do(ctx, buildOptionsArgs{})
+	if err != nil || res.Error != "" {
+		t.Fatalf("build_options: %v %+v", err, res)
+	}
+	premium, ok := state.state.LastOptions[curtains.OptionPremium]
+	if !ok || premium.Result.Total.IsZero() {
+		t.Fatalf("premium paket holatga yozilmadi: %+v", state.state.LastOptions)
+	}
+	// Paketdan keyin sotuvchi boshqa bitta hisob qildi — oxirgi hisob endi boshqa.
+	other := curtains.CalcResult{Total: decimal.NewFromInt(42)}
+	state.state.LastCalc, state.state.LastQuote = &other, &other
+
+	got, err := (&orderDraftHandler{d: d}).do(ctx, orderDraftArgs{Action: "draft", OptionTier: "premium"})
+	if err != nil || got.Error != "" {
+		t.Fatalf("order_draft: %v %+v", err, got)
+	}
+	if want := displayMoney(premium.Result.Total); got.TotalDisplay != want {
+		t.Fatalf("qoralama premium summasida bo'lishi kerak: got %q want %q", got.TotalDisplay, want)
+	}
+	if !state.state.LastCalc.Total.Equal(premium.Result.Total) {
+		t.Fatalf("tanlov saqlanishi kerak: LastCalc=%s", state.state.LastCalc.Total)
+	}
+}
+
+func TestSelectOption_Errors(t *testing.T) {
+	st := curtains.SessionState{}
+	if msg := selectOption(&st, "luxury"); msg == "" {
+		t.Fatal("noma'lum tier xato berishi kerak")
+	}
+	if msg := selectOption(&st, "premium"); !strings.Contains(msg, "build_options") {
+		t.Fatalf("paket tuzilmagan bo'lsa build_options ga yo'naltirishi kerak: %q", msg)
+	}
+	if msg := selectOption(&st, ""); msg != "" || st.LastCalc != nil {
+		t.Fatal("bo'sh tier holatni o'zgartirmasligi kerak")
+	}
+}

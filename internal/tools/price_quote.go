@@ -17,7 +17,9 @@ func PriceQuote(d Deps) tool.BaseTool {
 	h := &priceQuoteHandler{d: d}
 	return must(utils.InferTool("price_quote",
 		"curtain_calculate natijasiga tikuv, montaj, yetkazish va chegirmani qo'shib yakuniy narx, "+
-			"avans va qoldiqni beradi. Faqat chegirma yoki yakuniy taklif so'ralganda, curtain_calculate dan keyin chaqir.",
+			"avans va qoldiqni beradi. Faqat chegirma yoki yakuniy taklif so'ralganda, curtain_calculate dan keyin chaqir. "+
+			"discount: tier_percent=mijoz miqdori (bosqichli), manual_percent=qo'lda berilgan, applied_percent=jami; "+
+			"rule='qo'shiladi' — ikkalasi qo'shiladi, 'kattasi' — kattasi olinadi.",
 		h.do))
 }
 
@@ -32,6 +34,9 @@ func (h *priceQuoteHandler) do(ctx context.Context, a priceQuoteArgs) (priceQuot
 		return priceQuoteResult{Error: errCalcUnavailable}, nil
 	}
 	st, sid := loadState(ctx, h.d)
+	if msg := selectOption(&st, a.OptionTier); msg != "" {
+		return priceQuoteResult{Error: msg}, nil
+	}
 	if st.LastCalc == nil || len(st.LastCalc.Measurements) == 0 {
 		return priceQuoteResult{Error: "avval curtain_calculate chaqir — hisoblanadigan parda yo'q"}, nil
 	}
@@ -108,6 +113,7 @@ func (h *priceQuoteHandler) do(ctx context.Context, a priceQuoteArgs) (priceQuot
 		Totals:      t,
 		Lines:       lines,
 		Services:    services,
+		Discount:    discountBlock(ctx, v, res, role),
 		Display:     disp,
 		Warnings:    append(warnings, res.Warnings...),
 		Explanation: curtains.Explain(res),

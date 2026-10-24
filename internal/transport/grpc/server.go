@@ -15,6 +15,7 @@ import (
 	"github.com/muhammadvadud/alora-ai/internal/backend"
 	"github.com/muhammadvadud/alora-ai/internal/curtains"
 	"github.com/muhammadvadud/alora-ai/internal/observability"
+	"github.com/muhammadvadud/alora-ai/internal/pii"
 	"github.com/muhammadvadud/alora-ai/internal/session"
 	voicepkg "github.com/muhammadvadud/alora-ai/internal/voice"
 	grpcgo "google.golang.org/grpc"
@@ -144,8 +145,12 @@ func (s *Server) Chat(req *alorav1.ChatRequest, stream grpcgo.ServerStreamingSer
 			slog.Error("foydalanuvchi xabarini outbox'ga qo'shib bo'lmadi", "error", err, "session_id", req.GetSessionId())
 		}
 	}
+	// LLM ga boradigan nusxa — telefon maskalangan. Django LogMessage yuqorida
+	// ASL matnni oldi, shuning uchun audit va mijoz o'z raqamini ko'radi;
+	// model kontekstida PII bo'lmaydi (rules §1.6, ADR-020).
+	llmMessage := pii.Scrub(req.GetMessage())
 	var assistantContent string
-	for ev := range s.chat.Stream(ctx, req.GetSessionId(), req.GetMessage()) {
+	for ev := range s.chat.Stream(ctx, req.GetSessionId(), llmMessage) {
 		if ev.Kind == agent.KindThinking {
 			continue
 		}

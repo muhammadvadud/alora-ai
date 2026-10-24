@@ -187,9 +187,10 @@ func run() error {
 	}
 	deps := tools.Deps{Catalog: catalog, Calc: calc, State: store, Clock: curtains.RealClock{}}
 	if backendConn != nil {
-		// Buyurtma qoralamasi faqat gRPC rejimida (CLI'da foydalanuvchi mijoz emas).
-		// nil client interfeysdan non-nil bo'lib qolmasligi uchun shart qo'yiladi —
-		// aks holda order_draft "xizmat ulanmagan" deb ayta olmay, panic beradi.
+		// Orders saqlanadi (ADR-020), lekin order_draft uni ISHLATMAYDI: AI buyurtma
+		// yaratmaydi, mijoz ma'lumotlari ilova formasida kiritiladi. Shuning uchun bu
+		// wiring buyurtma yozishining boshqa yo'llari uchun kerak; nil client
+		// interfeysdan non-nil bo'lib qolmasligi uchun shart qo'yiladi.
 		deps.Orders = backend.NewOrderClient(backendConn, cfg.Backend.Timeout)
 	}
 	for _, candidate := range tools.Alora(deps) {

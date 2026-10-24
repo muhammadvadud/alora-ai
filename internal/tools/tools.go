@@ -22,6 +22,10 @@ type StateStore interface {
 
 // Orders — buyurtma qoralamasini Django'ga saqlash (rules §9.4). Sinxron, retry yo'q
 // (dublikat buyurtma xavfi — ADR-008). backend.OrderClient shu interfeysni qanoatlantiradi.
+//
+// ADR-020 dan keyin order_draft tool'i bu interfeysni ISHLATMAYDI: AI PII yig'maydi
+// va buyurtmani tasdiqlamaydi, buyurtma ilova formasini to'ldirgan sotuvchi tomonidan
+// yaratiladi. Interfeys va klient saqlanadi — backend.Orders boshqa yo'llar uchun kerak.
 type Orders interface {
 	SaveOrderDraft(ctx context.Context, d curtains.OrderDraft) (curtains.OrderDraftResult, error)
 }
@@ -32,7 +36,7 @@ type Deps struct {
 	Calc    curtains.Calculator // Django CalcPreview klienti
 	State   StateStore
 	Clock   curtains.Clock
-	Orders  Orders // buyurtma qoralamasini Django'ga yozish (nil bo'lsa order_draft xato qaytaradi)
+	Orders  Orders // buyurtma yozish (ADR-020 dan keyin order_draft ishlatmaydi)
 }
 
 // Alora — barcha domen tool'lari bir joyda (main.go shu ro'yxatni register qiladi).

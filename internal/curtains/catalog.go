@@ -163,6 +163,46 @@ func (c *Catalog) View() *View {
 
 func (v *View) Ready() bool { return !v.SyncedAt.IsZero() }
 
+// HasProducts — bu view'da (ixtiyoriy ravishda tenant bo'yicha filtrlangan)
+// kamida bitta mahsulot bormi. Bo'sh katalog — "katalog yuklanmagan" dan farqli:
+// katalog kelgan, lekin ma'lumot yo'q (filial import qilmagan, ADR-020).
+func (v *View) HasProducts() bool {
+	if v == nil {
+		return false
+	}
+	for _, p := range v.products {
+		if v.isValidTenant(p.TenantID) {
+			return true
+		}
+	}
+	return false
+}
+
+// IsEmpty — katalog kelgan, lekin bu TENANT uchun hech narsa yo'q: na mahsulot,
+// na variant, na fason. Bu "katalog yuklanmagan" (xizmat uzilishi) holatidan
+// farqli: katalog o'zi to'g'ri, faqat ma'lumot kiritilmagan — sotuvchiga
+// "menejer katalogni to'ldirishi kerak" deyish kerak, "xizmat ishlamayapti"
+// emas (ADR-020).
+//
+// Faqat TENANT ma'lumoti hisobga olinadi. Xizmatlar, chegirma bosqichlari,
+// hisoblash qoidalari va order default'lari GLOBAL sozlamalar (Service.da
+// TenantID yo'q) — ular har doim bo'lgani uchun bo'sh tenantni "to'ldirilgan"
+// deb ko'rsatmasligi kerak.
+func (v *View) IsEmpty() bool {
+	if v == nil {
+		return true
+	}
+	if v.HasProducts() {
+		return false
+	}
+	for _, x := range v.variants {
+		if v.isValidTenant(x.TenantID) {
+			return false
+		}
+	}
+	return len(v.Fasons()) == 0
+}
+
 func (v *View) ForTenant(tenantID string) *View {
 	if tenantID == "" {
 		return v

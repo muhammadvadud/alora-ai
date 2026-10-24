@@ -31,7 +31,10 @@ func (h *setContextHandler) do(ctx context.Context, a setContextArgs) (setContex
 	}
 	st, sid := loadState(ctx, h.d)
 	st.Apply("set_context", argsMap(a), now(h.d))
+	field, hint := st.NextQuestion()
+	// Savolni chiqarish — uni taklif qilganimiz (ADR-020): 2-marta taklif qilingan
+	// maydon NextQuestion'da o'tkaziladi, model bir savolda siklda qolmaydi.
+	st.MarkAsked(field)
 	saveState(ctx, h.d, sid, st)
-	_, hint := st.NextQuestion()
 	return setContextResult{State: st.Summary(), NextQuestion: hint}, nil
 }

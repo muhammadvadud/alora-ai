@@ -6,7 +6,7 @@
 > Har bir ish tugagach shu fayl **o'sha ishning commit'i ichida** yangilanadi.
 > Har task uchun "Qabul" — nima o'tsa bajarilgan hisoblanadi (rules.md §17.5 DoD).
 
-**Umumiy holat:** 98 / 112 bajarildi, 2 yarim · 2026-09-14: live DeepSeek o'tdi, xarajat 4–10× kamaytirildi (bosqichli tool'lar, ixcham natijalar, prefix-kesh 96%), senior audit tuzatildi · Qolgan: teglar (1.46/2.23/3.10), ovoz provider'lari (kalit yo'q: 3.2/3.3/3.8), kontrakt 1.5 kelishuvi (2.19, 4.2, 4.5, 4.9, 4.12), ADR (4.4, 4.6), 1.9/1.11
+**Umumiy holat:** 110 / 122 bajarildi, 1 yarim · 2026-09-14: live DeepSeek o'tdi, xarajat 4–10× kamaytirildi (bosqichli tool'lar, ixcham natijalar, prefix-kesh 96%), senior audit tuzatildi · 2026-09-28: live sessiyasidan 7 ta kuzatuv (4.17–4.23) va xavfsizlik auditi (4.16) yopildi — ADR-014/015/016/020 · Qolgan: teglar (1.46/2.23/3.10), ovoz provider'lari (kalit yo'q: 3.2/3.3/3.8), kontrakt 1.5 kelishuvi (2.19, 4.2, 4.5, 4.9, 4.12), ADR (4.4, 4.6), 1.9/1.11
 
 **Bosqich xaritasi:** 0 Poydevor (1 hafta) → 1 MVP (3–4 hafta) → 2 To'liq sotuv sikli (3 hafta) → 3 Ovoz (2–3 hafta) → 4 Sayqal (davomiy)
 
@@ -299,6 +299,13 @@
 - [x] 4.14 (2026-09-27 live) Suhbat oqimi: `NextQuestion` bosqichga mos (§4.5.4), `PromptBlock` ga ehtiyoj maydonlari, javob tili joriy xabardan (`MessageLocale`, ADR-013), prompt: variantlar ko'rsatilmagan bo'lsa avval `build_options`, tool oldidan matn yo'q.
 - [x] 4.15 (2026-09-27 live) `IsRetryable`: ulanish uzilishi (`connection reset`, `broken pipe`, `unexpected EOF`) qayta urinishga kiradi.
 - [x] 4.16 (2026-09-28 xavfsizlik auditi) Sessiya izolyatsiyasi: pgStore `ownerMatches` fail-open olib tashlandi (bo'sh `user_id` faqat egasiz sessiyaga kirsin, `ownerAllows` — yagona qoida), memoryStore ham shu semantikada (ega `(user_id, tenant_id)`, o'qish `warn`+bo'sh, yozuv `errSessionOwnerMismatch`); gRPC rejimida `DATABASE_URL` yo'q bo'lsa startup aniq xato bilan to'xtaydi; `Chat` bo'sh `user_id` ni `InvalidArgument` bilan rad etadi; `/metrics` porti `127.0.0.1` ga bog'landi.
+- [x] 4.17 (2026-09-28 live, ADR-020) `product_search` takrorlanuvchi bo'sh natijaga chiqmaydi: `EmptySearches` sanovi, muvaffaqiyatda reset, `stop:true` promptga, 2-marta ketma-ket bo'shda qidiruv tugaydi; `layers` rejimida jami `cards` sananadi.
+- [x] 4.18 (2026-09-28 live, ADR-020) Bo'sh katalog faqat tenant ma'lumotiga qaraydi: `View.IsEmpty` global `services`/config ni hisobdan chiqaradi; bo'sh tenant uchun tool aniq xato qaytaradi, `fason_lookup` ham shu ko'rinishda.
+- [x] 4.19 (2026-09-28 live, ADR-020) `catalog_sync`: Watch uzilganda `entity="catalog"` bilan to'liq Snapshot so'raladi; noma'lum action `reason=bulk_import` bilan loglanadi. Boshqariladigan fake Watch testlari (`FULL_RESYNC` + oddiy delta).
+- [x] 4.20 (2026-09-28 live, ADR-020) Har maydon ko'pi bilan 2 marta taklif etiladi — o'lchov (`room_name`/`length_m`/`height_m`/`qty`) maydonlari ham; uchinchi marta maydon `NextQuestion` dan chiqadi (`asked_test.go`).
+- [x] 4.21 (2026-09-28 live, ADR-020) Chegirma natijada ko'rinadi: `price_quote` va ixcham `curtain_calculate` uchun `discount` bloki (`tier_percent`, `manual_percent`, `applied_percent`, `rule`; mijoz rejimida `manual_max_percent` yo'q). Sonlar Django `CalcResult` dan olinadi, Go'da hisoblanmaydi.
+- [x] 4.22 (2026-09-28 live, ADR-020) `order_draft` PII yig'maydi va tasdiqlamaydi: `action=quote|draft`, `customer_form_required:true`, `confirm`/`phone`/`name` olib tashlandi; gRPC LLM kontekstiga yuborishdan oldin `pii.Scrub`, Django `LogMessage` da asl matn (`pii_test.go`). `backend.Orders` saqlanadi, order_draft ishlatmaydi.
+- [x] 4.23 (2026-09-28 live, ADR-020) `knowledge_lookup` so'z/prefix mosligi bilan qidiradi (`curtains.KnowledgeSearch`): `room`+`style` → `room_style`, topic normalizatsiyasi/alias, shartli qoidalar `MatchKnowledge` orqali, topic'siz fallback, o'lchov sonlari (`2.6`) ham token.
 
 ---
 

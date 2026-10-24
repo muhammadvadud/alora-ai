@@ -4,6 +4,20 @@ Barcha muhim o'zgarishlar ushbu faylda yozib boriladi.
 
 Format [Keep a Changelog](https://keepachangelog.com/uz/1.1.0/) ga asoslangan.
 
+## [Unreleased] - 2026-09-28
+
+### O'zgartirildi (ADR-014, ADR-015, ADR-016, ADR-020)
+- Rulon/rim AI orqali hisoblanmaydi: tekshiruv roly emas, `LayerOf` qatlamiga; tool aniq `MsgNotCalcSupported` qaytaradi (ADR-014).
+- `build_options` da xona qat'iy filtr; `curtain_calculate windows[] + qty` ko'p o'chov, `MaxMeasurements=20`; paket `OptionSnapshot` (Django natijasi) sifatida qaytadi, keyingi hisob shu ustida (ADR-016).
+- `product_search` takrorlanuvchi bo'sh natijada to'xtaydi (`EmptySearches`, `stop:true`); bo'sh katalog faqat tenant ma'lumotiga qaraydi; `catalog_sync` Watch uzilganda to'liq Snapshot so'raydi (`reason=bulk_import`).
+- Har maydon, jumladan o'lchovlar, ko'pi bilan 2 marta taklif etiladi.
+- Chegirma natijada ko'rinadi: `price_quote` va `curtain_calculate` uchun `discount` bloki (mijoz rejimida chegirma chegarasi yashiriladi).
+- **`order_draft` PII yig'maydi va tasdiqlamaydi** (breaking, ADR-020): `action=quote|draft`, `confirm`/`phone`/`name`/`address` argumentlari olib tashlandi, `customer_form_required` qo'shildi; gRPC LLM kontekstiga yuborishdan oldin telefon maskalaydi (`pii.Scrub`), Django `LogMessage` asl matnni oladi. `backend.Orders` saqlanadi, tool uni ishlatmaydi.
+- `knowledge_lookup` butun ibora emas, so'z/prefix mosligi bilan qidiradi; `room`+`style` → `room_style`; topic'siz fallback.
+
+### Testlar
+- Yangi: `internal/tools/catalog_empty_test.go`, `internal/tools/discount_test.go`, `internal/transport/grpc/pii_test.go`, `internal/curtains/asked_test.go`, `internal/curtains/knowledge_search_test.go`; `catalog_sync_test.go` boshqariladigan fake Watch/Snapshot ga o'tdi; golden 14/18 yangilandi.
+
 ## [v0.1.0] - 2026-09-14
 
 ### Qo'shildi

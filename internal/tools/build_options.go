@@ -26,7 +26,7 @@ func BuildOptions(d Deps) tool.BaseTool {
 type buildOptionsHandler struct{ d Deps }
 
 func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (buildOptionsResult, error) {
-	v, errMsg, stale := readyView(ctx, h.d)
+	v, errMsg, stale := readyCatalogView(ctx, h.d)
 	if errMsg != "" {
 		return buildOptionsResult{Error: errMsg}, nil
 	}
@@ -78,12 +78,19 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 	wg.Wait()
 
 	success := 0
+	var noPieces []string
 	for i := range outs {
 		if errs[i] != nil {
 			outs[i].Error = calcErrorText(errs[i])
 			continue
 		}
 		if results[i] == nil {
+			// Katalogda bu segment uchun mato topilmadi (Parts==nil) — bu HISOB
+			// xatosi emas. Sababni to'g'ri aytamiz, aks holda model "xizmat ishlamayapti"
+			// deb xato xabar beradi va sotuvchi noto'g'ri diagnoz qo'yadi (ADR-020).
+			if outs[i].Error != "" {
+				noPieces = append(noPieces, outs[i].Tier+": "+outs[i].Error)
+			}
 			continue
 		}
 		success++
@@ -92,12 +99,24 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 		attachPlanProducts(ctx, v, plans[i])
 	}
 	if success == 0 {
+		if len(noPieces) > 0 {
+			// Sabablar jamlangan xato — hech qanday paket tuzilmadi.
+			return buildOptionsResult{Options: outs, Stale: stale, Error: strings.Join(noPieces, "; ")}, nil
+		}
 		return buildOptionsResult{Options: outs, Stale: stale, Error: errCalcUnavailable}, nil
 	}
 	warnings := append([]string{}, optionWarnings(results)...)
 	warnings = append(warnings, missingServiceWarnings(missing)...)
 	if stale {
 		warnings = append(warnings, warnStale)
+	}
+	// Har muvaffaqiyatli paket holatga yoziladi: mijoz tanlasa price_quote/order_draft
+	// option_tier bilan aynan shu natijani oladi (ADR-016). Eski paketlar almashtiriladi.
+	st.LastOptions = make(map[curtains.OptionTier]curtains.OptionSnapshot, len(plans))
+	for i := range plans {
+		if results[i] != nil {
+			st.LastOptions[plans[i].Tier] = curtains.OptionSnapshot{Result: *results[i]}
+		}
 	}
 	st.Apply("build_options", argsMap(a), now(h.d))
 	saveState(ctx, h.d, sid, st)
