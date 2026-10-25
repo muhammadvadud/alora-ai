@@ -164,6 +164,7 @@ func run() error {
 		store = session.WithArchiveOnReset(store, archiver)
 		startArchiveCleanup(ctx, archiver)
 	}
+	store = session.WithPIIScrubbing(store)
 	var reporter grpctransport.Reporter
 	var reportOutbox *backend.Outbox
 	if cfg.Mode == "grpc" {

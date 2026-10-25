@@ -77,6 +77,29 @@ func TestChat_ScrubsPhoneBeforeLLM(t *testing.T) {
 // piiMarker — pii.mask.go dagi maskovchi belgi (test uni qayta ishlatmasin).
 const piiMarker = "***"
 
+func TestChat_ScrubsLabeledNameAddressAndEmailBeforeLLM(t *testing.T) {
+	message := "Mening ismim Sinovbek Auditov; email sinovbek@example.test; manzilim Sinov ko'chasi 123"
+	reporter := &recordingReporter{}
+	fake := &capturingStreamer{events: []agent.Event{{Kind: agent.KindDone}}}
+	srv := New(fake, Options{Reporter: reporter})
+	stream := &fakeChatStream{ctx: context.Background()}
+	err := srv.Chat(&alorav1.ChatRequest{SessionId: "private", UserId: "u1", TenantId: "t1", Message: message}, stream)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fake.mInputs) != 1 {
+		t.Fatalf("model kirishi: %v", fake.mInputs)
+	}
+	for _, secret := range []string{"Sinovbek", "sinovbek@example.test", "Sinov ko'chasi"} {
+		if strings.Contains(fake.mInputs[0], secret) {
+			t.Fatalf("LLMga PII o'tdi: %s", fake.mInputs[0])
+		}
+	}
+	if len(reporter.logs) == 0 || reporter.logs[0].Content != message {
+		t.Fatal("Django asl xabarni audit uchun olishi kerak")
+	}
+}
+
 // B6: PII yo'q xabarlar o'zgarmasligi kerak (keraksiz maskalash sessiyani iflos qiladi).
 func TestChat_NoPhoneLeavesMessageIntact(t *testing.T) {
 	for _, msg := range []string{"salom", "parda 4 m bo'libchi", "mato rangini ko'rsat"} {

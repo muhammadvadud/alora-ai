@@ -47,10 +47,16 @@ func MaskName(name string) string {
 	return strings.Join(initials, " ")
 }
 
-// Scrub matndagi O'zbekiston telefon raqamlarini maskalaydi.
+// Scrub matndagi aniq shaxsiy maydonlar va O'zbekiston telefonlarini maskalaydi.
 func Scrub(text string) string {
+	if result, ok := scrubStructured(text); ok {
+		return result
+	}
+	text = nameFieldRE.ReplaceAllString(text, "${1}${2}[ism yashirildi]")
+	text = addressFieldRE.ReplaceAllString(text, "${1}${2}[manzil yashirildi]")
+	text = emailRE.ReplaceAllString(text, "[email yashirildi]")
 	text = phoneCountryRE.ReplaceAllStringFunc(text, MaskPhone)
-	return phoneLocalRE.ReplaceAllStringFunc(text, MaskPhone)
+	return scrubLocalPhones(text)
 }
 
 // ScrubToolResult tool natijasini maskalash uchun Scrub bilan bir xil siyosatni ishlatadi.
