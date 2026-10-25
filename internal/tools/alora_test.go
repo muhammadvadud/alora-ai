@@ -227,7 +227,7 @@ func TestPriceQuote_RequiresCalcAndRespectsRoleLimit(t *testing.T) {
 	if res, _ := q.do(ctx, priceQuoteArgs{DiscountPct: 12}); res.Error != "chegirma chegarasi 5% — 12% berib bo'lmaydi" {
 		t.Fatalf("chegirma chegarasi: %q", res.Error)
 	}
-	res, _ := q.do(ctx, priceQuoteArgs{DiscountPct: 5, NeedInstall: true, NeedCornice: true, NeedDelivery: true})
+	res, _ := q.do(ctx, priceQuoteArgs{Services: []string{"sewing"}, DiscountPct: 5, NeedInstall: true, NeedCornice: true, NeedDelivery: true})
 	if res.Error != "" {
 		t.Fatalf("xato: %s", res.Error)
 	}

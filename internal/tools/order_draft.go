@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"strings"
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
@@ -18,7 +19,7 @@ func OrderDraft(d Deps) tool.BaseTool {
 		"Paket tanlansa action=draft va option_tier bilan DARHOL chaqir: saqlangan paketni aynan oladi, curtain_calculate/price_quote bilan qayta qurma. "+
 			"action=quote — joriy taklifni ko'rsatadi; action=draft — taklifni buyurtma qoralamasiga shakllantiradi "+
 			"va customer_form_required=true qaytaradi: mijoz ismi, telefoni va manzilini ILOVA FORMASI orqali sotuvchi kiritadi. "+
-			"Mijoz ma'lumotlarini hech qachon so'rama va tool'ga yuborma. Yakuniy tasdiq sotuvchida.",
+			"Qoralamadan oldin required_services orqali mijoz so'ragan xizmatlarni tekshir. Mijoz ma'lumotlarini hech qachon so'rama va tool'ga yuborma. Yakuniy tasdiq sotuvchida.",
 		h.do))
 }
 
@@ -26,6 +27,9 @@ type orderDraftHandler struct{ d Deps }
 
 func (h *orderDraftHandler) do(ctx context.Context, a orderDraftArgs) (orderDraftResult, error) {
 	st, sid := loadState(ctx, h.d)
+	if st.QuoteNeedsReview {
+		return orderDraftResult{Error: "talab o'zgargan: eski taklifdan qoralama tuzib bo'lmaydi; avval yangilangan talab bilan qayta hisobla"}, nil
+	}
 	if a.OptionTier != "" {
 		if msg := selectOption(&st, a.OptionTier); msg != "" {
 			return orderDraftResult{Error: msg}, nil
@@ -39,6 +43,9 @@ func (h *orderDraftHandler) do(ctx context.Context, a orderDraftArgs) (orderDraf
 	}
 	if quote == nil {
 		return orderDraftResult{Error: "avval price_quote chaqir — buyurtma uchun taklif yo'q"}, nil
+	}
+	if missing := missingQuotedServices(quote, normalizeServiceKeys(a.RequiredServices)); len(missing) > 0 {
+		return orderDraftResult{Error: "so'ralgan xizmatlar hisobga kiritilmagan: " + strings.Join(missing, ", ") + "; avval price_quote orqali to'liq xizmatlar ro'yxati bilan qayta hisobla"}, nil
 	}
 	switch a.Action {
 	case "quote":
@@ -74,4 +81,19 @@ func orderSummary(a orderDraftArgs, quote *curtains.CalcResult) map[string]any {
 		"deadline_days":  a.DeadlineDays,
 		"prepayment_pct": a.PrepaymentPct,
 	}
+}
+
+// missingQuotedServices — summa emas, haqiqiy hisob qatorlari tekshiriladi.
+func missingQuotedServices(quote *curtains.CalcResult, required []string) []string {
+	present := make(map[string]bool, len(quote.Services))
+	for _, service := range quote.Services {
+		present[service.Key] = true
+	}
+	var missing []string
+	for _, key := range required {
+		if !present[key] {
+			missing = append(missing, key)
+		}
+	}
+	return missing
 }

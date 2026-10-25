@@ -83,6 +83,10 @@ type calcAccessory struct {
 }
 
 type curtainCalcArgs struct {
+	SuggestSavings bool `json:"suggest_savings,omitempty" jsonschema:"description=faqat tejash/qimmat e'tirozida tavsiya kerak bo'lsa true"`
+
+	Services []string `json:"services" jsonschema:"description=xizmatlar to'liq: sewing/tape/hook/install; faqat mato=[]"`
+
 	CorniceLengthM float64         `json:"cornice_length_m"      jsonschema:"description=karniz uzunligi metrda — windows bo'lmasa"`
 	HeightM        float64         `json:"height_m"              jsonschema:"description=pardaning umumiy balandligi metrda — windows bo'lmasa"`
 	Parts          []calcPart      `json:"parts,omitempty"       jsonschema:"description=pardani tashkil qiluvchi mato bo'laklari — 1 tadan 10 tagacha"`
@@ -229,7 +233,7 @@ type priceQuoteArgs struct {
 	NeedCornice   bool     `json:"need_cornice,omitempty"   jsonschema:"description=yangi karniz kerakmi"`
 	NeedInstall   bool     `json:"need_install,omitempty"   jsonschema:"description=montaj kerakmi"`
 	NeedDelivery  bool     `json:"need_delivery,omitempty"  jsonschema:"description=yetkazib berish kerakmi"`
-	Services      []string `json:"services,omitempty"       jsonschema:"description=xizmat kalitlari — har biri ALOHIDA element: sewing / tape / hook / install / cornice; bo'sh = standart (sewing+tape+hook)"`
+	Services      []string `json:"services,omitempty"       jsonschema:"description=xizmat kalitlari — har biri ALOHIDA element: sewing / tape / hook / install / cornice; [] = xizmat yo'q; berilmasa oxirgi hisob xizmatlari saqlanadi"`
 	DiscountPct   float64  `json:"discount_pct,omitempty"   jsonschema:"description=sotuvchi/manager qo'lda kiritgan chegirma foizi"`
 	PrepaymentPct float64  `json:"prepayment_pct,omitempty" jsonschema:"description=avans %"`
 }
@@ -344,6 +348,8 @@ type knowledgeLookupResult struct {
 // ma'lumotlari LLM kontekstiga kirmaydi: ularni ilova formasiga sotuvchi
 // kiritadi. `confirm` ham olib tashlandi — AI buyurtmani tasdiqlamaydi.
 type orderDraftArgs struct {
+	RequiredServices []string `json:"required_services,omitempty" jsonschema:"description=mijoz so'ragan xizmatlar: qoralamada borligi tekshiriladi; sewing/tape/hook/install"`
+
 	Action        string  `json:"action"                  jsonschema:"description=amal,enum=quote,enum=draft"`
 	OptionTier    string  `json:"option_tier,omitempty"   jsonschema:"description=mijoz tanlagan paket: economy|standard|premium — bo'sh bo'lsa oxirgi price_quote"`
 	Note          string  `json:"note,omitempty"          jsonschema:"description=buyurtmaga qo'shimcha eslatma"`

@@ -352,3 +352,7 @@
 2. Har task: kod → test → `make lint test` → `tasks.md` belgisi → commit (`feat(scope): ... (#task)`).
 3. Bosqich yakuni: golden + live + integratsiya → teg → `docs/LIVE-RUNS.md`.
 4. Har hafta: `[!]` ro'yxati backend bilan ko'rib chiqiladi, yechilganlar `[ ]` ga o'tadi.
+
+## Jonli baholashdan keyingi tuzatishlar (2026-10-25)
+
+- [~] S.5 Hisob xizmatlari va qoralama yaxlitligi, eskirgan taklif himoyasi, aniq maydon izohi va mustaqil jonli qayta baholash.

@@ -25,8 +25,8 @@ steps:
           - name: price_quote
             args:
               discount_pct: 5
-              need_delivery: true
-      - text: "Jami 4 836 000 so'm, avans 2 418 000 so'm."
+              services: []
+      - text: "Jami 4 446 000 so'm, avans 2 223 000 so'm."
     expect_tools: ["price_quote"]
     expect_stage: calc
     expect_products: false

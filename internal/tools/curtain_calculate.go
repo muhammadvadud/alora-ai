@@ -17,10 +17,9 @@ import (
 func CurtainCalculate(d Deps) tool.BaseTool {
 	h := &curtainCalcHandler{d: d}
 	return must(utils.InferTool("curtain_calculate",
-		"Parda uchun mato (m2), bezaklar va narxini hisoblaydi — o'lchamlar ma'lum bo'lgach, hisob so'ralganda chaqir. "+
-			"Bitta oyna uchun cornice_length_m + height_m + parts, bir nechta oyna uchun windows[] (har birida o'lcham, qty — nechta shunday deraza, parts). "+
-			"Rulon/rim (tayyor, burmasiz) pardalar hisoblanmaydi — sotuvchiga uzat. "+
-			"Natijadagi total ni aynan ayting. Narxni FAQAT shu tool beradi. variant_id uchun faqat katalog tool natijasidagi to'liq ID'dan foydalan; mahsulot nomi yoki SKU'ni variant_id qilib yuborma.",
+		"Mato va so'ralgan services narxini Django hisoblaydi; [] faqat mato. Xizmatni natijada bor bo'lsagina kiritilgan de. "+
+			"Bir oyna: cornice_length_m/height_m/parts; ko'p oyna: windows[]. variant_id faqat katalogdagi to'liq ID. "+
+			"Rim/rulon hisoblanmaydi. Jami va explanation'ni ishlat.",
 		h.do))
 }
 
@@ -50,7 +49,7 @@ func (h *curtainCalcHandler) do(ctx context.Context, a curtainCalcArgs) (curtain
 		}
 	}
 
-	in := curtains.CalcInput{Measurements: measurements, Services: []string{}, Role: userRole(ctx)}
+	in := curtains.CalcInput{Measurements: measurements, Services: normalizeServiceKeys(a.Services), Role: userRole(ctx)}
 	if err := curtains.ValidateWithLimits(in, v.Variant, v.Limits()); err != nil {
 		return curtainCalcResult{Error: err.Error()}, nil
 	}
@@ -69,8 +68,11 @@ func (h *curtainCalcHandler) do(ctx context.Context, a curtainCalcArgs) (curtain
 		Discount:    discountBlock(ctx, v, res, in.Role),
 		Display:     displayTotals(res),
 		Warnings:    append([]string{}, res.Warnings...),
-		Explanation: append(buildExplanation(v, res), curtains.Explain(res)...),
+		Explanation: buildExplanation(v, res),
 		Stale:       stale,
+	}
+	if a.SuggestSavings {
+		out.Explanation = append(out.Explanation, curtains.Explain(res)...)
 	}
 	if stale {
 		out.Warnings = append(out.Warnings, warnStale)
@@ -79,8 +81,10 @@ func (h *curtainCalcHandler) do(ctx context.Context, a curtainCalcArgs) (curtain
 	st, sid := loadState(ctx, h.d)
 	st.Apply("curtain_calculate", argsMap(a), now(h.d))
 	st.LastCalc = &res
+	st.QuoteNeedsReview = false
 	st.LastQuote = nil
 	st.SelectedOption = ""
+	st.LastOptions = nil
 	saveState(ctx, h.d, sid, st)
 	return out, nil
 }

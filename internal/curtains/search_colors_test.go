@@ -104,13 +104,25 @@ func TestNormalize(t *testing.T) {
 }
 
 func TestBuildColorGroupsCompleteness(t *testing.T) {
-	want := 15 // TZ: diapazon rangi (bej, grafit, oq, qora, ...) — 15 guruh
+	want := 16 // Asosiy ranglar va qum/pesochniy til sinonimlari.
 	if got := len(colorGroups); got != want {
 		t.Fatalf("rang guruhlari soni %d, kutilgan %d", got, want)
 	}
 	for i := range colorGroups {
 		if len(colorGroups[i].aliases) < 2 {
 			t.Errorf("guruh[%d] (%#v) uz+en+ru sinonimi to'liq emas", i, colorGroups[i])
+		}
+	}
+}
+
+func TestSandColorAliasesDoNotMeanSilver(t *testing.T) {
+	for _, query := range []string{"qum", "песочный", "sand"} {
+		matcher := newColorMatcher(query)
+		if !matcher.match("Kum rang", "") {
+			t.Fatalf("sand alias not recognized: %s", query)
+		}
+		if matcher.match("Kumush", "") || matcher.match("Kulrang", "") {
+			t.Fatalf("unrelated shade matched: %s", query)
 		}
 	}
 }

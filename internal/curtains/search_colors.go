@@ -32,6 +32,7 @@ var colorGroups = buildColorGroups()
 // Paket boshlanishida yig'iladi, keyin hech qayerda o'zgartirilmaydi (global mutable holat yo'q).
 func buildColorGroups() []colorGroup {
 	raw := []rawColor{
+		{words: []string{"qum", "kum rang", "қум", "песочный", "sand"}},
 		{words: []string{"bej", "beige", "бежевый"}, hex: "#F5F5DC"},
 		{words: []string{"grafit", "graphite", "графит"}, hex: "#404040"},
 		{words: []string{"oq", "white", "белый"}, hex: "#FFFFFF"},

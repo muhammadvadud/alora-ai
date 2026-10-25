@@ -38,7 +38,7 @@ func TestHallucination_PassesWhenPriceComesFromTools(t *testing.T) {
 	res := runScenario(scenario{
 		Name: "narx-tooldan",
 		Steps: []step{{
-			User:        "Karniz 4 m, balandlik 2.6 m, grafit mato. Hisob va avansni ayt.",
+			User:        "Karniz 4 m, balandlik 2.6 m, grafit mato. Tikuv, tasma, ilgich va yetkazish bilan hisob va avansni ayt.",
 			ExpectTools: []string{"curtain_calculate", "price_quote"},
 			ExpectStage: "calc",
 			LLM: []llmStep{
@@ -49,7 +49,7 @@ func TestHallucination_PassesWhenPriceComesFromTools(t *testing.T) {
 						"variant_id": VHiTechGrafit, "role": "portyera", "coefficient": 2.5,
 					}},
 				}}}},
-				{Tools: []llmTool{{Name: "price_quote", Args: map[string]any{"need_delivery": true}}}},
+				{Tools: []llmTool{{Name: "price_quote", Args: map[string]any{"need_delivery": true, "services": []string{"sewing", "tape", "hook"}}}}},
 				{Text: "Jami 5 070 000 so'm turadi, avans 2 535 000 so'm."},
 			},
 		}},

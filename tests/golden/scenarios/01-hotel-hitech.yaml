@@ -47,6 +47,7 @@ steps:
       - tools:
           - name: price_quote
             args:
+              services: [sewing, tape, hook]
               need_delivery: true
       - text: "Jami 5 070 000 so'm. Avans 2 535 000 so'm."
     expect_tools: ["price_quote"]

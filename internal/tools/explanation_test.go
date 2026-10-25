@@ -13,17 +13,19 @@ func TestBuildExplanation(t *testing.T) {
 			{
 				Parts: []curtains.PartResult{
 					{
-						Role:         curtains.RolePortyera,
-						SKU:          "Office Minimal",
-						WidthM:       dec(2.5),
-						HeightM:      dec(1.5),
-						Coef:         dec(1.5),
-						RawAreaM2:    dec(6.19),
-						AreaM2:       dec(6.4),
-						WastePercent: dec(13.3),
-						PriceUnit:    curtains.PerSqm,
-						UnitPrice:    dec(45000),
-						LineTotal:    dec(288000),
+						Role:          curtains.RolePortyera,
+						SKU:           "Office Minimal",
+						WidthM:        dec(2.5),
+						HeightM:       dec(1.5),
+						Coef:          dec(1.5),
+						VisibleAreaM2: dec(5.625),
+						WasteAreaM2:   dec(0.565),
+						RawAreaM2:     dec(6.19),
+						AreaM2:        dec(6.4),
+						WastePercent:  dec(13.3),
+						PriceUnit:     curtains.PerSqm,
+						UnitPrice:     dec(45000),
+						LineTotal:     dec(288000),
 					},
 				},
 				Accessories: []curtains.AccessoryResult{
@@ -49,7 +51,7 @@ func TestBuildExplanation(t *testing.T) {
 		t.Fatal("Kutilgan explanation qatorlari chiqmadi")
 	}
 
-	expectedPart := "portyera Office Minimal: eni 2.5 m × K 1.5; balandlik 1.5 m; xom maydon 6.19 m² → 6.4 m² (chok/bukma zapasi 13.3%); 6.4 m² × 45 000 so'm = 288 000 so'm"
+	expectedPart := "portyera Office Minimal: ko'rinadigan maydon: 2.5 m × K 1.5 × 1.5 m = 5.625 m²; chok/bukma zapasi 0.565 m²; zapasli maydon 6.19 m²; yaxlitlangan narxlanadigan maydon 6.4 m²; 6.4 m² × 45 000 so'm = 288 000 so'm"
 	if lines[0] != expectedPart {
 		t.Errorf("Kutilgan: %s\nHaqiqiy: %s", expectedPart, lines[0])
 	}

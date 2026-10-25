@@ -395,15 +395,13 @@ func buildExplanation(v *curtains.View, res curtains.CalcResult) []string {
 			unit := unitLabel(p.PriceUnit)
 			var b strings.Builder
 			fmt.Fprintf(&b, "%s %s: ", p.Role, partLabel(v, p.VariantID, p.SKU))
-			if p.WidthM.IsPositive() && p.Coef.IsPositive() {
-				fmt.Fprintf(&b, "eni %s m × K %s; ", p.WidthM.String(), p.Coef.String())
-			}
-			if p.HeightM.IsPositive() {
-				fmt.Fprintf(&b, "balandlik %s m; ", p.HeightM.String())
+			if p.VisibleAreaM2.IsPositive() {
+				fmt.Fprintf(&b, "ko'rinadigan maydon: %s m × K %s × %s m = %s m²; ",
+					p.WidthM.String(), p.Coef.String(), p.HeightM.String(), p.VisibleAreaM2.String())
 			}
 			if p.WastePercent.IsPositive() {
-				fmt.Fprintf(&b, "xom maydon %s %s → %s %s (chok/bukma zapasi %s%%); ",
-					p.RawAreaM2.String(), unit, p.AreaM2.String(), unit, p.WastePercent.StringFixed(1))
+				fmt.Fprintf(&b, "chok/bukma zapasi %s m²; zapasli maydon %s m²; yaxlitlangan narxlanadigan maydon %s m²; ",
+					p.WasteAreaM2.String(), p.RawAreaM2.String(), p.AreaM2.String())
 			}
 			if p.AreaM2.IsPositive() && p.UnitPrice.IsPositive() {
 				fmt.Fprintf(&b, "%s %s × %s = %s", p.AreaM2.String(), unit, displayMoney(p.UnitPrice), displayMoney(p.LineTotal))

@@ -124,6 +124,9 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 	// option_tier bilan aynan shu natijani oladi (ADR-016). Eski paketlar almashtiriladi.
 	st.LastOptions = make(map[curtains.OptionTier]curtains.OptionSnapshot, len(plans))
 	st.SelectedOption = ""
+	st.LastCalc = nil
+	st.LastQuote = nil
+	st.QuoteNeedsReview = false
 	for i := range plans {
 		if results[i] != nil {
 			st.LastOptions[plans[i].Tier] = curtains.OptionSnapshot{Result: *results[i]}
