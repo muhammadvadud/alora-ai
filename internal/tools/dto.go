@@ -190,6 +190,7 @@ type buildOptionsArgs struct {
 	Pattern        string  `json:"pattern,omitempty" jsonschema:"description=bezak turi"`
 	Transparency   string  `json:"transparency,omitempty" jsonschema:"description=shaffoflik"`
 	Color          string  `json:"color,omitempty" jsonschema:"description=istalgan rang"`
+	TulColor       string  `json:"tul_color,omitempty" jsonschema:"description=tulning alohida istalgan rangi; portyera rangini avtomatik ko'chirma; mos rang bo'lmasa paket cheklovi qaytadi"`
 }
 
 type buildOptionResult struct {

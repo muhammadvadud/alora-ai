@@ -49,11 +49,23 @@ func displayMoney(d decimal.Decimal) string {
 
 // displayTotals — Django natijasidan o'qiladigan summalar. Sonlar hisobdan, matn bu yerda.
 func displayTotals(r curtains.CalcResult) map[string]string {
+	deliveryStatus := "yetkazish hisobga kiritilmagan"
+	included := r.DeliveryAmount.IsPositive()
+	for _, service := range r.Services {
+		included = included || service.IsDelivery
+	}
+	if included {
+		deliveryStatus = "yetkazish hisobga kiritilgan"
+		if r.DeliveryAmount.IsZero() {
+			deliveryStatus += ", ushbu hisobdagi narxi nol"
+		}
+	}
 	return map[string]string{
-		"subtotal": displayMoney(r.Subtotal),
-		"discount": displayMoney(r.DiscountAmount) + " (" + r.DiscountPercent.StringFixed(0) + "%)",
-		"delivery": displayMoney(r.DeliveryAmount),
-		"total":    displayMoney(r.Total),
+		"subtotal":        displayMoney(r.Subtotal),
+		"discount":        displayMoney(r.DiscountAmount) + " (" + r.DiscountPercent.StringFixed(0) + "%)",
+		"delivery":        displayMoney(r.DeliveryAmount),
+		"delivery_status": deliveryStatus,
+		"total":           displayMoney(r.Total),
 	}
 }
 

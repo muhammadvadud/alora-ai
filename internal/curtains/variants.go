@@ -176,6 +176,9 @@ func basicPart(card ProductCard, role PartRole, st SessionState, coef decimal.De
 // Segmentda qatlam bo'lmasa `fallback` segmentlari navbat bilan sinaladi —
 // premium tul katalogda bo'lmasligi mumkin, lekin tul tul bo'lib qolaveradi.
 func cheapestLayer(v *View, q SearchQuery, layer string, segments ...Segment) []ProductCard {
+	if layer == string(RoleTul) && q.TulColor != "" {
+		q.Color, q.StrictColor = q.TulColor, true
+	}
 	return cheapestWhere(v, q, layer, strictFilter{}, segments...)
 }
 

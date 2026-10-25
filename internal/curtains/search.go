@@ -19,13 +19,14 @@ const (
 // Bo'sh maydonlar filtr emas (ixtiyoriy); MaxPrice > 0 — narx chegarasi.
 // Limit ≤ 0 → 5, > 10 → 10.
 type SearchQuery struct {
-	Query        string          // nom/SKU/kod bo'yicha qat'iy qidiruv ("Velvet Chek") — so'zlar mahsulot nomi yoki variant SKU ichida
-	Room         string          // tavsiya etiladigan xona (RecommendedRooms bo'yicha)
-	Style        string          // uslub (Product.Style)
-	Pattern      string          // bezak (Product.Pattern ichida qidiriladi)
-	Transparency string          // shaffoflik (Product.Transparency)
-	Layer        string          // qatlam: tul|portyera|lambrekan|astar|kant|rim|rulon — kategoriya/fabric_type/nom bo'yicha (LayerOf)
-	Color        string          // rang: nom/so'z — sinonim va hex ΔE orqali (search_colors.go)
+	Query        string // nom/SKU/kod bo'yicha qat'iy qidiruv ("Velvet Chek") — so'zlar mahsulot nomi yoki variant SKU ichida
+	Room         string // tavsiya etiladigan xona (RecommendedRooms bo'yicha)
+	Style        string // uslub (Product.Style)
+	Pattern      string // bezak (Product.Pattern ichida qidiriladi)
+	Transparency string // shaffoflik (Product.Transparency)
+	Layer        string // qatlam: tul|portyera|lambrekan|astar|kant|rim|rulon — kategoriya/fabric_type/nom bo'yicha (LayerOf)
+	Color        string // rang: nom/so'z — sinonim va hex ΔE orqali (search_colors.go)
+	TulColor     string
 	Kind         string          // "fabric" | "accessory" | "" (hammasi)
 	Segment      Segment         // narx segmenti (berilsa — mos kelishi shart)
 	MaxPrice     decimal.Decimal // yuqori narx chegarasi (0 — cheklovsiz)
@@ -35,7 +36,8 @@ type SearchQuery struct {
 	StrictTransparency bool
 	// StrictRoom — Room ham ball emas, qat'iy filtr (xuddi shu sabab bilan faqat
 	// build_options ichki chaqiruvi; product_search DTO'siga chiqmaydi).
-	StrictRoom bool
+	StrictRoom  bool
+	StrictColor bool
 }
 
 // ProductCard — qidiruv natijasidagi bitta variantning kartochkasi (TZ §3.1).
@@ -154,7 +156,11 @@ func Search(v *View, q SearchQuery) []ProductCard {
 				continue
 			}
 			score := base
-			if colorOn && cm.match(vx.ColorName, vx.ColorHex) {
+			colorMatch := colorOn && cm.match(vx.ColorName, vx.ColorHex)
+			if q.StrictColor && colorOn && !colorMatch {
+				continue
+			}
+			if colorMatch {
 				score++
 			}
 			// Bufer to'lganida, skor hozirgi eng yomondan past variant hech qanday

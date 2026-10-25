@@ -48,6 +48,7 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 		return buildOptionsResult{Error: "karniz uzunligi va balandlik kerak — cornice_length_m va height_m bilan qayta chaqir yoki sotuvchidan so'ra"}, nil
 	}
 	q := curtains.SearchQuery{Room: first(a.Room, st.Room), Style: first(a.Style, st.Style), Pattern: first(a.Pattern, st.Pattern), Transparency: first(a.Transparency, st.Transparency), Color: first(a.Color, "")}
+	q.TulColor = a.TulColor
 	plans := curtains.PlanOptions(v, st, q)
 	outs := make([]buildOptionResult, 3)
 	results := [3]*curtains.CalcResult{}
