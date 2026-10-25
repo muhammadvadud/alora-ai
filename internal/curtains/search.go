@@ -157,8 +157,11 @@ func Search(v *View, q SearchQuery) []ProductCard {
 			}
 			score := base
 			colorMatch := colorOn && cm.match(vx.ColorName, vx.ColorHex)
-			if q.StrictColor && colorOn && !colorMatch {
-				continue
+			if q.StrictColor && colorOn {
+				colorMatch = cm.matchStrict(vx.ColorName, vx.ColorHex)
+				if !colorMatch {
+					continue
+				}
 			}
 			if colorMatch {
 				score++

@@ -13,7 +13,7 @@ func paletteView() *View {
 		},
 		Variants: []Variant{
 			{ID: "port-grey", ProductID: "port", ColorName: "Grafit", Price: d("100"), PriceUnit: PerSqm, IsActive: true},
-			{ID: "tul-1", ProductID: "tul", ColorName: "Pushti", Price: d("5"), PriceUnit: PerSqm, IsActive: true},
+			{ID: "tul-1", ProductID: "tul", ColorName: "Pushti", ColorHex: "#FFFFFF", Price: d("5"), PriceUnit: PerSqm, IsActive: true},
 			{ID: "tul-2", ProductID: "tul", ColorName: "Pushti", Price: d("6"), PriceUnit: PerSqm, IsActive: true},
 			{ID: "tul-3", ProductID: "tul", ColorName: "Pushti", Price: d("7"), PriceUnit: PerSqm, IsActive: true},
 			{ID: "tul-4", ProductID: "tul", ColorName: "Белый", Price: d("10"), PriceUnit: PerSqm, IsActive: true},
@@ -42,5 +42,19 @@ func TestSearch_StrictColorFiltersBeforePerProductLimit(t *testing.T) {
 	cards := Search(paletteView(), SearchQuery{Layer: "tul", Color: "oq", StrictColor: true})
 	if len(cards) != 1 || cards[0].VariantID != "tul-4" {
 		t.Fatalf("uch mos bo'lmagan variant to'rtinchi mos rangni yashirmasin: %+v", cards)
+	}
+}
+
+func TestStrictColor_ExplicitNameWinsOverConflictingHex(t *testing.T) {
+	matcher := newColorMatcher("oq")
+	for _, name := range []string{"Pushti", "To'q pushti", "Розовый"} {
+		if matcher.matchStrict(name, "#FFFFFF") {
+			t.Fatalf("oq HEX boshqa aniq rangni oqqa aylantirmasin: %s", name)
+		}
+	}
+	for _, name := range []string{"Oq", "Белый", "Antik oq"} {
+		if !matcher.matchStrict(name, "#FFC0CB") {
+			t.Fatalf("aniq oq nomi HEXdan ustun: %s", name)
+		}
 	}
 }

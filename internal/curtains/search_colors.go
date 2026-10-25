@@ -209,6 +209,27 @@ func (m colorMatcher) match(colorName, colorHex string) bool {
 	return false
 }
 
+func (m colorMatcher) matchStrict(colorName, colorHex string) bool {
+	words := strings.FieldsFunc(normalize(colorName), func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	})
+	knownName := false
+	for _, word := range words {
+		if _, ok := lookupGroup(word); ok {
+			knownName = true
+		}
+		for _, wanted := range m.words {
+			if word == wanted.word || wanted.group.has(word) {
+				return true
+			}
+		}
+	}
+	if knownName && m.haveHex {
+		return false
+	}
+	return m.match(colorName, colorHex)
+}
+
 // colorScore — moslik tekshiruvining ochiq ko'rinishi; testlar shu orqali yoziladi.
 func colorScore(query, colorName, colorHex string) bool {
 	return newColorMatcher(query).match(colorName, colorHex)
