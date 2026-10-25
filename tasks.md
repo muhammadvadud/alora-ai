@@ -289,7 +289,7 @@
 - [x] S.3a Katalogdagi ro'yxat va obyekt teglaridan mahalliy mahsulot aliaslari bir xil qidiriladi.
 - [x] S.3b Hisob izohi zapas va rulon bichish chiqindisini chalkashtirmaydi; chegirma foizlari doim qo'shiladi deb taxmin qilmaydi.
 - [x] S.3c Paketda haqiqiy rang/shaffoflik va tayyor budjet taqqoslashi bor; kalitsiz regressiya va barcha Go tekshiruvlari o'tdi.
-- [ ] S.4 Kalitsiz regressiyalar va tejamkor yakuniy API baholash.
+- [x] S.4 Build/vet/lint/race, 30 savolli retrieval va 24 jonli API navbati; yakuniy sotuv bahosi 91/100, hisobiy sarf $0.024940098. Markaziy hisobot backend/docs/sales-training/ ichida.
 
 ## Bosqich 4 — Sayqal (davomiy)
 
