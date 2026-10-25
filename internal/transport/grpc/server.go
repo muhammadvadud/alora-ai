@@ -140,14 +140,13 @@ func (s *Server) Chat(req *alorav1.ChatRequest, stream grpcgo.ServerStreamingSer
 		CustomerMode: info.CustomerMode, ConversationID: info.ConversationID,
 	})
 	info = requestInfo(req)
-	if s.reporter != nil {
+	if s.reporter != nil && req.GetContext()["message_id"] == "" {
 		if err := s.reporter.LogMessage(ctx, backend.MessageLog{SessionID: req.GetSessionId(), ConversationID: info.ConversationID, Role: "user", Content: req.GetMessage()}); err != nil {
 			slog.Error("foydalanuvchi xabarini outbox'ga qo'shib bo'lmadi", "error", err, "session_id", req.GetSessionId())
 		}
 	}
-	// LLM ga boradigan nusxa — telefon maskalangan. Django LogMessage yuqorida
-	// ASL matnni oldi, shuning uchun audit va mijoz o'z raqamini ko'radi;
-	// model kontekstida PII bo'lmaydi (rules §1.6, ADR-020).
+	// Django avval saqlagan USER xabari message_id bilan keladi — qayta loglanmaydi.
+	// Modelga esa faqat markaziy PII filtridan o'tgan nusxa yuboriladi.
 	llmMessage := pii.Scrub(req.GetMessage())
 	var assistantContent string
 	for ev := range s.chat.Stream(ctx, req.GetSessionId(), llmMessage) {

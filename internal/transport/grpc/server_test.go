@@ -82,10 +82,12 @@ func TestServerChatFiltersThinkingAndPreservesOrder(t *testing.T) {
 type recordingReporter struct {
 	logs  []backend.MessageLog
 	usage []agent.Usage
+	ids   []backend.UsageIDs
 }
 
-func (r *recordingReporter) ReportUsage(_ context.Context, usage agent.Usage, _ backend.UsageIDs) error {
+func (r *recordingReporter) ReportUsage(_ context.Context, usage agent.Usage, ids backend.UsageIDs) error {
 	r.usage = append(r.usage, usage)
+	r.ids = append(r.ids, ids)
 	return nil
 }
 func (r *recordingReporter) LogMessage(_ context.Context, message backend.MessageLog) error {
@@ -98,7 +100,7 @@ func TestServerChatReportsMessagesAndUsage(t *testing.T) {
 	fake := &fakeStreamer{events: []agent.Event{{Kind: agent.KindContent, Content: "javob"}, {Kind: agent.KindDone, Usage: &agent.Usage{PromptTokens: 3, CompletionTokens: 2}}}}
 	srv := New(fake, Options{Reporter: reporter})
 	stream := &fakeChatStream{ctx: context.Background()}
-	req := &alorav1.ChatRequest{SessionId: "s1", UserId: "u1", TenantId: "t1", Message: "savol", Context: map[string]string{"conversation_id": "c1", "message_id": "m1"}}
+	req := &alorav1.ChatRequest{SessionId: "s1", UserId: "u1", TenantId: "t1", Message: "savol", Context: map[string]string{"conversation_id": "c1"}}
 	if err := srv.Chat(req, stream); err != nil {
 		t.Fatal(err)
 	}

@@ -287,6 +287,7 @@
 - [x] S.5b Qat'iy rangda aniq nom zid HEX'dan ustun; uchta mos kelmagan variantdan keyingi oq tul ham topiladi, kirill va to'q pushti regressiyalari o'tdi.
 - [x] S.6 Aniq ism/manzil/email maydonlari, eski/yangi tarix va state himoyalandi; JSON aniqligi, narx va tool juftligi saqlandi. Build/vet/lint/race va gRPC chegarasi kalitsiz tekshirildi.
 - [x] S.6a Eski multimodal matn ham nusxada maskalanadi; deprecated turga to'g'ridan-to'g'ri murojaat yo'q, barcha lint va race tekshiruvlari qayta o'tdi.
+- [x] S.7 Oldindan saqlangan USER message_id Go usage'da saqlanadi; user xabari ikkinchi marta loglanmaydi, legacy yo'l regressiyasi saqlandi.
 
 - [x] S.1 Boshlang'ich ish holati build/vet/lint/race bilan tekshirildi va alohida branchda saqlandi.
 - [x] S.2 Manbali bilim, ixcham prompt va minimal sotuv yordamchilari uchun ADR-021 qayd etildi.
