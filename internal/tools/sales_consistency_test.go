@@ -107,3 +107,23 @@ func TestFasonCard_ResolvesMeasurementsWithoutModelArithmetic(t *testing.T) {
 		t.Fatal("kant topilmasa portyera bilan almashtirilmasligi kerak")
 	}
 }
+
+func TestBuildOptions_BudgetComparisonUsesReturnedTotal(t *testing.T) {
+	deps, _, state := optionsDeps()
+	ctx := session.WithID(context.Background(), "budget-options")
+	result, err := (&buildOptionsHandler{d: deps}).do(ctx, buildOptionsArgs{BudgetMax: 3500000})
+	if err != nil || result.Error != "" {
+		t.Fatalf("paketlar: %v %+v", err, result)
+	}
+	if result.Options[0].BudgetNote != "budjetga sig'adi" || result.Options[2].BudgetNote != "budjetdan 500 000 so'm yuqori" || !state.state.BudgetMax.Equal(d("3500000")) {
+		t.Fatalf("budjet va tayyor hisob: %+v", result.Options)
+	}
+}
+
+func TestOptionVariants_ExposeActualVariantColor(t *testing.T) {
+	plan := curtains.OptionPlan{Parts: []curtains.PartSpec{{Role: curtains.RolePortyera, VariantID: vPortyera}}}
+	variants := optionVariants(plan, testCatalog().View())
+	if len(variants) != 1 || variants[0].Color != "grafit" {
+		t.Fatalf("rang nomdan taxmin qilinmasligi kerak: %+v", variants)
+	}
+}

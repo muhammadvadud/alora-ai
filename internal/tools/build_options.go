@@ -41,6 +41,9 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 	if a.HeightM > 0 {
 		st.HeightM = dec(a.HeightM)
 	}
+	if a.BudgetMax > 0 {
+		st.BudgetMax = dec(a.BudgetMax)
+	}
 	if st.CorniceLengthM.IsZero() || st.HeightM.IsZero() {
 		return buildOptionsResult{Error: "karniz uzunligi va balandlik kerak — cornice_length_m va height_m bilan qayta chaqir yoki sotuvchidan so'ra"}, nil
 	}
@@ -96,6 +99,12 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 		success++
 		outs[i].Total = displayMoney(results[i].Total)
 		outs[i].Display = displayTotals(*results[i])
+		if st.BudgetMax.IsPositive() {
+			outs[i].BudgetNote = "budjetga sig'adi"
+			if results[i].Total.GreaterThan(st.BudgetMax) {
+				outs[i].BudgetNote = "budjetdan " + displayMoney(results[i].Total.Sub(st.BudgetMax)) + " yuqori"
+			}
+		}
 		attachPlanProducts(ctx, v, plans[i])
 	}
 	if success == 0 {
@@ -127,11 +136,18 @@ func (h *buildOptionsHandler) do(ctx context.Context, a buildOptionsArgs) (build
 func optionVariants(p curtains.OptionPlan, v *curtains.View) []buildOptionVariant {
 	variants := make([]buildOptionVariant, 0, len(p.Parts)+len(p.Accessories))
 	for _, part := range p.Parts {
-		variants = append(variants, buildOptionVariant{
+		variant := buildOptionVariant{
 			Role:      string(part.Role),
 			VariantID: part.VariantID,
 			Name:      partLabel(v, part.VariantID, ""),
-		})
+		}
+		if value, ok := v.Variant(part.VariantID); ok {
+			variant.Color = value.ColorName
+			if product, ok := v.Product(value.ProductID); ok {
+				variant.Transparency = product.Transparency
+			}
+		}
+		variants = append(variants, variant)
 	}
 	for _, accessory := range p.Accessories {
 		variants = append(variants, buildOptionVariant{

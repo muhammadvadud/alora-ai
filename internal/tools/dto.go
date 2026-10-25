@@ -193,21 +193,24 @@ type buildOptionsArgs struct {
 }
 
 type buildOptionResult struct {
-	Tier     string               `json:"tier"`
-	Why      string               `json:"why,omitempty"`
-	Total    string               `json:"total,omitempty"` // o'qiladigan yakuniy summa
-	Display  any                  `json:"display,omitempty"`
-	Lines    []string             `json:"lines,omitempty"` // tarkib xulosasi, eng ko'pi 3 qator
-	Variants []buildOptionVariant `json:"variants,omitempty"`
-	Error    string               `json:"error,omitempty"`
+	Tier       string               `json:"tier"`
+	Why        string               `json:"why,omitempty"`
+	Total      string               `json:"total,omitempty"` // o'qiladigan yakuniy summa
+	Display    any                  `json:"display,omitempty"`
+	Lines      []string             `json:"lines,omitempty"` // tarkib xulosasi, eng ko'pi 3 qator
+	Variants   []buildOptionVariant `json:"variants,omitempty"`
+	BudgetNote string               `json:"budget_note,omitempty"`
+	Error      string               `json:"error,omitempty"`
 }
 
 // buildOptionVariant — paketni keyin qayta hisoblashda model ishlatishi kerak
 // bo'lgan katalog identifikatori. Nom yoki SKU variant_id o'rnini bosa olmaydi.
 type buildOptionVariant struct {
-	Role      string `json:"role"`
-	VariantID string `json:"variant_id"`
-	Name      string `json:"name,omitempty"`
+	Role         string `json:"role"`
+	VariantID    string `json:"variant_id"`
+	Name         string `json:"name,omitempty"`
+	Color        string `json:"color,omitempty"`
+	Transparency string `json:"transparency,omitempty"`
 }
 
 type buildOptionsResult struct {

@@ -288,6 +288,7 @@
 - [x] S.3 Ko'p tilli bilim qidiruvi, manbali mahsulot ma'lumoti va izchil paket/qoralama oqimi; 30 savolli real korpus retrieval tekshiruvi.
 - [x] S.3a Katalogdagi ro'yxat va obyekt teglaridan mahalliy mahsulot aliaslari bir xil qidiriladi.
 - [x] S.3b Hisob izohi zapas va rulon bichish chiqindisini chalkashtirmaydi; chegirma foizlari doim qo'shiladi deb taxmin qilmaydi.
+- [x] S.3c Paketda haqiqiy rang/shaffoflik va tayyor budjet taqqoslashi bor; kalitsiz regressiya va barcha Go tekshiruvlari o'tdi.
 - [ ] S.4 Kalitsiz regressiyalar va tejamkor yakuniy API baholash.
 
 ## Bosqich 4 — Sayqal (davomiy)
