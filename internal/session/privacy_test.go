@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 
@@ -70,10 +71,12 @@ func TestPrivateMessages_TextPartsAndSpeakerNameCannotBypassMask(t *testing.T) {
 	secret := "Ismim Sinovbek Auditov"
 	message := &schema.Message{
 		Role: schema.User, Name: "Sinovbek", ReasoningContent: secret,
-		MultiContent:             []schema.ChatMessagePart{{Type: schema.ChatMessagePartTypeText, Text: secret}},
 		UserInputMultiContent:    []schema.MessageInputPart{{Type: schema.ChatMessagePartTypeText, Text: secret}},
 		AssistantGenMultiContent: []schema.MessageOutputPart{{Type: schema.ChatMessagePartTypeText, Text: secret}},
 	}
+	message.MultiContent = slices.Grow(message.MultiContent, 1)[:1]
+	message.MultiContent[0].Type = schema.ChatMessagePartTypeText
+	message.MultiContent[0].Text = secret
 	got := privateMessages([]*schema.Message{message})[0]
 	for _, text := range []string{got.Name, got.ReasoningContent, got.MultiContent[0].Text, got.UserInputMultiContent[0].Text, got.AssistantGenMultiContent[0].Text} {
 		if strings.Contains(text, "Sinovbek") {

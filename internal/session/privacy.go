@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"slices"
 
 	"github.com/cloudwego/eino/schema"
 
@@ -59,7 +60,7 @@ func privateMessages(messages []*schema.Message) []*schema.Message {
 		if copy.Role == schema.User && copy.Name != "" {
 			copy.Name = "mijoz"
 		}
-		copy.MultiContent = append([]schema.ChatMessagePart(nil), message.MultiContent...)
+		copy.MultiContent = slices.Clone(message.MultiContent)
 		for partIndex, part := range copy.MultiContent {
 			copy.MultiContent[partIndex].Text = pii.Scrub(part.Text)
 		}
