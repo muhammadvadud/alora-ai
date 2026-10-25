@@ -602,6 +602,12 @@ kaliti taklifga bir marta kiradi. Narx formulasi, proto va ReAct yadrosi
 o'zgarmaydi. Muqobil: uzun umumiy prompt va modelni qimmatrog'iga almashtirish
 — token sarfi va katalog cheklovlarini hal qilmagani uchun rad etildi.
 
+Paket kartochkasi variantning haqiqiy rangi/shaffofligini ham beradi: model
+rang mosligini nomdan taxmin qilmaydi. Budjet farqi mavjud CompareOptions
+kabi faqat Django qaytargan jami bilan mijoz budjetining taqqoslashi;
+bu narx formulasini Go'ga ko'chirmaydi. Taqqoslash tool natijasida tayyor
+matn bo'ladi, LLM pulni mustaqil ayirmaydi.
+
 | # | Sana | Qaror | Sabab |
 |---|---|---|---|
 | ADR-001 | 2026-09-12 | `Catalog` gRPC serveri Django'da, Go — klient (TZ §7 "Agent, Catalog server" o'rniga) | Backend allaqachon `Catalog.Snapshot/Watch` serverini yozgan (`apps/chat/grpc_server/catalog_service.py`); Go Watch oqimini tortadi. Shartnoma o'zgarmaydi. |
