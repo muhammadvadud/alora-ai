@@ -390,7 +390,7 @@ func buildExplanation(v *curtains.View, res curtains.CalcResult) []string {
 				fmt.Fprintf(&b, "balandlik %s m; ", p.HeightM.String())
 			}
 			if p.WastePercent.IsPositive() {
-				fmt.Fprintf(&b, "xom maydon %s %s → %s %s (chiqindi %s%%); ",
+				fmt.Fprintf(&b, "xom maydon %s %s → %s %s (chok/bukma zapasi %s%%); ",
 					p.RawAreaM2.String(), unit, p.AreaM2.String(), unit, p.WastePercent.StringFixed(1))
 			}
 			if p.AreaM2.IsPositive() && p.UnitPrice.IsPositive() {

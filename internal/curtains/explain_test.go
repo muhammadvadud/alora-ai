@@ -20,10 +20,13 @@ func TestExplain(t *testing.T) {
 	}
 	got := Explain(res)
 	joined := strings.Join(got, "\n")
-	for _, want := range []string{"chiqindi 18.5%", "2.5 — 2 ga tushirsangiz", "chegirma 7% qo'llandi (tier 2% + qo'lda 5%)"} {
+	for _, want := range []string{"chok/bukma zapasi 18.5%", "2.5 — 2 ga tushirsangiz", "chegirma 7% qo'llandi (tier 2%; qo'lda 5%)"} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("kutildi %q, got:\n%s", want, joined)
 		}
+	}
+	if strings.Contains(joined, "rulon eni bilan kesim mos kelmadi") {
+		t.Fatal("hisob natijasidan kelib chiqmagan sabab aytilmasligi kerak")
 	}
 	if strings.Contains(joined, "tul: burma") {
 		t.Fatal("coef 1.5 uchun tavsiya bo'lmasligi kerak")

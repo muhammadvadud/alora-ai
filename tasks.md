@@ -287,6 +287,7 @@
 - [x] S.2a O'zbek/rus/kirill bilim qidiruvi, 8 qoida/2000 belgi prompt byudjeti va 6 natijali lookup kalitsiz testlar bilan tekshirildi.
 - [x] S.3 Ko'p tilli bilim qidiruvi, manbali mahsulot ma'lumoti va izchil paket/qoralama oqimi; 30 savolli real korpus retrieval tekshiruvi.
 - [x] S.3a Katalogdagi ro'yxat va obyekt teglaridan mahalliy mahsulot aliaslari bir xil qidiriladi.
+- [x] S.3b Hisob izohi zapas va rulon bichish chiqindisini chalkashtirmaydi; chegirma foizlari doim qo'shiladi deb taxmin qilmaydi.
 - [ ] S.4 Kalitsiz regressiyalar va tejamkor yakuniy API baholash.
 
 ## Bosqich 4 — Sayqal (davomiy)

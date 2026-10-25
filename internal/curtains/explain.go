@@ -23,7 +23,7 @@ func Explain(res CalcResult) []string {
 	for _, m := range res.Measurements {
 		for _, p := range m.Parts {
 			if p.WastePercent.IsPositive() {
-				add(fmt.Sprintf("%s (%s): chiqindi %s%% — rulon eni bilan kesim mos kelmadi", p.Role, p.SKU, p.WastePercent.StringFixed(1)))
+				add(fmt.Sprintf("%s (%s): chok/bukma zapasi %s%%; rulon bichish chiqindisi emas", p.Role, p.SKU, p.WastePercent.StringFixed(1)))
 			}
 		}
 	}
@@ -36,7 +36,7 @@ func Explain(res CalcResult) []string {
 		}
 	}
 	if res.DiscountPercent.IsPositive() {
-		add(fmt.Sprintf("chegirma %s%% qo'llandi (tier %s%% + qo'lda %s%%)", res.DiscountPercent.String(), res.TierDiscountPercent.String(), res.ManualDiscountPercent.String()))
+		add(fmt.Sprintf("chegirma %s%% qo'llandi (tier %s%%; qo'lda %s%%)", res.DiscountPercent.String(), res.TierDiscountPercent.String(), res.ManualDiscountPercent.String()))
 	}
 	return out
 }

@@ -49,7 +49,7 @@ func TestBuildExplanation(t *testing.T) {
 		t.Fatal("Kutilgan explanation qatorlari chiqmadi")
 	}
 
-	expectedPart := "portyera Office Minimal: eni 2.5 m × K 1.5; balandlik 1.5 m; xom maydon 6.19 m² → 6.4 m² (chiqindi 13.3%); 6.4 m² × 45 000 so'm = 288 000 so'm"
+	expectedPart := "portyera Office Minimal: eni 2.5 m × K 1.5; balandlik 1.5 m; xom maydon 6.19 m² → 6.4 m² (chok/bukma zapasi 13.3%); 6.4 m² × 45 000 so'm = 288 000 so'm"
 	if lines[0] != expectedPart {
 		t.Errorf("Kutilgan: %s\nHaqiqiy: %s", expectedPart, lines[0])
 	}
