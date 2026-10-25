@@ -112,6 +112,8 @@ type MeasurementResult struct {
 	RawAreaM2        decimal.Decimal   `json:"raw_area_m2"`
 	AreaM2           decimal.Decimal   `json:"area_m2"`
 	AccessoriesTotal decimal.Decimal   `json:"accessories_total"`
+	PartsTotal       *decimal.Decimal  `json:"parts_total,omitempty"`
+	MeasurementTotal *decimal.Decimal  `json:"measurement_total,omitempty"`
 }
 
 type ServiceLine struct {

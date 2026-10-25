@@ -45,10 +45,16 @@ func trimHistory(msgs []*schema.Message, max int) []*schema.Message {
 	return msgs[start:]
 }
 
-// limitToolResults model kontekstini og'irlashtiradigan eski tool natijalarini
+// limitToolResults model kontekstini og'irlashtiradigan tool natijalarini
 // qisqartiradi. Store'dagi xabarlar o'zgarmasligi uchun faqat xabar struct'ining
-// nusxasi tahrirlanadi; oxirgi ikki natija esa modelga to'liq kerak bo'ladi.
+// nusxasi tahrirlanadi.
 func limitToolResults(msgs []*schema.Message, maxChars int) []*schema.Message {
+	return limitToolResultsKeeping(msgs, maxChars, 0)
+}
+
+// limitToolResultsKeeping eng yangi natijalarni to'liq qoldirib, avvalgi
+// natijalarni keyingi model chaqiruvlarida ixchamlaydi.
+func limitToolResultsKeeping(msgs []*schema.Message, maxChars, keepLatest int) []*schema.Message {
 	if maxChars <= 0 || len(msgs) == 0 {
 		return msgs
 	}
@@ -68,7 +74,7 @@ func limitToolResults(msgs []*schema.Message, maxChars int) []*schema.Message {
 			continue
 		}
 		seenTools++
-		if seenTools > totalTools-2 || utf8.RuneCountInString(msg.Content) <= maxChars {
+		if seenTools > totalTools-keepLatest || utf8.RuneCountInString(msg.Content) <= maxChars {
 			continue
 		}
 		clone := *msg

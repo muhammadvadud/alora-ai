@@ -17,7 +17,7 @@ func turn(text string) []*schema.Message {
 	}
 }
 
-func TestLimitToolResultsKeepsLatestTwoAndStoreContent(t *testing.T) {
+func TestLimitToolResultsTrimsEveryStoredToolResultAndPreservesStore(t *testing.T) {
 	const originalSize = 10000
 	const limit = 3000
 	content := strings.Repeat("x", originalSize)
@@ -37,18 +37,33 @@ func TestLimitToolResultsKeepsLatestTwoAndStoreContent(t *testing.T) {
 			continue
 		}
 		toolIndex++
-		if toolIndex <= 3 {
-			if len([]rune(msg.Content)) > limit+len([]rune(" …[qisqartirildi, 10000 belgi]")) {
-				t.Fatalf("eski tool natijasi limitdan oshdi: %d", len([]rune(msg.Content)))
-			}
-			if !strings.Contains(msg.Content, "[qisqartirildi, 10000 belgi]") {
-				t.Fatalf("qisqartirish suffix'i yo'q: %q", msg.Content[len(msg.Content)-40:])
-			}
-		} else if msg.Content != content {
-			t.Fatalf("oxirgi tool natijasi qisqartirildi: tool=%d", toolIndex)
+		if len([]rune(msg.Content)) > limit+len([]rune(" …[qisqartirildi, 10000 belgi]")) {
+			t.Fatalf("tool natijasi limitdan oshdi: %d", len([]rune(msg.Content)))
+		}
+		if !strings.Contains(msg.Content, "[qisqartirildi, 10000 belgi]") {
+			t.Fatalf("qisqartirish suffix'i yo'q: %q", msg.Content[len(msg.Content)-40:])
 		}
 	}
 	if msgs[2].Content != content || msgs[8].Content != content {
+		t.Fatal("store tarixidagi asl tool natijasi o'zgardi")
+	}
+}
+
+func TestLimitToolResultsKeepingPreservesOnlyNewestAndStoreContent(t *testing.T) {
+	const limit = 30
+	content := strings.Repeat("x", 100)
+	msgs := []*schema.Message{
+		schema.ToolMessage(content, "1"),
+		schema.ToolMessage(content, "2"),
+	}
+	got := limitToolResultsKeeping(msgs, limit, 1)
+	if !strings.Contains(got[0].Content, "[qisqartirildi, 100 belgi]") {
+		t.Fatalf("oldingi natija qisqartirilmadi: %q", got[0].Content)
+	}
+	if got[1].Content != content {
+		t.Fatalf("eng yangi natija o'zgardi: %q", got[1].Content)
+	}
+	if msgs[0].Content != content {
 		t.Fatal("store tarixidagi asl tool natijasi o'zgardi")
 	}
 }

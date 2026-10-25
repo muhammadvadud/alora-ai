@@ -17,7 +17,7 @@ import (
 func CurtainCalculate(d Deps) tool.BaseTool {
 	h := &curtainCalcHandler{d: d}
 	return must(utils.InferTool("curtain_calculate",
-		"Mato va so'ralgan services narxini Django hisoblaydi; [] faqat mato. Xizmatni natijada bor bo'lsagina kiritilgan de. "+
+		"Django hisoblaydi; faqat aniq so'ralgan services. Sewing alohida; tape/hook faqat mijoz so'rasa. [] faqat mato. "+
 			"Bir oyna: cornice_length_m/height_m/parts; ko'p oyna: windows[]. variant_id faqat katalogdagi to'liq ID. "+
 			"Rim/rulon hisoblanmaydi. Jami va explanation'ni ishlat.",
 		h.do))

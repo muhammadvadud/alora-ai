@@ -356,3 +356,5 @@
 ## Jonli baholashdan keyingi tuzatishlar (2026-10-25)
 
 - [~] S.5 Hisob xizmatlari va qoralama yaxlitligi, eskirgan taklif himoyasi, aniq maydon izohi va mustaqil jonli qayta baholash.
+  - [x] S.5a Tool natijalari tarixda ixchamlanadi; token chegarasida tayyor javob yo'qolmaydi. Agent race testlari o'tdi.
+  - [x] S.5b Django CalcPreview nested subtotal maydonlari Go DTO'da saqlanadi; race fixture parity o'tdi.

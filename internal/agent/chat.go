@@ -204,6 +204,11 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 		activeModel := primary
 		usedFallback := false
 		for step := 0; step < c.maxStep; step++ {
+			// Har tool aylanishida promptga avvalgi katta natijalarni qayta-qayta
+			// yubormaslik uchun faqat eng yangi natijani to'liq saqlaymiz.
+			if step > 0 {
+				msgs = limitToolResultsKeeping(msgs, c.maxToolResultChars, 1)
+			}
 			// Tool bajarilgach sessiya bosqichi o'zgargan bo'lishi mumkin (set_context →
 			// recommend, curtain_calculate → calc): to'plam qayta tanlanadi, aks holda
 			// "hisobla va chegirma ayt" kabi xabarda price_quote modelga ko'rinmaydi.
@@ -229,10 +234,9 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 			usedFallback = usedFallback || switched
 			usage = addUsage(usage, u)
 
-			// Byudjet qo'riqchisi: bitta navbatda yig'ilgan prompt tokenlar (har aylanish
-			// usage.prompt) chegaradan oshsa sikl darhol to'xtaydi — ortiqcha aylanish va
-			// pul sarflanmaydi. Tarixga yozilmaydi (mavjud xato naqshi: Append faqat quyida,
-			// odatdagi yo'lda bajariladi).
+			// Byudjet qo'riqchisi ortiqcha tool aylanishini to'xtatadi. Agar ayni model
+			// chaqiruvi yakuniy matnni allaqachon qaytargan bo'lsa, tayyor javobni xato bilan
+			// yopmaymiz: qo'shimcha model chaqiruvi qilinmaydi va mijoz javobni oladi.
 			if c.promptTokenBudget > 0 && usage.Prompt > c.promptTokenBudget {
 				provider := c.provider
 				if usedFallback {
@@ -244,8 +248,10 @@ func (c *Chat) Stream(ctx context.Context, sessionID, input string) <-chan Event
 				if c.onBudgetExceeded != nil {
 					c.onBudgetExceeded(provider)
 				}
-				emit(ctx, out, Event{Kind: KindError, Err: msg})
-				return
+				if len(toolCalls) > 0 || strings.TrimSpace(content) == "" {
+					emit(ctx, out, Event{Kind: KindError, Err: msg})
+					return
+				}
 			}
 			if len(toolCalls) == 0 {
 				// Yakuniy javob. Bo'sh matnni tarixga yozmaymiz — quyida fallback qo'yiladi.

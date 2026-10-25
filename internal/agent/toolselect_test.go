@@ -205,6 +205,7 @@ func containsName(xs []string, name string) bool {
 // umumiy 45k byudjet (40k) dan oshadi, sikl ikkinchi aylanishda to'xtashi kerak.
 type budgetModel struct {
 	calls int
+	loop  bool
 }
 
 func (m *budgetModel) WithTools([]*schema.ToolInfo) (model.ToolCallingChatModel, error) {
@@ -248,18 +249,27 @@ func (m *budgetModel) Stream(_ context.Context, _ []*schema.Message, _ ...model.
 			ResponseMeta: meta,
 		}}), nil
 	}
+	if m.loop {
+		return schema.StreamReaderFromArray([]*schema.Message{{
+			Role: schema.Assistant,
+			ToolCalls: []schema.ToolCall{{
+				ID: "call_b_2", Type: "function",
+				Function: schema.FunctionCall{Name: "any_tool", Arguments: `{}`},
+			}},
+			ResponseMeta: meta,
+		}}), nil
+	}
 	return schema.StreamReaderFromArray([]*schema.Message{{
 		Role: schema.Assistant, Content: "javob",
 		ResponseMeta: &schema.ResponseMeta{Usage: &schema.TokenUsage{PromptTokens: 20000, CompletionTokens: 5}},
 	}}), nil
 }
 
-// Byudjet qo'riqchisi: yig'ilgan prompt token chegaradan oshsa sikl to'xtaydi,
-// error event chiqadi, tarixga yozilmaydi va done chiqmaydi.
-func TestChatStream_PromptTokenBudget_StopsLoop(t *testing.T) {
+// Byudjet oshsa navbatdagi tool aylanishi bloklanadi, xato tarixga yozilmaydi.
+func TestChatStream_PromptTokenBudget_StopsToolLoop(t *testing.T) {
 	store := session.NewMemory()
 	exceeded := 0
-	chat, err := NewChat(context.Background(), &budgetModel{}, nil, store, Options{
+	chat, err := NewChat(context.Background(), &budgetModel{loop: true}, nil, store, Options{
 		Stream:            true,
 		PromptTokenBudget: 40000,
 		OnBudgetExceeded:  func(string) { exceeded++ },
@@ -281,7 +291,7 @@ func TestChatStream_PromptTokenBudget_StopsLoop(t *testing.T) {
 		}
 	}
 
-	if !strings.Contains(gotError, "javob byudjeti tugadi") || !strings.Contains(gotError, "45000 token") {
+	if !strings.Contains(gotError, "javob byudjeti tugadi") || !strings.Contains(gotError, "50000 token") {
 		t.Fatalf("error event = %q, want byudjet xabari (45000 token)", gotError)
 	}
 	if gotDone {
@@ -296,6 +306,44 @@ func TestChatStream_PromptTokenBudget_StopsLoop(t *testing.T) {
 	}
 	if len(history) != 0 {
 		t.Fatalf("byudjet xatosi tarixga yozildi: %d xabar", len(history))
+	}
+}
+
+// Yakuniy matn token chegarasidan o'tgan javob bo'lsa ham mijozga yetkaziladi;
+// qo'shimcha tool chaqiruvi qilinmaydi va xato event yakuniy javobni yopmaydi.
+func TestChatStream_PromptTokenBudget_PreservesFinalAnswer(t *testing.T) {
+	store := session.NewMemory()
+	exceeded := 0
+	chat, err := NewChat(context.Background(), &budgetModel{}, nil, store, Options{
+		Stream:            true,
+		PromptTokenBudget: 40000,
+		OnBudgetExceeded:  func(string) { exceeded++ },
+	})
+	if err != nil {
+		t.Fatalf("NewChat: %v", err)
+	}
+
+	var (
+		gotError bool
+		gotDone  *Usage
+	)
+	for ev := range chat.Stream(context.Background(), "s-final", "salom") {
+		switch ev.Kind {
+		case KindError:
+			gotError = true
+		case KindDone:
+			gotDone = ev.Usage
+		}
+	}
+	if gotError || gotDone == nil || gotDone.PromptTokens != 45000 {
+		t.Fatalf("final javob holati: error=%v done=%+v", gotError, gotDone)
+	}
+	if exceeded != 1 {
+		t.Fatalf("OnBudgetExceeded=%d, want 1", exceeded)
+	}
+	history, err := store.History(context.Background(), "s-final")
+	if err != nil || len(history) == 0 {
+		t.Fatalf("tayyor javob tarixi saqlanmadi: len=%d err=%v", len(history), err)
 	}
 }
 
