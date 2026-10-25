@@ -282,6 +282,8 @@
 
 ## Sotuv bilimlarini yaxshilash — 2026-10-25
 
+- [ ] S.5 Tul rangini alohida tanlash, yetkazish holati va qisqa muloqot; mahsulot ma'lumotlari keyingi alohida muhokamaga qoldiriladi.
+
 - [x] S.1 Boshlang'ich ish holati build/vet/lint/race bilan tekshirildi va alohida branchda saqlandi.
 - [x] S.2 Manbali bilim, ixcham prompt va minimal sotuv yordamchilari uchun ADR-021 qayd etildi.
 - [x] S.2a O'zbek/rus/kirill bilim qidiruvi, 8 qoida/2000 belgi prompt byudjeti va 6 natijali lookup kalitsiz testlar bilan tekshirildi.

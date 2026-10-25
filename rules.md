@@ -585,6 +585,20 @@ tool **stub** (`{"error":"hali ulanmagan"}`) bilan qoladi, "bajarildi" belgilanm
 
 ## 19. Qarorlar jurnali (ADR)
 
+### ADR-022 — Sotuvni bosqichma-bosqich sayqallash (2026-10-25)
+
+Buyurtmachi rang uyg'unligi, qisqa muloqot, yetkazish izohi va ortiqcha
+chaqiruvlarni navbat bilan yaxshilashni davom ettirishga ruxsat berdi;
+mahsulot ma'lumotlari alohida keyingi muhokamaga qoldirildi.
+`build_options.tul_color` asosiy portyera rangidan mustaqil, ixtiyoriy talab.
+Tanlash mexanizmi shu qatlamni mavjud rang matcher'i bilan filtrlaydi;
+rang juftlash tavsiyasi va qisqa javob siyosati DB promptidan keladi.
+Mos tul yo'q bo'lsa boshqa rangni mos deb yashirmaydi, paket cheklovini
+qaytaradi. Yangi mahsulot, narx yoki qattiq kodlangan rang palitrasi yo'q.
+Display'dagi yetkazish holati Django ServiceLine.IsDelivery va tayyor
+DeliveryAmount orqali izohlanadi: nol summa avtomatik bepul xizmat emas.
+Narx formulasi, proto, ReAct yadrosi va mahsulot ma'lumotlari o'zgarmaydi.
+
 ### ADR-021 — Sotuv bilimlari va token byudjeti (2026-10-25)
 
 Buyurtmachi O'zbekiston bozoriga mos professional sotuv yordamchisini,
