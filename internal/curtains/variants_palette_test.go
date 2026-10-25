@@ -38,6 +38,14 @@ func TestPlanOptions_MissingTulColorNeverSubstitutesPink(t *testing.T) {
 	}
 }
 
+func TestPlanOptions_ExplicitPinkIsRespected(t *testing.T) {
+	state := SessionState{CorniceLengthM: d("3"), HeightM: d("2.6")}
+	plans := PlanOptions(paletteView(), state, SearchQuery{Color: "grafit", TulColor: "pushti"})
+	if len(plans[1].Parts) != 2 || plans[1].Parts[1].VariantID != "tul-1" {
+		t.Fatalf("mijoz istagi avtomatik oq tavsiyadan ustun: %+v", plans[1])
+	}
+}
+
 func TestSearch_StrictColorFiltersBeforePerProductLimit(t *testing.T) {
 	cards := Search(paletteView(), SearchQuery{Layer: "tul", Color: "oq", StrictColor: true})
 	if len(cards) != 1 || cards[0].VariantID != "tul-4" {

@@ -585,6 +585,20 @@ tool **stub** (`{"error":"hali ulanmagan"}`) bilan qoladi, "bajarildi" belgilanm
 
 ## 19. Qarorlar jurnali (ADR)
 
+### ADR-023 — Modelga yuboriladigan shaxsiy ma'lumotlar (2026-10-25)
+
+Buyurtmachi qolgan kamchiliklarni navbat bilan tuzatishni davom ettirishni
+so'radi. Markaziy PII filtri aniq ism/manzil/email belgilari va strukturali
+customer maydonlarini yashiradi. Telefonning mavjud niqobi saqlanadi.
+Sessiya Store dekoratori History/Append'da shu siyosatni qo'llaydi: eski
+tarix ham modelga xom qaytmaydi. Xabar roli, tool-call ID/juftligi, narx,
+o'lcham va katta JSON sonlari saqlanadi; original store xotirasi o'qishda
+o'zgarmaydi. Django'dagi mijozga tegishli asl chat yozuvlari o'chirilmaydi.
+Bu belgilanmagan har qanday ismni universal NER bilan aniqlash da'vosi
+emas. ReAct yadrosi, DB sxemasi va mahsulotlar o'zgarmaydi. Muqobil pulli
+klassifikator — maxfiy ma'lumotni yana tashqi modelga yuborishi va xarajat
+sababli tanlanmadi.
+
 ### ADR-022 — Sotuvni bosqichma-bosqich sayqallash (2026-10-25)
 
 Buyurtmachi rang uyg'unligi, qisqa muloqot, yetkazish izohi va ortiqcha
